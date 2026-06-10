@@ -1,5 +1,16 @@
+# Compiled objects
 *.o
+obj/
 
-build/
+# Binary output
 bin/
 
+# Generated asset files
+assets/*.rgb565
+
+# Swap files
+*.swp
+*.swo
+
+# Editor temp files
+*~

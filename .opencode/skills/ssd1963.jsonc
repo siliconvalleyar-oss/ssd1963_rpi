@@ -1,0 +1,68 @@
+{
+    "name": "ssd1963-rpi",
+    "description": "Develop, build, and run SSD1963 display projects on Raspberry Pi with 16-bit parallel 8080 interface via libbcm2835 GPIO bit-bang.",
+    "commands": {
+        "build": {
+            "description": "Build the SSD1963 project",
+            "command": "make"
+        },
+        "clean": {
+            "description": "Clean build artifacts",
+            "command": "make clean"
+        },
+        "run": {
+            "description": "Build and run the application (requires sudo for GPIO)",
+            "command": "sudo make run"
+        },
+        "remote-build": {
+            "description": "SSH to Pi and compile remotely (libbcm2835 only available on Pi)",
+            "command": "make remote-build PI_HOST=pi@raspberry.local"
+        },
+        "remote-run": {
+            "description": "SSH to Pi, build, and run",
+            "command": "make remote-run PI_HOST=pi@raspberry.local"
+        },
+        "install-deps": {
+            "description": "Install libbcm2835 and build tools",
+            "command": "bash script_tools_ssd1963_rpi/install_deps.sh"
+        },
+        "convert-image": {
+            "description": "Convert a PNG image to RGB565 format for the display",
+            "command": "python3 script_tools_ssd1963_rpi/convert_png_to_rgb.py <input.png> <output.rgb565>"
+        },
+        "help": {
+            "description": "Show Makefile help",
+            "command": "make help"
+        }
+    },
+    "hardware": {
+        "display": {
+            "controller": "SSD1963",
+            "resolution": "480x272",
+            "color_format": "RGB565",
+            "interface": "16-bit parallel 8080"
+        },
+        "gpio": {
+            "library": "libbcm2835",
+            "data_pins": "GPIO 12–27 (D0–D15)",
+            "control_pins": {
+                "WR": 3,
+                "RS": 4,
+                "CS": 5,
+                "RESET": 6,
+                "BACKLIGHT": 0
+            }
+        }
+    },
+    "files": {
+        "main_source": "src/main.cpp",
+        "library_source": "src/ssd1963.cpp",
+        "config_header": "include/config_hw.hpp",
+        "display_driver": "include/ssd1963.hpp",
+        "command_defs": "include/ssd1963_cmd.hpp",
+        "color_defs": "include/color.hpp",
+        "makefile": "Makefile",
+        "assets": "assets/",
+        "conversion_tools": "script_tools_ssd1963_rpi/"
+    }
+}
