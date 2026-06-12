@@ -1,122 +1,113 @@
-# SSD1963 Photo Display for Raspberry Pi
+# SSD1963 Display Driver for Raspberry Pi
 
-Drive an SSD1963 TFT LCD (480x272, 16-bit parallel 8080 interface) from a Raspberry Pi using `libbcm2835` GPIO bit-banging. Displays color blocks and a full-screen PNG photo.
+Drive an SSD1963 TFT LCD (480x272, 16-bit parallel 8080 interface) from a Raspberry Pi using `libbcm2835` GPIO bit-banging. Features interactive menu, UI widgets, QR code generation, and bitmap font rendering.
+
+## Features
+
+- **Optimized driver** — 2 GPIO calls per pixel (vs 32), batch writes, 16× faster screen fills
+- **Interactive menu** — 4-button navigation (UP/DOWN/SELECT/BACK) with debounce
+- **QR code generation** — Encode text/WiFi/URL as QR codes using Nayuki library
+- **Bitmap font** — 8×8 font with 112 glyphs including arrows, symbols, icons
+- **UI widgets** — ProgressBar (animated), CheckBox, TextBox, SelectiveMenu
+- **Image display** — RGB565 raw binary files full-screen
+- **Icons** — 8 built-in 16×16 icons (settings, photo, info, shapes, palette, etc.)
+
+## Quick Start
+
+```bash
+# Build and run on Pi
+make run
+
+# Or remote build via SSH
+make remote-run PI_HOST=pi@192.168.1.100
+```
+
+## Documentation
+
+| File                        | Content                                 |
+|-----------------------------|-----------------------------------------|
+| `docs/API.md`               | Full driver API reference               |
+| `docs/HARDWARE.md`          | Wiring diagram, pinout, timings         |
+| `docs/MENU.md`              | Menu system and UI component guide      |
+| `docs/OPTIMIZATION.md`      | Performance optimization details        |
+| `docs/PROGRAMMING.md`       | Programming guide with examples         |
 
 ## Hardware
 
 | Component | Details |
 |-----------|---------|
-| Display   | SSD1963 controller, 480x272, RGB565, 16-bit parallel |
-| Interface | 8080 parallel bus (16 data + 5 control pins = 21 GPIOs) |
-| GPIO lib  | [`libbcm2835`](http://www.airspayce.com/mikem/bcm2835/) (memory-mapped I/O) |
-| Tested on | Raspberry Pi Zero 2W, Raspberry Pi 4 |
+| Display   | SSD1963, 480×272, RGB565, 16-bit parallel |
+| Interface | 8080 bus (16 data + 5 control = 21 GPIOs) |
+| GPIO lib  | [`libbcm2835`](http://www.airspayce.com/mikem/bcm2835/) |
+| Buttons   | 4× GPIO with pull-up (UP=7, DOWN=8, SELECT=9, BACK=10) |
+| Tested on | Raspberry Pi Zero 2W, Pi 4 |
 
-### Pinout (GPIO → SSD1963)
+## Project Structure
 
-| Function | BCM GPIO |
-|----------|----------|
-| D0–D15   | 12–27    |
-| WR       | 3        |
-| RS (DC)  | 4        |
-| CS       | 5        |
-| RESET    | 6        |
-| BACKLIGHT| 0        |
+```
+├── include/
+│   ├── ssd1963.hpp         # Driver class, macros, bitmasks
+│   ├── ssd1963_cmd.hpp     # Command constants
+│   ├── config_hw.hpp       # Pins, dimensions, timings
+│   ├── color.hpp           # RGB565 colors
+│   ├── font.hpp            # 8×8 bitmap font + text rendering
+│   ├── icons.hpp           # 16×16 icon bitmaps
+│   ├── ui.hpp              # ProgressBar, CheckBox, TextBox, SelectiveMenu
+│   ├── menu.hpp            # Menu class + callback declarations
+│   ├── qrcodegen.hpp       # QR Code generator (Nayuki)
+│   └── qr_display.hpp      # QR display helpers
+├── src/
+│   ├── main.cpp            # Entry point with demo menu
+│   ├── menu.cpp            # Menu + 10 built-in actions
+│   ├── ssd1963.cpp         # Driver implementation
+│   └── qrcodegen.cpp       # QR Code generator
+├── assets/
+│   └── capibaras.rgb565    # Sample full-screen image
+├── docs/
+│   ├── API.md              # Driver API reference
+│   ├── HARDWARE.md         # Wiring guide
+│   ├── MENU.md             # UI component guide
+│   ├── OPTIMIZATION.md     # Performance tuning
+│   └── PROGRAMMING.md      # Developer guide
+├── script_tools_ssd1963_rpi/  # PNG→RGB565 converter, deps installer
+├── Makefile
+└── README.md
+```
+
+## Menu Demo Items
+
+| # | Item              | Description                              |
+|---|-------------------|------------------------------------------|
+| 1 | Color Test        | 7 color swatches with labels             |
+| 2 | Show Photo        | Full-screen RGB565 image                 |
+| 3 | Screen Info       | Driver/display information               |
+| 4 | Draw Shapes       | Geometric primitives demo                |
+| 5 | QR: GitHub URL    | QR code for opencode repository          |
+| 6 | QR: WiFi Config   | QR code with WiFi credentials            |
+| 7 | QR: Custom Text   | QR code with free text                   |
+| 8 | About             | Version and credits                      |
+| 9 | Exit              | Return to shell                          |
 
 ## Dependencies
 
 ```bash
-sudo apt install build-essential
-```
+# Build tools
+sudo apt install build-essential python3-pil
 
-Install `libbcm2835` from source (not in distro repos):
-
-```bash
-wget http://www.airspayce.com/mikem/bcm2835/bcm2835-1.75.tar.gz
-tar xzf bcm2835-1.75.tar.gz
-cd bcm2835-1.75
-./configure && make && sudo make install
-```
-
-Or use the script:
-```bash
+# libbcm2835 (not in distro repos)
 bash script_tools_ssd1963_rpi/install_deps.sh
 ```
 
-## Build & Run
-
-### Local build (requires libbcm2835 installed on this machine)
-
-```bash
-make          # builds bin/ssd1963_app
-make run      # runs with sudo (GPIO requires root)
-sudo ./bin/ssd1963_app
-```
-
-### Remote build via SSH (recommended if compiling on a Pi)
-
-```bash
-make remote-build   # ssh pi@raspberry.local "cd <dir> && make -j4"
-make remote-run     # build + run on the Pi
-```
-
-Override host/path:
-```bash
-make remote-build PI_HOST=pi@192.168.1.100 PI_DIR=/home/pi/my_project
-```
-
-The program:
-1. Initializes the SSD1963 (PLL, timings, 480x272)
-2. Clears screen to black
-3. Draws 7 color blocks (R,G,B,Y,C,M,W)
-4. Renders `assets/capibaras.rgb565` full-screen
-
-## Image Pipeline
-
-```
-source PNG → Python PIL → raw .rgb565 (RGB565 big-endian) → display
-```
-
-### Converting your own images
+## Image Conversion
 
 ```bash
 python3 script_tools_ssd1963_rpi/convert_png_to_rgb.py input.png output.rgb565
 ```
 
-Or use the shell wrapper (auto-names output):
-```bash
-bash script_tools_ssd1963_rpi/convert_png_to_rgb.sh input.png
-```
-
-Requirements for conversion: `python3-pil` (`sudo apt install python3-pil`)
-
-## Project Structure
-
-```
-ssd1963_photo_png_2026_sucess_rgb/
-├── include/
-│   ├── ssd1963.hpp        # SSD1963 class (GPIO ops, init, drawing)
-│   ├── ssd1963_cmd.hpp    # SSD1963 command constants (~100+)
-│   ├── config_hw.hpp      # Pin definitions, LCD timings, dimensions
-│   └── color.hpp          # RGB565 macro + basic color constants
-├── src/
-│   ├── main.cpp           # Test sequence: color blocks → photo
-│   └── ssd1963.cpp        # Bus init, command/data, drawing routines
-├── assets/
-│   ├── capibaras.png      # Source image (480x272)
-│   └── capibaras.rgb565   # Pre-converted RGB565 for direct display
-├── script_tools_ssd1963_rpi/
-│   ├── convert_png_to_rgb.py  # PNG → RGB565 converter
-│   ├── convert_png_to_rgb.sh  # Shell wrapper
-│   └── install_deps.sh        # Installs libbcm2835 + build tools
-├── helps/                 # Datasheets, pinout docs, installation guides
-├── Makefile
-├── .gitignore
-└── README.md
-```
-
 ## Troubleshooting
 
-- **"bcm2835.h not found"** – `libbcm2835` is not installed. Run `bash script_tools_ssd1963_rpi/install_deps.sh`.
-- **No display output** – Check wiring. Backlight on GPIO 0 must be high.
-- **Blurry image** – Verify LCD_FPR in `config_hw.hpp` matches your display's pixel clock.
-- **Permission denied** – Run with `sudo` (GPIO access requires root).
+- `bcm2835.h: No such file` — Install libbcm2835
+- `bcm2835_init() failed` — Run with `sudo`
+- Blank screen — Check backlight (GPIO 0) and RESET (GPIO 6)
+- Corrupted colors — Verify D0–D15 wiring
+- Blurry image — Adjust `LCD_FPR` in `config_hw.hpp`
