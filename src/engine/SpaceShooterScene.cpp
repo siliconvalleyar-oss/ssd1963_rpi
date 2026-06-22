@@ -236,7 +236,7 @@ void SpaceShooterScene::draw_hud() {
     uint32_t secs = m_timer / 1000;
     std::snprintf(buf, sizeof(buf), "%02u:%02u", secs / 60, secs % 60);
     m_display.draw_string(LCD_WIDTH - 48, 2, buf, rgb(150, 150, 150), BG);
-    m_display.draw_string(LCD_WIDTH - 84, LCD_HEIGHT - 12, "v" ENGINE_VERSION,
+    m_display.draw_string(LCD_WIDTH - 84, LCD_HEIGHT - 12, ENGINE_VERSION,
                           rgb(80, 100, 80), BG);
     if (m_lives == 0) {
         m_display.draw_string_centered(LCD_WIDTH / 2, LCD_HEIGHT / 2 - 10,

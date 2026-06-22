@@ -1,5 +1,7 @@
 CXX       = g++
 CXXFLAGS  = -Iinclude -std=c++11 -Wall -Wextra -O2
+VERSION  := $(shell git describe --tags --abbrev=0 2>/dev/null || echo "0.0.0")
+CXXFLAGS += -DVERSION_TAG=\"$(VERSION)\"
 LDFLAGS   = -lbcm2835 -lm
 
 SRC_DIR   = src

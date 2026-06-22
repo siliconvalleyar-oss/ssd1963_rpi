@@ -23,7 +23,7 @@ bool GameEngine::init() {
     m_start_time = bcm2835_st_read();
     m_state = EngineState::RUNNING;
 
-    std::cout << "[ENGINE] Arcade Photo v" << ENGINE_VERSION
+    std::cout << "[ENGINE] Arcade " << ENGINE_VERSION
               << " | " << LCD_WIDTH << "x" << LCD_HEIGHT << "\n";
     return true;
 }

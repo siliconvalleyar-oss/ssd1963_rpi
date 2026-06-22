@@ -5,7 +5,7 @@
 #include <config_hw.hpp>
 #include <color.hpp>
 
-#define ENGINE_VERSION "5.2.0"
+#define ENGINE_VERSION VERSION_TAG
 
 enum class EngineState : uint8_t { INIT, RUNNING, EXIT };
 

@@ -13,7 +13,7 @@ int main() {
     GameEngine engine;
     if (!engine.init()) return 1;
 
-    MenuScene         menu(engine.display(), "ARCADE v" ENGINE_VERSION);
+    MenuScene         menu(engine.display(), "ARCADE " ENGINE_VERSION);
     FontDemoScene     font_demo(engine.display());
     SpaceShooterScene shooter(engine.display());
     ImageViewerScene  viewer(engine.display(), "assets/capibaras.rgb565", "CAPIBARAS");
@@ -34,7 +34,7 @@ int main() {
     engine.set_menu_scene(&menu);
     engine.set_scene(&menu);
 
-    std::cout << "[MAIN] ARCADE v" << ENGINE_VERSION << " iniciado\n";
+    std::cout << "[MAIN] ARCADE " << ENGINE_VERSION << " iniciado\n";
     engine.run();
     std::cout << "[MAIN] Fin.\n";
     return 0;
