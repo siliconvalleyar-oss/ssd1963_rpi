@@ -1,36 +1,60 @@
 #include <ssd1963.hpp>
+//#include <ssd1963_cmd.hpp>
 #include <bcm2835.h>
+#include <unistd.h>
+#include <cstdint>
 #include <iostream>
-#include <menu.hpp>
+#include <color.hpp>
+
+
+
+void delay_ms(uint32_t ms) {
+    usleep(ms * 1000);
+}
+//version 3
+
 
 int main() {
-    SSD1963 ssd1963;
 
+    SSD1963 ssd1963;
     if (!bcm2835_init()) {
-        std::cerr << "Error: bcm2835_init() failed. Run with sudo." << std::endl;
+        std::cerr << "Error al inicializar bcm2835" << std::endl;
         return 1;
     }
-
     ssd1963.setup_gpio();
     ssd1963.init();
-    ssd1963.clear_screen(0x0000);
-
-    Menu menu(ssd1963);
-    menu.set_title("SSD1963 DEMO v1.0");
-
-    menu.add_item("1. Color Test",       menu_color_test);
-    menu.add_item("2. Show Photo",       menu_show_photo);
-    menu.add_item("3. Screen Info",      menu_screen_info);
-    menu.add_item("4. Draw Shapes",      menu_draw_shapes);
-    menu.add_item("5. QR: GitHub URL",   menu_qr_url);
-    menu.add_item("6. QR: WiFi Config",  menu_qr_wifi);
-    menu.add_item("7. QR: Custom Text",  menu_qr_text);
-    menu.add_item("8. About",            menu_about);
-    menu.add_item("9. Exit",             [](SSD1963&){ /* exit handled by menu */ });
-
-    menu.run();
-
+    // Limpiar toda la pantalla a negro primero
     ssd1963.clear_screen(BLACK);
+    delay_ms(500);
+    struct ColorBlock {
+        uint16_t x;
+        uint16_t y;
+        uint16_t color;
+        const char* name;
+    };
+    // Bloques grandes 60x60, distribuidos horizontalmente
+    ColorBlock blocks[] = {
+        {10, 10, RED, "RED"},
+        {80, 10, GREEN, "GREEN"},
+        {150, 10, BLUE, "BLUE"},
+        {220, 10, YELLOW, "YELLOW"},
+        {290, 10, CYAN, "CYAN"},
+        {360, 10, MAGENTA, "MAGENTA"},
+        {430, 10, WHITE, "WHITE"},
+        // Aquí podrías agregar más o cambiar posición si tu pantalla es más ancha
+    };
+    const uint16_t block_width = 45;
+    const uint16_t block_height = 45;
+    for (const auto& block : blocks) {
+        std::cout << "Dibujando bloque color: " << block.name << " en (" << block.x << ", " << block.y << ")" << std::endl;
+        ssd1963.draw_block(block.x, block.y, block_width, block_height, block.color);
+        // Sin delay para que quede fijo rápido
+    }
+//    std::cout << "Fin del test de colores." << std::endl;
+ delay_ms(900);
+
+    ssd1963.draw_image_rgb565("assets/capibaras.rgb565");
     bcm2835_close();
     return 0;
 }
+

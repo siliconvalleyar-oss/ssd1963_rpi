@@ -1,37 +1,37 @@
 {
     "name": "ssd1963-rpi",
-    "description": "Develop, build, and run SSD1963 TFT LCD (480x272, RGB565, 16-bit parallel 8080) projects on Raspberry Pi via libbcm2835 GPIO bit-bang.",
+    "description": "Develop, build, and run SSD1963 display projects on Raspberry Pi with 16-bit parallel 8080 interface via libbcm2835 GPIO bit-bang.",
     "commands": {
         "build": {
-            "description": "Build the SSD1963 application",
+            "description": "Build the SSD1963 project",
             "command": "make"
         },
         "clean": {
-            "description": "Clean build artifacts (obj/ bin/)",
+            "description": "Clean build artifacts",
             "command": "make clean"
         },
         "run": {
-            "description": "Build and run locally (requires sudo for GPIO)",
-            "command": "make run"
+            "description": "Build and run the application (requires sudo for GPIO)",
+            "command": "sudo make run"
         },
         "remote-build": {
-            "description": "SSH to Pi and compile (libbcm2835 only available on Pi)",
+            "description": "SSH to Pi and compile remotely (libbcm2835 only available on Pi)",
             "command": "make remote-build PI_HOST=pi@raspberry.local"
         },
         "remote-run": {
-            "description": "SSH to Pi, build, and run with sudo",
+            "description": "SSH to Pi, build, and run",
             "command": "make remote-run PI_HOST=pi@raspberry.local"
         },
         "install-deps": {
-            "description": "Install libbcm2835 + build tools on the Pi",
+            "description": "Install libbcm2835 and build tools",
             "command": "bash script_tools_ssd1963_rpi/install_deps.sh"
         },
         "convert-image": {
-            "description": "Convert a PNG to raw RGB565 for direct display",
+            "description": "Convert a PNG image to RGB565 format for the display",
             "command": "python3 script_tools_ssd1963_rpi/convert_png_to_rgb.py <input.png> <output.rgb565>"
         },
         "help": {
-            "description": "Show all Makefile targets",
+            "description": "Show Makefile help",
             "command": "make help"
         }
     },
@@ -39,67 +39,30 @@
         "display": {
             "controller": "SSD1963",
             "resolution": "480x272",
-            "color_format": "RGB565 (16-bit)",
-            "interface": "16-bit parallel 8080 (21 GPIOs: 16 data + 5 control)"
+            "color_format": "RGB565",
+            "interface": "16-bit parallel 8080"
         },
-        "pi": "Tested on Raspberry Pi Zero 2W and Pi 4",
-        "gpio_library": "libbcm2835 (memory-mapped I/O, requires root)",
-        "gpio_map": {
-            "D0–D15": "GPIO 12–27",
-            "WR": "GPIO 3",
-            "RS (DC)": "GPIO 4",
-            "CS": "GPIO 5",
-            "RESET": "GPIO 6",
-            "BACKLIGHT": "GPIO 0"
+        "gpio": {
+            "library": "libbcm2835",
+            "data_pins": "GPIO 12–27 (D0–D15)",
+            "control_pins": {
+                "WR": 3,
+                "RS": 4,
+                "CS": 5,
+                "RESET": 6,
+                "BACKLIGHT": 0
+            }
         }
     },
     "files": {
-        "main": "src/main.cpp",
-        "driver": "src/ssd1963.cpp",
-        "header": "include/ssd1963.hpp",
-        "commands": "include/ssd1963_cmd.hpp",
-        "config": "include/config_hw.hpp",
-        "colors": "include/color.hpp",
+        "main_source": "src/main.cpp",
+        "library_source": "src/ssd1963.cpp",
+        "config_header": "include/config_hw.hpp",
+        "display_driver": "include/ssd1963.hpp",
+        "command_defs": "include/ssd1963_cmd.hpp",
+        "color_defs": "include/color.hpp",
         "makefile": "Makefile",
-        "converter": "script_tools_ssd1963_rpi/convert_png_to_rgb.py",
-        "installer": "script_tools_ssd1963_rpi/install_deps.sh",
-        "sample_image": "assets/capibaras.rgb565"
-    },
-    "architecture": {
-        "bus_timing": {
-            "WR_strobe": "~10ns (no artificial delay; GPIO toggle speed is sufficient)",
-            "setup_hold": "CS/RS setup before WR; WR pulse width set by bcm2835 speed"
-        },
-        "init_sequence": [
-            "1. Physical reset: RESET LOW 10ms → HIGH 10ms",
-            "2. Soft reset (CMD 0x01), wait 10ms",
-            "3. PLL config: SET_PLL_MN (0xE2) → M=49, N=4 → PLLclk=500MHz, SYSclk=100MHz (with 10MHz REFclk)",
-            "4. PLL start: SET_PLL (0xE0) → 0x01, wait 10ms → 0x03, wait 10ms",
-            "5. LCD mode: SET_LCD_MODE (0xB0) → DE mode, RGB565, 480x272",
-            "6. Pixel interface: SET_PIXEL_DATA_INTERFACE (0xF0) → 16-bit 565 (0x03)",
-            "7. LSHIFT freq: SET_LSHIFT_FREQ (0xE6) → pixel clock divider (default: 0x1E848 ≈ 2MHz)",
-            "8. Horizontal timing: SET_HOR_PERIOD (0xB4)",
-            "9. Vertical timing: SET_VER_PERIOD (0xB6)",
-            "10. Display ON: ON_DISPLAY (0x29), wait 50ms",
-            "11. Backlight ON (GPIO 0 HIGH)"
-        ],
-        "image_pipeline": "source PNG → Python PIL → raw .rgb565 (big-endian R+G+B per pixel) → write via 16-bit parallel bus",
-        "pixel_clock": "LCD_FPR = (SYSCLK / desired_pclk) - 1. Default 0x1E848 ≈ 2.0MHz. Adjust if image is blurry or offset."
-    },
-    "troubleshooting": {
-        "bcm2835_h_not_found": "Run 'bash script_tools_ssd1963_rpi/install_deps.sh' to install libbcm2835 from source",
-        "no_display_output": "Check wiring. Backlight (GPIO 0) must be HIGH. Verify RESET sequence.",
-        "blurry_image": "Adjust LCD_FPR in config_hw.hpp to match your display's pixel clock",
-        "permission_denied": "Run with 'sudo' — GPIO access requires root",
-        "garbage_colors": "Check 16-bit data bus wiring (D0–D15). Verify RGB565 vs RGB888 in init.",
-        "backlight_off": "GPIO 0 may have pull-down. Explicitly set HIGH after init."
-    },
-    "notes": [
-        "The 8080 parallel bus uses 16 data lines + 5 control lines = 21 GPIOs total",
-        "write_data_bus clears ALL data pins first, then sets HIGH bits (slower but safer)",
-        "clear_screen uses write_data(color) twice per pixel (high+low byte) — legacy from 8-bit mode",
-        "PLL formula: PLLclk = REFclk × M, SYSclk = PLLclk / N. With M=49, N=4, REFclk=10MHz → SYSclk=122.5MHz? Check actual REFclk on your board",
-        "set_area / write_command / write_data are the 3 fundamental operations",
-        "draw_image_rgb565 reads file as raw big-endian uint16 per pixel (no header)"
-    ]
+        "assets": "assets/",
+        "conversion_tools": "script_tools_ssd1963_rpi/"
+    }
 }

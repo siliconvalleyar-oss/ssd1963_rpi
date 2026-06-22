@@ -6,7 +6,7 @@ SRC_DIR = src
 OBJ_DIR = obj
 BIN_DIR = bin
 
-SRCS = main.cpp $(SRC_DIR)/ssd1963.cpp $(SRC_DIR)/menu.cpp $(SRC_DIR)/qrcodegen.cpp
+SRCS = main.cpp $(SRC_DIR)/ssd1963.cpp
 OBJS = $(patsubst %.cpp, $(OBJ_DIR)/%.o, $(notdir $(SRCS)))
 TARGET = $(BIN_DIR)/ssd1963_app
 
