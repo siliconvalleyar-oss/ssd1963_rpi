@@ -19,12 +19,17 @@ private:
     struct Item { const char* label; Scene* target; };
     Item     m_items[MENU_MAX_ITEMS];
     uint8_t  m_count;
-    uint8_t  m_sel;        // item actual
-    uint8_t  m_next_sel;   // item para la próxima vez que entre al menú
+    uint8_t  m_target;   // item a seleccionar esta vez
+    uint8_t  m_next;     // item para la próxima vez
+    uint8_t  m_cur;      // item actualmente destacado en pantalla
     uint32_t m_timer;
     bool     m_drawn;
 
-    static constexpr uint32_t HIGHLIGHT_MS = 2500;
+    enum Phase { CYCLE, HOLD, DONE };
+    Phase    m_phase;
+
+    static constexpr uint32_t CYCLE_MS  = 600;
+    static constexpr uint32_t HOLD_MS   = 1500;
 
     void do_select();
 };
