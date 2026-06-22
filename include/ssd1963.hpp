@@ -175,6 +175,18 @@ public:
     // Visualización de imágenes
     // ---------------------------------------------------------------
 
+    /** @brief Escribe un bloque de píxeles RGB565 en el display.
+     *
+     *  Usa set_area + escritura masiva. Mucho más rápido que draw_pixel por píxel.
+     *
+     *  @param x    X inicial.
+     *  @param y    Y inicial.
+     *  @param w    Ancho en píxeles.
+     *  @param h    Alto en píxeles.
+     *  @param data Arreglo de colores RGB565 (w × h píxeles, row-major). */
+    void draw_pixels(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
+                     const uint16_t* data);
+
     /** @brief Carga y muestra una imagen RGB565 raw desde archivo.
      *
      *  El archivo debe tener exactamente LCD_WIDTH * LCD_HEIGHT * 2 bytes

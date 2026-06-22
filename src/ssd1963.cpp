@@ -316,13 +316,17 @@ void SSD1963::draw_char(uint16_t x, uint16_t y, char chr, uint16_t color, uint16
     }
     uint8_t idx = chr - 0x20;
 
+    // Rellenar fondo completo en 1 operación en vez de 64 draw_pixel
+    if (bg != 0xFFFF) {
+        fill_rect(x, y, FONT_CHAR_WIDTH, FONT_CHAR_HEIGHT, bg);
+    }
+
+    // Dibujar solo píxeles de frente (típicamente 5-40 por carácter)
     for (uint8_t row = 0; row < FONT_CHAR_HEIGHT; row++) {
         uint8_t bits = m_font_8x8[idx][row];
         for (uint8_t col = 0; col < FONT_CHAR_WIDTH; col++) {
             if (bits & (1 << (7 - col))) {
                 draw_pixel(x + col, y + row, color);
-            } else if (bg != 0xFFFF) {
-                draw_pixel(x + col, y + row, bg);
             }
         }
     }
@@ -407,6 +411,16 @@ void SSD1963::draw_string_centered_scaled(uint16_t center_x, uint16_t y, const c
 // =========================================================================
 // Visualización de imágenes
 // =========================================================================
+void SSD1963::draw_pixels(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
+                          const uint16_t* data) {
+    set_area(x, y, x + w - 1, y + h - 1);
+    write_command(SSD1963_WRITE_MEMORY_START);
+    uint32_t n = (uint32_t)w * h;
+    for (uint32_t i = 0; i < n; i++) {
+        write_data(data[i]);
+    }
+}
+
 void SSD1963::draw_image_rgb565(const char* filepath) {
     FILE* file = fopen(filepath, "rb");
     if (!file) {
