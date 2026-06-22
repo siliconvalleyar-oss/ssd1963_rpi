@@ -189,13 +189,14 @@ void SSD1963::init() {
 }
 
 void SSD1963::write_data_bus(uint16_t data) {
-    bcm2835_gpio_write_multi(DATA_PINS_MASK, LOW);
-    uint32_t mask = 0;
-    for (uint8_t i = 0; i < 16; i++)
-        if (data & (1 << i))
-            mask |= (1 << (SSD1963_LCD_D0 + i));
-    if (mask)
-        bcm2835_gpio_write_multi(mask, HIGH);
+    for (uint8_t pin = SSD1963_LCD_D0; pin <= SSD1963_LCD_D15; pin++) {
+        bcm2835_gpio_write(pin, LOW);
+    }
+    for (uint8_t i = 0; i < 16; i++) {
+        if (data & (1 << i)) {
+            bcm2835_gpio_write(SSD1963_LCD_D0 + i, HIGH);
+        }
+    }
 }
 
 void SSD1963::write_command(uint8_t cmd) {
