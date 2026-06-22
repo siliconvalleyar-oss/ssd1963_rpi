@@ -11,7 +11,10 @@ static uint16_t rgb(uint8_t r, uint8_t g, uint8_t b) {
 SpriteViewerScene::SpriteViewerScene(SSD1963& display)
     : Scene(display), m_count(0), m_idx(0), m_timer(0), m_drawn(false)
 {
-    std::memset(m_entries, 0, sizeof(m_entries));
+    for (uint8_t i = 0; i < SPRITE_VIEWER_MAX; i++) {
+        m_entries[i].label  = nullptr;
+        m_entries[i].loaded = false;
+    }
 }
 
 bool SpriteViewerScene::add_sprite(const char* filepath, const char* label) {
