@@ -1,21 +1,135 @@
-// ssd1963.cpp
+/**
+ * @file    ssd1963.cpp
+ * @brief   Implementación del driver SSD1963 para Raspberry Pi.
+ * @details Control de display TFT mediante bus paralelo 8080
+ *          con GPIO bit-banging via libbcm2835.
+ */
 
 #include <unistd.h>
 #include <iostream>
+#include <cstring>
 #include <config_hw.hpp>
 #include <ssd1963_cmd.hpp>
 #include <ssd1963.hpp>
 #include <color.hpp>
 
+// =========================================================================
+// Fuente bitmap 8x8 para caracteres ASCII imprimibles (0x20 - 0x7E)
+// =========================================================================
+// Cada carácter se define como 8 bytes, cada byte representa una columna
+// de 8 píxeles (MSB = píxel superior). Adaptado de fuentes estándar.
+const uint8_t SSD1963::m_font_8x8[95][8] = {
+    {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}, // ' '
+    {0x18,0x18,0x18,0x18,0x18,0x00,0x18,0x00}, // '!'
+    {0x6C,0x6C,0x6C,0x00,0x00,0x00,0x00,0x00}, // '"'
+    {0x6C,0x6C,0xFE,0x6C,0xFE,0x6C,0x6C,0x00}, // '#'
+    {0x18,0x3E,0x60,0x3C,0x06,0x7C,0x18,0x00}, // '$'
+    {0x00,0x66,0xAC,0xD8,0x36,0x6A,0xCC,0x00}, // '%'
+    {0x38,0x6C,0x68,0x76,0xDC,0xCC,0x76,0x00}, // '&'
+    {0x18,0x18,0x18,0x00,0x00,0x00,0x00,0x00}, // '''
+    {0x0C,0x18,0x30,0x30,0x30,0x18,0x0C,0x00}, // '('
+    {0x30,0x18,0x0C,0x0C,0x0C,0x18,0x30,0x00}, // ')'
+    {0x00,0x66,0x3C,0xFF,0x3C,0x66,0x00,0x00}, // '*'
+    {0x00,0x18,0x18,0x7E,0x18,0x18,0x00,0x00}, // '+'
+    {0x00,0x00,0x00,0x00,0x00,0x18,0x18,0x30}, // ','
+    {0x00,0x00,0x00,0x7E,0x00,0x00,0x00,0x00}, // '-'
+    {0x00,0x00,0x00,0x00,0x00,0x18,0x18,0x00}, // '.'
+    {0x06,0x0C,0x0C,0x18,0x30,0x30,0x60,0x00}, // '/'
+    {0x3C,0x66,0x76,0x7E,0x6E,0x66,0x3C,0x00}, // '0'
+    {0x18,0x38,0x18,0x18,0x18,0x18,0x7E,0x00}, // '1'
+    {0x3C,0x66,0x06,0x1C,0x30,0x60,0x7E,0x00}, // '2'
+    {0x3C,0x66,0x06,0x1C,0x06,0x66,0x3C,0x00}, // '3'
+    {0x1C,0x3C,0x6C,0xCC,0xFE,0x0C,0x0C,0x00}, // '4'
+    {0x7E,0x60,0x7C,0x06,0x06,0x66,0x3C,0x00}, // '5'
+    {0x3C,0x66,0x60,0x7C,0x66,0x66,0x3C,0x00}, // '6'
+    {0x7E,0x06,0x0C,0x18,0x30,0x30,0x30,0x00}, // '7'
+    {0x3C,0x66,0x66,0x3C,0x66,0x66,0x3C,0x00}, // '8'
+    {0x3C,0x66,0x66,0x3E,0x06,0x66,0x3C,0x00}, // '9'
+    {0x00,0x18,0x18,0x00,0x00,0x18,0x18,0x00}, // ':'
+    {0x00,0x18,0x18,0x00,0x00,0x18,0x18,0x30}, // ';'
+    {0x0C,0x18,0x30,0x60,0x30,0x18,0x0C,0x00}, // '<'
+    {0x00,0x00,0x7E,0x00,0x7E,0x00,0x00,0x00}, // '='
+    {0x30,0x18,0x0C,0x06,0x0C,0x18,0x30,0x00}, // '>'
+    {0x3C,0x66,0x0C,0x18,0x18,0x00,0x18,0x00}, // '?'
+    {0x3C,0x66,0x6E,0x6E,0x60,0x66,0x3C,0x00}, // '@'
+    {0x18,0x3C,0x66,0x66,0x7E,0x66,0x66,0x00}, // 'A'
+    {0x7C,0x66,0x66,0x7C,0x66,0x66,0x7C,0x00}, // 'B'
+    {0x3C,0x66,0x60,0x60,0x60,0x66,0x3C,0x00}, // 'C'
+    {0x78,0x6C,0x66,0x66,0x66,0x6C,0x78,0x00}, // 'D'
+    {0x7E,0x60,0x60,0x7C,0x60,0x60,0x7E,0x00}, // 'E'
+    {0x7E,0x60,0x60,0x7C,0x60,0x60,0x60,0x00}, // 'F'
+    {0x3C,0x66,0x60,0x6E,0x66,0x66,0x3E,0x00}, // 'G'
+    {0x66,0x66,0x66,0x7E,0x66,0x66,0x66,0x00}, // 'H'
+    {0x7E,0x18,0x18,0x18,0x18,0x18,0x7E,0x00}, // 'I'
+    {0x06,0x06,0x06,0x06,0x06,0x66,0x3C,0x00}, // 'J'
+    {0x66,0x6C,0x78,0x70,0x78,0x6C,0x66,0x00}, // 'K'
+    {0x60,0x60,0x60,0x60,0x60,0x60,0x7E,0x00}, // 'L'
+    {0xC6,0xEE,0xFE,0xD6,0xC6,0xC6,0xC6,0x00}, // 'M'
+    {0x66,0x76,0x7E,0x7E,0x6E,0x66,0x66,0x00}, // 'N'
+    {0x3C,0x66,0x66,0x66,0x66,0x66,0x3C,0x00}, // 'O'
+    {0x7C,0x66,0x66,0x7C,0x60,0x60,0x60,0x00}, // 'P'
+    {0x3C,0x66,0x66,0x66,0x6E,0x3C,0x0E,0x00}, // 'Q'
+    {0x7C,0x66,0x66,0x7C,0x6C,0x66,0x66,0x00}, // 'R'
+    {0x3C,0x66,0x60,0x3C,0x06,0x66,0x3C,0x00}, // 'S'
+    {0x7E,0x18,0x18,0x18,0x18,0x18,0x18,0x00}, // 'T'
+    {0x66,0x66,0x66,0x66,0x66,0x66,0x3C,0x00}, // 'U'
+    {0x66,0x66,0x66,0x66,0x66,0x3C,0x18,0x00}, // 'V'
+    {0xC6,0xC6,0xC6,0xD6,0xFE,0xEE,0xC6,0x00}, // 'W'
+    {0x66,0x66,0x3C,0x18,0x3C,0x66,0x66,0x00}, // 'X'
+    {0x66,0x66,0x66,0x3C,0x18,0x18,0x18,0x00}, // 'Y'
+    {0x7E,0x06,0x0C,0x18,0x30,0x60,0x7E,0x00}, // 'Z'
+    {0x3C,0x30,0x30,0x30,0x30,0x30,0x3C,0x00}, // '['
+    {0x60,0x30,0x30,0x18,0x0C,0x0C,0x06,0x00}, // '\'
+    {0x3C,0x0C,0x0C,0x0C,0x0C,0x0C,0x3C,0x00}, // ']'
+    {0x18,0x3C,0x66,0x00,0x00,0x00,0x00,0x00}, // '^'
+    {0x00,0x00,0x00,0x00,0x00,0x00,0xFE,0x00}, // '_'
+    {0x18,0x18,0x0C,0x00,0x00,0x00,0x00,0x00}, // '`'
+    {0x00,0x00,0x3C,0x06,0x3E,0x66,0x3E,0x00}, // 'a'
+    {0x60,0x60,0x7C,0x66,0x66,0x66,0x7C,0x00}, // 'b'
+    {0x00,0x00,0x3C,0x66,0x60,0x66,0x3C,0x00}, // 'c'
+    {0x06,0x06,0x3E,0x66,0x66,0x66,0x3E,0x00}, // 'd'
+    {0x00,0x00,0x3C,0x66,0x7E,0x60,0x3C,0x00}, // 'e'
+    {0x1C,0x36,0x30,0x7C,0x30,0x30,0x30,0x00}, // 'f'
+    {0x00,0x00,0x3E,0x66,0x66,0x3E,0x06,0x3C}, // 'g'
+    {0x60,0x60,0x7C,0x66,0x66,0x66,0x66,0x00}, // 'h'
+    {0x18,0x00,0x38,0x18,0x18,0x18,0x3C,0x00}, // 'i'
+    {0x18,0x00,0x38,0x18,0x18,0x18,0x18,0x70}, // 'j'
+    {0x60,0x60,0x66,0x6C,0x78,0x6C,0x66,0x00}, // 'k'
+    {0x38,0x18,0x18,0x18,0x18,0x18,0x3C,0x00}, // 'l'
+    {0x00,0x00,0xEC,0xFE,0xD6,0xC6,0xC6,0x00}, // 'm'
+    {0x00,0x00,0x7C,0x66,0x66,0x66,0x66,0x00}, // 'n'
+    {0x00,0x00,0x3C,0x66,0x66,0x66,0x3C,0x00}, // 'o'
+    {0x00,0x00,0x7C,0x66,0x66,0x7C,0x60,0x60}, // 'p'
+    {0x00,0x00,0x3E,0x66,0x66,0x3E,0x06,0x06}, // 'q'
+    {0x00,0x00,0x7C,0x66,0x60,0x60,0x60,0x00}, // 'r'
+    {0x00,0x00,0x3E,0x60,0x3C,0x06,0x7C,0x00}, // 's'
+    {0x30,0x30,0x7C,0x30,0x30,0x30,0x1C,0x00}, // 't'
+    {0x00,0x00,0x66,0x66,0x66,0x66,0x3E,0x00}, // 'u'
+    {0x00,0x00,0x66,0x66,0x66,0x3C,0x18,0x00}, // 'v'
+    {0x00,0x00,0xC6,0xC6,0xD6,0x7E,0x6C,0x00}, // 'w'
+    {0x00,0x00,0x66,0x3C,0x18,0x3C,0x66,0x00}, // 'x'
+    {0x00,0x00,0x66,0x66,0x66,0x3E,0x06,0x3C}, // 'y'
+    {0x00,0x00,0x7E,0x0C,0x18,0x30,0x7E,0x00}, // 'z'
+    {0x0E,0x18,0x18,0x70,0x18,0x18,0x0E,0x00}, // '{'
+    {0x18,0x18,0x18,0x00,0x18,0x18,0x18,0x00}, // '|'
+    {0x70,0x18,0x18,0x0E,0x18,0x18,0x70,0x00}, // '}'
+    {0x76,0xDC,0x00,0x00,0x00,0x00,0x00,0x00}, // '~'
+};
 
+// =========================================================================
+// Constructor
+// =========================================================================
 SSD1963::SSD1963() {}
 
+// =========================================================================
+// Inicialización
+// =========================================================================
 void SSD1963::delay_ms(uint32_t ms) {
     usleep(ms * 1000);
 }
 
 void SSD1963::setup_gpio() {
-    // Configurar pines de datos como salida
+    // Configurar pines de datos D0-D15 como salida
     for (uint8_t pin = SSD1963_LCD_D0; pin <= SSD1963_LCD_D15; pin++) {
         bcm2835_gpio_fsel(pin, BCM2835_GPIO_FSEL_OUTP);
     }
@@ -25,7 +139,7 @@ void SSD1963::setup_gpio() {
     bcm2835_gpio_fsel(SSD1963_LCD_CS, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(SSD1963_LCD_RESET, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(SSD1963_LCD_BACKLIGHT, BCM2835_GPIO_FSEL_OUTP);
-    // Estados iniciales
+    // Estados iniciales (inactivos)
     CS_HIGH();
     WR_HIGH();
     RS_HIGH();
@@ -33,105 +147,64 @@ void SSD1963::setup_gpio() {
     BACKLIGHT_OFF();
 }
 
-
-
-void  SSD1963::write_command(uint8_t cmd) {
-    RS_LOW();
-    CS_LOW();
-    write_data_bus(cmd);
-    WR_LOW();
-   //  usleep(10); // o eliminarlo
-    WR_HIGH();
-    CS_HIGH();
-}
-void SSD1963::write_data(uint16_t data) {
-    RS_HIGH();
-    CS_LOW();
-    write_data_bus(data);
-    WR_LOW();
-     //usleep(10); // o eliminarlo
-    WR_HIGH();
-    CS_HIGH();
-}
- 
-
-void SSD1963::set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
-    write_command(SSD1963_SET_COLUMN_ADDRESS);
-    write_data(x1 >> 8);
-    write_data(x1 & 0xFF);
-    write_data(x2 >> 8);
-    write_data(x2 & 0xFF);
-    write_command(SSD1963_SET_PAGE_ADDRESS);
-    write_data(y1 >> 8);
-    write_data(y1 & 0xFF);
-    write_data(y2 >> 8);
-    write_data(y2 & 0xFF);
-}
-
-
-
-void SSD1963::clear_screen(uint16_t color) {
-    set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
-    write_command(SSD1963_WRITE_MEMORY_START);
-    for (uint32_t i = 0; i < LCD_WIDTH * LCD_HEIGHT; i++) {
-        write_data(color);
-        write_data(color>>8);
-    }
-}
-
-
-
 void SSD1963::init() {
-
-    // 1. Reset físico (mismo estilo que STM32)
+    // 1. Reset físico por GPIO
     RESET_LOW();
-    delay_ms(10); // equivalente a un pequeño ciclo de espera
+    delay_ms(10);
     RESET_HIGH();
     delay_ms(10);
-    // 2. Soft Reset (ANTES del PLL)
+
+    // 2. Soft reset por comando
     write_command(SSD1963_SOFT_RESET);
     delay_ms(10);
-    // 3. Configurar PLL (para REFclk = 10 MHz → PLLclk = 500MHz, SYSclk = 100MHz)
+
+    // 3. Configurar PLL
+    //    REFclk = 10 MHz → PLLclk = 500 MHz (M=50x), SYSclk = 100 MHz (N=/5)
     write_command(SSD1963_SET_PLL_MN);
-    write_data(49);     // PLLclk = REFclk * 50
-    write_data(4);      // SYSclk = PLLclk / 5
-    write_data(4);      // Dummy (según código STM32)
-    // Activar PLL
+    write_data(49);  // Multiplicador M (PLLclk = REFclk * (M+1))
+    write_data(4);   // Divisor N (SYSclk = PLLclk / (N+1))
+    write_data(4);   // Dummy (reservado)
+
+    // Activar PLL en dos pasos
     write_command(SSD1963_SET_PLL);
     write_data(0x01);
-    delay_ms(10);  // largo retardo
+    delay_ms(10);
     write_command(SSD1963_SET_PLL);
     write_data(0x03);
     delay_ms(10);
-    // 4. Configurar modo LCD
+
+    // 4. Configurar modo LCD (DE mode, RGB565, 480x272)
     write_command(SSD1963_SET_LCD_MODE);
-    write_data(0x0C);    // DE mode
+    write_data(0x0C);    // TFT + DE mode
     write_data(0x00);    // RGB565
     write_data((LCD_WIDTH - 1) >> 8);
     write_data((LCD_WIDTH - 1) & 0xFF);
     write_data((LCD_HEIGHT - 1) >> 8);
     write_data((LCD_HEIGHT - 1) & 0xFF);
-    write_data(0x00);    // RGB
-    // 5. Interfaz de datos (RGB565)
+    write_data(0x00);    // RGB orden
+
+    // 5. Interfaz de datos de píxel (16-bit RGB565)
     write_command(SSD1963_SET_PIXEL_DATA_INTERFACE);
-    write_data(SSD1963_PDI_16BIT565);  // Interfaz 16-bit 565
-    // 6. Frecuencia LSHIFT
-    uint32_t LCD_FPR = 0x01E848; // ejemplo: 2.0MHz para SYSCLK=100MHz
+    write_data(SSD1963_PDI_16BIT565);
+
+    // 6. Frecuencia LSHIFT (pixel clock)
     write_command(SSD1963_SET_LSHIFT_FREQ);
     write_data((LCD_FPR >> 16) & 0xFF);
     write_data((LCD_FPR >> 8) & 0xFF);
     write_data(LCD_FPR & 0xFF);
-    // 7. Tiempos de sincronización horizontales
+
+    // 7. Temporización horizontal
     write_command(SSD1963_SET_HOR_PERIOD);
     write_data((TFT_HSYNC_PERIOD >> 8) & 0xFF);
     write_data(TFT_HSYNC_PERIOD & 0xFF);
     write_data((TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH) >> 8);
     write_data((TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH) & 0xFF);
     write_data(TFT_HSYNC_PULSE);
-    write_data(0x00); // LPS = 0
-    write_data(0x00); // Opcional
-    write_data(0x00); // Opcional
-    // 8. Tiempos de sincronización verticales
+    write_data(0x00);
+    write_data(0x00);
+    write_data(0x00);
+
+    // 8. Temporización vertical
     write_command(SSD1963_SET_VER_PERIOD);
     write_data((TFT_VSYNC_PERIOD >> 8) & 0xFF);
     write_data(TFT_VSYNC_PERIOD & 0xFF);
@@ -140,34 +213,156 @@ void SSD1963::init() {
     write_data(TFT_VSYNC_PULSE);
     write_data(0x00);
     write_data(0x00);
-    // 9. Encender display
+
+    // 9. Encender display y backlight
     write_command(SSD1963_ON_DISPLAY);
     delay_ms(50);
-      // 12. Encender luz de fondo (GPIO)
     BACKLIGHT_ON();
 }
 
- 
+// =========================================================================
+// Primitivas del bus 8080
+// =========================================================================
+void SSD1963::write_command(uint8_t cmd) {
+    RS_LOW();
+    CS_LOW();
+    write_data_bus(cmd);
+    WR_LOW();
+    WR_HIGH();
+    CS_HIGH();
+}
 
-void SSD1963::draw_block(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
-    set_area(x, y, x + width - 1, y + height - 1);
+void SSD1963::write_data(uint16_t data) {
+    RS_HIGH();
+    CS_LOW();
+    write_data_bus(data);
+    WR_LOW();
+    WR_HIGH();
+    CS_HIGH();
+}
+
+void SSD1963::write_data_bus(uint16_t data) {
+    // Limpiar todos los pines de datos
+    for (uint8_t pin = SSD1963_LCD_D0; pin <= SSD1963_LCD_D15; pin++) {
+        bcm2835_gpio_write(pin, LOW);
+    }
+    // Escribir bits activos
+    for (uint8_t i = 0; i < 16; i++) {
+        if (data & (1 << i)) {
+            bcm2835_gpio_write(SSD1963_LCD_D0 + i, HIGH);
+        }
+    }
+}
+
+void SSD1963::set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
+    write_command(SSD1963_SET_COLUMN_ADDRESS);
+    write_data(x1 >> 8);
+    write_data(x1 & 0xFF);
+    write_data(x2 >> 8);
+    write_data(x2 & 0xFF);
+
+    write_command(SSD1963_SET_PAGE_ADDRESS);
+    write_data(y1 >> 8);
+    write_data(y1 & 0xFF);
+    write_data(y2 >> 8);
+    write_data(y2 & 0xFF);
+}
+
+// =========================================================================
+// Operaciones de dibujo
+// =========================================================================
+void SSD1963::clear_screen(uint16_t color) {
+    set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
     write_command(SSD1963_WRITE_MEMORY_START);
-    for (uint32_t i = 0; i < width * height; i++) {
+    for (uint32_t i = 0; i < LCD_WIDTH * LCD_HEIGHT; i++) {
         write_data(color);
     }
 }
 
 void SSD1963::draw_pixel(uint16_t x, uint16_t y, uint16_t color) {
-    set_area(x, y, x, y);  // Define el área como 1x1 píxel
+    set_area(x, y, x, y);
     write_command(SSD1963_WRITE_MEMORY_START);
-    write_data(color);     // Envía el color (pixel)
+    write_data(color);
 }
 
+void SSD1963::draw_block(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
+    set_area(x, y, x + width - 1, y + height - 1);
+    write_command(SSD1963_WRITE_MEMORY_START);
+    for (uint32_t i = 0; i < (uint32_t)width * height; i++) {
+        write_data(color);
+    }
+}
 
+void SSD1963::fill_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
+    draw_block(x, y, width, height, color);
+}
+
+void SSD1963::draw_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
+    // Superior
+    draw_block(x, y, width, 1, color);
+    // Inferior
+    draw_block(x, y + height - 1, width, 1, color);
+    // Izquierda
+    draw_block(x, y, 1, height, color);
+    // Derecha
+    draw_block(x + width - 1, y, 1, height, color);
+}
+
+// =========================================================================
+// Renderizado de texto
+// =========================================================================
+void SSD1963::draw_char(uint16_t x, uint16_t y, char chr, uint16_t color, uint16_t bg) {
+    if (chr < 0x20 || chr > 0x7E) {
+        chr = 0x20; // Reemplazar no imprimibles con espacio
+    }
+    uint8_t idx = chr - 0x20;
+
+    for (uint8_t col = 0; col < FONT_CHAR_WIDTH; col++) {
+        uint8_t line = m_font_8x8[idx][col];
+        for (uint8_t row = 0; row < FONT_CHAR_HEIGHT; row++) {
+            if (line & (1 << row)) {
+                draw_pixel(x + col, y + row, color);
+            } else if (bg != 0xFFFF) {
+                draw_pixel(x + col, y + row, bg);
+            }
+        }
+    }
+}
+
+void SSD1963::draw_string(uint16_t x, uint16_t y, const char* str, uint16_t color, uint16_t bg) {
+    uint16_t cursor_x = x;
+    while (*str) {
+        if (*str == '\n') {
+            cursor_x = x;
+            y += FONT_CHAR_HEIGHT + 2;
+        } else {
+            draw_char(cursor_x, y, *str, color, bg);
+            cursor_x += FONT_CHAR_WIDTH + 1;
+        }
+        str++;
+    }
+}
+
+void SSD1963::draw_string_centered(uint16_t center_x, uint16_t y, const char* str,
+                                    uint16_t color, uint16_t bg) {
+    uint16_t len = 0;
+    const char* p = str;
+    while (*p) {
+        if (*p != '\n') len++;
+        p++;
+    }
+    uint16_t text_width = len * (FONT_CHAR_WIDTH + 1);
+    uint16_t start_x = center_x - (text_width / 2);
+    draw_string(start_x, y, str, color, bg);
+}
+
+// =========================================================================
+// Visualización de imágenes
+// =========================================================================
 void SSD1963::draw_image_rgb565(const char* filepath) {
     FILE* file = fopen(filepath, "rb");
     if (!file) {
-        std::cerr << "No se pudo abrir la imagen: " << filepath << std::endl;
+        std::cerr << "[SSD1963] Error: no se pudo abrir " << filepath << std::endl;
         return;
     }
 
@@ -179,23 +374,9 @@ void SSD1963::draw_image_rgb565(const char* filepath) {
         if (fread(&high, 1, 1, file) != 1) break;
         if (fread(&low, 1, 1, file) != 1) break;
 
-        uint16_t color = (high << 8) | low;
+        uint16_t color = ((uint16_t)high << 8) | low;
         write_data(color);
     }
 
     fclose(file);
 }
-
-void SSD1963::write_data_bus(uint16_t data) {
-    // Limpia todos los pines de datos
-    for (uint8_t pin = SSD1963_LCD_D0; pin <= SSD1963_LCD_D15; pin++) {
-        bcm2835_gpio_write(pin, LOW);
-    }
-    // Escribe los bits correspondientes a HIGH
-    for (uint8_t i = 0; i < 16; i++) {
-        if (data & (1 << i)) {
-            bcm2835_gpio_write(SSD1963_LCD_D0 + i, HIGH);
-        }
-    }
-}
-

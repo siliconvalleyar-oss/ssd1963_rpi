@@ -114,6 +114,14 @@ ssd1963_photo_png_2026_sucess_rgb/
 └── README.md
 ```
 
+## Documentation
+
+- [**Architecture**](ARCHITECTURE.md) — Software architecture, layers, data flow, timing configuration
+- [**Changelog**](CHANGELOG.md) — Version history and release notes
+- [**Hardware Guide**](docs/hardware.md) — Detailed pinout, wiring diagram, connection checklist
+- [**API Reference**](docs/api.md) — Full SSD1963 class API, GPIO macros, commands, color constants
+- [**Development Guide**](docs/development.md) — Setup, build, remote workflow, image pipeline, troubleshooting
+
 ## Troubleshooting
 
 - **"bcm2835.h not found"** – `libbcm2835` is not installed. Run `bash script_tools_ssd1963_rpi/install_deps.sh`.

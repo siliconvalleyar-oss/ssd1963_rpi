@@ -1,51 +1,179 @@
-// ssd1963.hpp
+/**
+ * @file    ssd1963.hpp
+ * @brief   Driver para el controlador SSD1963 TFT LCD en Raspberry Pi.
+ * @details Proporciona una interfaz completa para inicializar y dibujar
+ *          en displays SSD1963 usando GPIO bit-banging (bus paralelo 8080)
+ *          a través de la librería libbcm2835.
+ *
+ * @note    Soporta resolución 480x272 en formato RGB565 a 16-bit.
+ * @note    Requiere libbcm2835 instalada (http://www.airspayce.com/mikem/bcm2835/)
+ */
 #pragma once
+
 #include <bcm2835.h>
 #include <cstdint>
+#include <cstdio>
 
-
-//SSD1963_PIN_RST pin128_ssd1963_smd  CONF 1=8080 0:6800
-//SSD1963_PIN_RD pin121_ssd1963_smd  Enable signal (RD)6800 mode: E (enable signal)
-//8080 mode: RD# (read strobe signal)
-//SSD1963_PIN_RW  pin120_ssd1963_smd  R/W
-//SSD1963_PIN_CS  pin123_ssd1963_smd Chip Select
-//SSD1963_PIN_RS  pin123_ssd1963_smd Data command
-
-
-
-
-// Macros de control
-#define RS_LOW()    bcm2835_gpio_write(SSD1963_LCD_RS, LOW)
-#define RS_HIGH()   bcm2835_gpio_write(SSD1963_LCD_RS, HIGH)
-#define WR_LOW()    bcm2835_gpio_write(SSD1963_LCD_WR, LOW)
-#define WR_HIGH()   bcm2835_gpio_write(SSD1963_LCD_WR, HIGH)
-#define CS_LOW()    bcm2835_gpio_write(SSD1963_LCD_CS, LOW)
-#define CS_HIGH()   bcm2835_gpio_write(SSD1963_LCD_CS, HIGH)
-#define RESET_LOW() bcm2835_gpio_write(SSD1963_LCD_RESET, LOW)
-#define RESET_HIGH() bcm2835_gpio_write(SSD1963_LCD_RESET, HIGH)
-#define BACKLIGHT_ON() bcm2835_gpio_write(SSD1963_LCD_BACKLIGHT, HIGH)
+// =========================================================================
+// Macros de control GPIO
+// =========================================================================
+#define RS_LOW()        bcm2835_gpio_write(SSD1963_LCD_RS, LOW)
+#define RS_HIGH()       bcm2835_gpio_write(SSD1963_LCD_RS, HIGH)
+#define WR_LOW()        bcm2835_gpio_write(SSD1963_LCD_WR, LOW)
+#define WR_HIGH()       bcm2835_gpio_write(SSD1963_LCD_WR, HIGH)
+#define CS_LOW()        bcm2835_gpio_write(SSD1963_LCD_CS, LOW)
+#define CS_HIGH()       bcm2835_gpio_write(SSD1963_LCD_CS, HIGH)
+#define RESET_LOW()     bcm2835_gpio_write(SSD1963_LCD_RESET, LOW)
+#define RESET_HIGH()    bcm2835_gpio_write(SSD1963_LCD_RESET, HIGH)
+#define BACKLIGHT_ON()  bcm2835_gpio_write(SSD1963_LCD_BACKLIGHT, HIGH)
 #define BACKLIGHT_OFF() bcm2835_gpio_write(SSD1963_LCD_BACKLIGHT, LOW)
 
+/*! \def FONT_CHAR_WIDTH
+ *  \brief Ancho en píxeles de cada carácter bitmap. */
+/*! \def FONT_CHAR_HEIGHT
+ *  \brief Alto en píxeles de cada carácter bitmap. */
+#define FONT_CHAR_WIDTH     8
+#define FONT_CHAR_HEIGHT    8
 
+/**
+ * @class   SSD1963
+ * @brief   Controlador de alto nivel para el display SSD1963.
+ *
+ * Proporciona métodos para inicializar el display, dibujar formas
+ * geométricas, renderizar texto con fuente bitmap y mostrar imágenes
+ * desde archivos RGB565 raw.
+ *
+ * ## Uso básico
+ * @code
+ *     SSD1963 display;
+ *     bcm2835_init();
+ *     display.setup_gpio();
+ *     display.init();
+ *     display.clear_screen(BLACK);
+ *     display.draw_string(10, 10, "Hola Mundo", WHITE, BLACK);
+ * @endcode
+ */
 class SSD1963 {
 public:
-
     SSD1963();
-    void init();
+
+    // ---------------------------------------------------------------
+    // Inicialización y configuración
+    // ---------------------------------------------------------------
+
+    /** @brief Configura todos los pines GPIO como salida. */
     void setup_gpio();
-    void clear_screen(uint16_t color);
-    void draw_block(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color);
+
+    /** @brief Secuencia completa de inicialización del SSD1963.
+     *
+     *  Incluye: reset físico, soft reset, configuración PLL,
+     *  modo LCD, temporización horizontal/vertical, y encendido. */
+    void init();
+
+    /** @brief Delay de bloqueo en milisegundos.
+     *  @param ms Tiempo de espera. */
     void delay_ms(uint32_t ms);
-	void draw_pixel(uint16_t x, uint16_t y, uint16_t color);
-    void draw_image_rgb565(const char* filepath) ;
-    
+
+    // ---------------------------------------------------------------
+    // Operaciones de dibujo
+    // ---------------------------------------------------------------
+
+    /** @brief Limpia toda la pantalla con un color sólido.
+     *  @param color Color RGB565. */
+    void clear_screen(uint16_t color);
+
+    /** @brief Dibuja un píxel individual.
+     *  @param x Coordenada X.
+     *  @param y Coordenada Y.
+     *  @param color Color RGB565. */
+    void draw_pixel(uint16_t x, uint16_t y, uint16_t color);
+
+    /** @brief Rellena un área rectangular con un color sólido.
+     *  @param x      X inicial.
+     *  @param y      Y inicial.
+     *  @param width  Ancho del rectángulo.
+     *  @param height Alto del rectángulo.
+     *  @param color  Color RGB565. */
+    void draw_block(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color);
+
+    /** @brief Dibuja el contorno de un rectángulo (1px de grosor).
+     *  @param x      X inicial.
+     *  @param y      Y inicial.
+     *  @param width  Ancho.
+     *  @param height Alto.
+     *  @param color  Color del borde. */
+    void draw_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color);
+
+    /** @brief Rellena un rectángulo (alias de draw_block, semántica más clara).
+     *  @param x      X inicial.
+     *  @param y      Y inicial.
+     *  @param width  Ancho.
+     *  @param height Alto.
+     *  @param color  Color de relleno. */
+    void fill_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color);
+
+    // ---------------------------------------------------------------
+    // Renderizado de texto
+    // ---------------------------------------------------------------
+
+    /** @brief Dibuja un carácter ASCII (fuente bitmap 8x8).
+     *  @param x     Posición X.
+     *  @param y     Posición Y.
+     *  @param chr   Carácter a dibujar.
+     *  @param color Color del texto.
+     *  @param bg    Color de fondo (0xFFFF para transparente). */
+    void draw_char(uint16_t x, uint16_t y, char chr, uint16_t color, uint16_t bg);
+
+    /** @brief Dibuja una cadena de texto.
+     *  @param x     Posición X inicial.
+     *  @param y     Posición Y.
+     *  @param str   Cadena a dibujar.
+     *  @param color Color del texto.
+     *  @param bg    Color de fondo. */
+    void draw_string(uint16_t x, uint16_t y, const char* str, uint16_t color, uint16_t bg);
+
+    /** @brief Dibuja texto centrado horizontalmente.
+     *  @param center_x Centro X de la pantalla.
+     *  @param y         Posición Y.
+     *  @param str       Cadena a dibujar.
+     *  @param color     Color del texto.
+     *  @param bg        Color de fondo. */
+    void draw_string_centered(uint16_t center_x, uint16_t y, const char* str,
+                              uint16_t color, uint16_t bg);
+
+    // ---------------------------------------------------------------
+    // Visualización de imágenes
+    // ---------------------------------------------------------------
+
+    /** @brief Carga y muestra una imagen RGB565 raw desde archivo.
+     *
+     *  El archivo debe tener exactamente LCD_WIDTH * LCD_HEIGHT * 2 bytes
+     *  en formato big-endian RGB565.
+     *
+     *  @param filepath Ruta al archivo .rgb565. */
+    void draw_image_rgb565(const char* filepath);
+
 private:
-    
+    // ---------------------------------------------------------------
+    // Primitivas del bus 8080
+    // ---------------------------------------------------------------
+
+    /** @brief Escribe 16 bits en el bus de datos GPIO (bit-banging). */
     void write_data_bus(uint16_t data);
+
+    /** @brief Ciclo de escritura de comando (RS=LOW). */
     void write_command(uint8_t cmd);
+
+    /** @brief Ciclo de escritura de datos (RS=HIGH). */
     void write_data(uint16_t data);
+
+    /** @brief Define el área activa de escritura en GRAM. */
     void set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
-    void define_constants();
 
+    // ---------------------------------------------------------------
+    // Fuente bitmap 8x8 (ASCII 0x20-0x7F)
+    // ---------------------------------------------------------------
+
+    /** @brief Tabla de fuente bitmap 8x8 para caracteres ASCII imprimibles. */
+    static const uint8_t m_font_8x8[95][8];
 };
-
