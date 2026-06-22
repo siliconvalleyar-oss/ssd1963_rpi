@@ -19,13 +19,12 @@ private:
     struct Item { const char* label; Scene* target; };
     Item     m_items[MENU_MAX_ITEMS];
     uint8_t  m_count;
-    uint8_t  m_sel;
+    uint8_t  m_sel;        // item actual
+    uint8_t  m_next_sel;   // item para la próxima vez que entre al menú
     uint32_t m_timer;
-    uint32_t m_last_cycle;
     bool     m_drawn;
 
-    static constexpr uint32_t CYCLE_MS  = 2500;
-    static constexpr uint32_t SELECT_MS = 5000;
+    static constexpr uint32_t HIGHLIGHT_MS = 2500;
 
     void do_select();
 };
