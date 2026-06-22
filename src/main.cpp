@@ -15,6 +15,7 @@
 #include <engine/MenuScene.hpp>
 #include <engine/ImageViewerScene.hpp>
 #include <engine/SpaceShooterScene.hpp>
+#include <engine/FontDemoScene.hpp>
 #include <engine/PatternScene.hpp>
 #include <engine/ColorBlocksScene.hpp>
 
@@ -27,12 +28,14 @@ int main() {
 
     // Escenas
     MenuScene          menu(engine.display(), "ARCADE PHOTO");
+    FontDemoScene      font_demo(engine.display());
     SpaceShooterScene  shooter(engine.display());
     ImageViewerScene   viewer(engine.display(), "assets/capibaras.rgb565", "CAPIBARAS");
     PatternScene       patterns(engine.display());
     ColorBlocksScene   colors(engine.display());
 
     // Menú arcade
+    menu.add_item("FONT DEMO",      &font_demo, RGB565CONVERT(255, 255, 100));
     menu.add_item("SPACE SHOOTER",  &shooter,  RGB565CONVERT(0,   200, 255));
     menu.add_item("VER FOTO",       &viewer,   RGB565CONVERT(255, 200, 0));
     menu.add_item("DEMO COLORES",   &colors,   RGB565CONVERT(255, 80,  80));

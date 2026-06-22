@@ -141,6 +141,36 @@ public:
     void draw_string_centered(uint16_t center_x, uint16_t y, const char* str,
                               uint16_t color, uint16_t bg);
 
+    /** @brief Dibuja un carácter ASCII con escala (usando fill_rect).
+     *  @param x      Posición X.
+     *  @param y      Posición Y.
+     *  @param chr    Carácter a dibujar.
+     *  @param color  Color del texto.
+     *  @param bg     Color de fondo (0xFFFF = transparente).
+     *  @param scale  Factor de escala (1 = 8x8, 2 = 16x16, 3 = 24x24...). */
+    void draw_char_scaled(uint16_t x, uint16_t y, char chr,
+                          uint16_t color, uint16_t bg, uint8_t scale);
+
+    /** @brief Dibuja cadena con factor de escala.
+     *  @param x      Posición X.
+     *  @param y      Posición Y.
+     *  @param str    Cadena a dibujar.
+     *  @param color  Color del texto.
+     *  @param bg     Color de fondo.
+     *  @param scale  Factor de escala. */
+    void draw_string_scaled(uint16_t x, uint16_t y, const char* str,
+                            uint16_t color, uint16_t bg, uint8_t scale);
+
+    /** @brief Dibuja cadena escalada centrada horizontalmente.
+     *  @param center_x Centro X.
+     *  @param y         Posición Y.
+     *  @param str       Cadena.
+     *  @param color     Color.
+     *  @param bg        Fondo.
+     *  @param scale     Escala. */
+    void draw_string_centered_scaled(uint16_t center_x, uint16_t y, const char* str,
+                                     uint16_t color, uint16_t bg, uint8_t scale);
+
     // ---------------------------------------------------------------
     // Visualización de imágenes
     // ---------------------------------------------------------------

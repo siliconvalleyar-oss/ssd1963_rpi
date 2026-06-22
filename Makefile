@@ -13,6 +13,7 @@ SRCS      = $(SRC_DIR)/main.cpp \
             $(ENG_DIR)/MenuScene.cpp \
             $(ENG_DIR)/Sprite.cpp \
             $(ENG_DIR)/SpaceShooterScene.cpp \
+            $(ENG_DIR)/FontDemoScene.cpp \
             $(ENG_DIR)/ImageViewerScene.cpp \
             $(ENG_DIR)/ColorBlocksScene.cpp \
             $(ENG_DIR)/PatternScene.cpp

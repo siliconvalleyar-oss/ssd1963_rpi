@@ -357,6 +357,55 @@ void SSD1963::draw_string_centered(uint16_t center_x, uint16_t y, const char* st
 }
 
 // =========================================================================
+// Renderizado de texto con escala
+// =========================================================================
+void SSD1963::draw_char_scaled(uint16_t x, uint16_t y, char chr,
+                               uint16_t color, uint16_t bg, uint8_t scale) {
+    if (chr < 0x20 || chr > 0x7E) chr = 0x20;
+    uint8_t idx = chr - 0x20;
+    uint8_t sz = scale;
+
+    for (uint8_t col = 0; col < 8; col++) {
+        uint8_t bits = m_font_8x8[idx][col];
+        for (uint8_t row = 0; row < 8; row++) {
+            uint16_t px = x + col * sz;
+            uint16_t py = y + row * sz;
+            if (bits & (1 << row)) {
+                fill_rect(px, py, sz, sz, color);
+            } else if (bg != 0xFFFF) {
+                fill_rect(px, py, sz, sz, bg);
+            }
+        }
+    }
+}
+
+void SSD1963::draw_string_scaled(uint16_t x, uint16_t y, const char* str,
+                                 uint16_t color, uint16_t bg, uint8_t scale) {
+    uint16_t cx = x;
+    uint8_t step = 8 * scale + scale;
+    while (*str) {
+        if (*str == '\n') {
+            cx = x;
+            y += 8 * scale + scale;
+        } else {
+            draw_char_scaled(cx, y, *str, color, bg, scale);
+            cx += step;
+        }
+        str++;
+    }
+}
+
+void SSD1963::draw_string_centered_scaled(uint16_t center_x, uint16_t y, const char* str,
+                                          uint16_t color, uint16_t bg, uint8_t scale) {
+    uint16_t len = 0;
+    const char* p = str;
+    while (*p) { if (*p != '\n') len++; p++; }
+    uint16_t text_w = len * (8 * scale + scale);
+    uint16_t sx = (center_x > text_w / 2) ? center_x - text_w / 2 : 0;
+    draw_string_scaled(sx, y, str, color, bg, scale);
+}
+
+// =========================================================================
 // Visualización de imágenes
 // =========================================================================
 void SSD1963::draw_image_rgb565(const char* filepath) {
