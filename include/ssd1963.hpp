@@ -207,7 +207,7 @@ private:
     // Primitivas del bus 8080
     // ---------------------------------------------------------------
 
-    /** @brief Escribe 16 bits en el bus de datos GPIO usando multi-write. */
+    /** @brief Escribe 16 bits en el bus de datos GPIO (multi-write rápido). */
     void write_data_bus(uint16_t data);
 
     /** @brief Ciclo de escritura de comando (RS=LOW). */
@@ -215,9 +215,6 @@ private:
 
     /** @brief Ciclo de escritura de datos (RS=HIGH, CS toggles). */
     void write_data(uint16_t data);
-
-    /** @brief Convierte 16-bit data a máscara GPIO (D0-D15). */
-    static uint32_t data_to_mask(uint16_t data);
 
     /** @brief Define el área activa de escritura en GRAM. */
     void set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);

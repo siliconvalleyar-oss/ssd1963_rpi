@@ -198,13 +198,6 @@ void SSD1963::write_data_bus(uint16_t data) {
         bcm2835_gpio_write_multi(mask, HIGH);
 }
 
-uint32_t SSD1963::data_to_mask(uint16_t data) {
-    uint32_t m = 0;
-    for (uint8_t i = 0; i < 16; i++)
-        if (data & (1 << i)) m |= (1 << (SSD1963_LCD_D0 + i));
-    return m;
-}
-
 void SSD1963::write_command(uint8_t cmd) {
     RS_LOW();
     CS_LOW();
@@ -238,61 +231,29 @@ void SSD1963::set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
 }
 
 // =========================================================================
-// Operaciones de dibujo optimizadas con burst mode (CS LOW mantenido)
+// Operaciones de dibujo (usando write_data estándar con CS toggling)
 // =========================================================================
 
 void SSD1963::clear_screen(uint16_t color) {
     set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
-
-    uint32_t mask = data_to_mask(color);
-    uint32_t n = LCD_WIDTH * LCD_HEIGHT;
-
-    CS_LOW();
-    RS_LOW();
-    write_data_bus(SSD1963_WRITE_MEMORY_START);
-    WR_LOW(); WR_HIGH();
-    RS_HIGH();
-
-    for (uint32_t i = 0; i < n; i++) {
-        bcm2835_gpio_write_multi(DATA_PINS_MASK, LOW);
-        if (mask)
-            bcm2835_gpio_write_multi(mask, HIGH);
-        WR_LOW(); WR_HIGH();
+    write_command(SSD1963_WRITE_MEMORY_START);
+    for (uint32_t i = 0; i < LCD_WIDTH * LCD_HEIGHT; i++) {
+        write_data(color);
     }
-    CS_HIGH();
 }
 
 void SSD1963::draw_pixel(uint16_t x, uint16_t y, uint16_t color) {
     set_area(x, y, x, y);
-    CS_LOW();
-    RS_LOW();
-    write_data_bus(SSD1963_WRITE_MEMORY_START);
-    WR_LOW(); WR_HIGH();
-    RS_HIGH();
-    write_data_bus(color);
-    WR_LOW(); WR_HIGH();
-    CS_HIGH();
+    write_command(SSD1963_WRITE_MEMORY_START);
+    write_data(color);
 }
 
 void SSD1963::draw_block(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
     set_area(x, y, x + width - 1, y + height - 1);
-
-    uint32_t mask = data_to_mask(color);
-    uint32_t n = (uint32_t)width * height;
-
-    CS_LOW();
-    RS_LOW();
-    write_data_bus(SSD1963_WRITE_MEMORY_START);
-    WR_LOW(); WR_HIGH();
-    RS_HIGH();
-
-    for (uint32_t i = 0; i < n; i++) {
-        bcm2835_gpio_write_multi(DATA_PINS_MASK, LOW);
-        if (mask)
-            bcm2835_gpio_write_multi(mask, HIGH);
-        WR_LOW(); WR_HIGH();
+    write_command(SSD1963_WRITE_MEMORY_START);
+    for (uint32_t i = 0; i < (uint32_t)width * height; i++) {
+        write_data(color);
     }
-    CS_HIGH();
 }
 
 void SSD1963::fill_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
@@ -409,26 +370,17 @@ void SSD1963::draw_string_centered_scaled(uint16_t center_x, uint16_t y, const c
 }
 
 // =========================================================================
-// Visualización de imágenes (burst optimizado)
+// Visualización de imágenes
 // =========================================================================
 
 void SSD1963::draw_pixels(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
                           const uint16_t* data) {
     set_area(x, y, x + w - 1, y + h - 1);
-
+    write_command(SSD1963_WRITE_MEMORY_START);
     uint32_t n = (uint32_t)w * h;
-
-    CS_LOW();
-    RS_LOW();
-    write_data_bus(SSD1963_WRITE_MEMORY_START);
-    WR_LOW(); WR_HIGH();
-    RS_HIGH();
-
     for (uint32_t i = 0; i < n; i++) {
-        write_data_bus(data[i]);
-        WR_LOW(); WR_HIGH();
+        write_data(data[i]);
     }
-    CS_HIGH();
 }
 
 void SSD1963::draw_image_rgb565(const char* filepath) {
@@ -439,12 +391,7 @@ void SSD1963::draw_image_rgb565(const char* filepath) {
     }
 
     set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
-
-    CS_LOW();
-    RS_LOW();
-    write_data_bus(SSD1963_WRITE_MEMORY_START);
-    WR_LOW(); WR_HIGH();
-    RS_HIGH();
+    write_command(SSD1963_WRITE_MEMORY_START);
 
     for (uint32_t i = 0; i < LCD_WIDTH * LCD_HEIGHT; i++) {
         uint8_t high, low;
@@ -452,10 +399,8 @@ void SSD1963::draw_image_rgb565(const char* filepath) {
         if (fread(&low, 1, 1, file) != 1) break;
 
         uint16_t color = ((uint16_t)high << 8) | low;
-        write_data_bus(color);
-        WR_LOW(); WR_HIGH();
+        write_data(color);
     }
-    CS_HIGH();
 
     fclose(file);
 }
