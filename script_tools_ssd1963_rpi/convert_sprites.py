@@ -41,6 +41,23 @@ def convert_png_to_spr(png_path):
 
     print(f"  {basename:30s} {w:3d}x{h:3d}  -> {spr_path}")
 
+def gen_sprite_list():
+    """Regenera include/engine/sprite_list.hpp"""
+    out_path = "include/engine/sprite_list.hpp"
+    pairs = []
+    for f in sorted(glob.glob(os.path.join(SPRITES_DIR, "*.spr"))):
+        basename = os.path.splitext(os.path.basename(f))[0]
+        label = basename.replace("_", " ").title()
+        pairs.append((f, label))
+    with open(out_path, "w") as out:
+        out.write("#pragma once\n")
+        out.write("#include <engine/SpriteViewerScene.hpp>\n\n")
+        out.write("static void populate_sprites(SpriteViewerScene& scene) {\n")
+        for path, label in pairs:
+            out.write(f'    scene.add_sprite("{path}", "{label}");\n')
+        out.write("}\n")
+    print(f"  Regenerated {out_path} ({len(pairs)} sprites)")
+
 def main():
     print(f"Converting PNGs in {SPRITES_DIR}/ ...")
     pngs = sorted(glob.glob(os.path.join(SPRITES_DIR, "*.png")))
@@ -50,6 +67,7 @@ def main():
     for png in pngs:
         convert_png_to_spr(png)
     print(f"Done. {len(pngs)} sprites converted.")
+    gen_sprite_list()
 
 if __name__ == "__main__":
     main()

@@ -6,6 +6,8 @@
 #include <engine/ImageViewerScene.hpp>
 #include <engine/ColorBlocksScene.hpp>
 #include <engine/PatternScene.hpp>
+#include <engine/SpriteViewerScene.hpp>
+#include <engine/sprite_list.hpp>
 
 int main() {
     GameEngine engine;
@@ -17,10 +19,14 @@ int main() {
     ImageViewerScene  viewer(engine.display(), "assets/capibaras.rgb565", "CAPIBARAS");
     ColorBlocksScene  colors(engine.display());
     PatternScene      patterns(engine.display());
+    SpriteViewerScene sprites(engine.display());
+
+    populate_sprites(sprites);
 
     menu.add_item("FONT DEMO",      &font_demo);
     menu.add_item("SPACE SHOOTER",  &shooter);
     menu.add_item("VER FOTO",       &viewer);
+    menu.add_item("NAVES",          &sprites);
     menu.add_item("COLORES",        &colors);
     menu.add_item("PATRONES",       &patterns);
     menu.add_item("SALIR",          nullptr);

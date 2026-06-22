@@ -16,7 +16,8 @@ SRCS      = $(SRC_DIR)/main.cpp \
             $(ENG_DIR)/FontDemoScene.cpp \
             $(ENG_DIR)/ImageViewerScene.cpp \
             $(ENG_DIR)/ColorBlocksScene.cpp \
-            $(ENG_DIR)/PatternScene.cpp
+            $(ENG_DIR)/PatternScene.cpp \
+            $(ENG_DIR)/SpriteViewerScene.cpp
 
 OBJS      = $(patsubst %.cpp,$(OBJ_DIR)/%.o,$(notdir $(SRCS)))
 TARGET    = $(BIN_DIR)/ssd1963_app
