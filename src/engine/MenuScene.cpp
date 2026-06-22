@@ -11,6 +11,9 @@ MenuScene::MenuScene(SSD1963& display, const char* title)
     , m_scroll_offset(0)
     , m_anim_timer(0)
     , m_bg_color(RGB565CONVERT(20, 20, 30))
+    , m_auto_timer(0)
+    , m_input_timer(0)
+    , m_auto_mode(true)
 {
     std::memset(m_items, 0, sizeof(m_items));
 }
@@ -27,13 +30,41 @@ bool MenuScene::on_enter() {
     m_selected = 0;
     m_scroll_offset = 0;
     m_anim_timer = 0;
+    m_auto_timer = 0;
+    m_input_timer = 0;
+    m_auto_mode = true;
     return true;
 }
 
-void MenuScene::on_exit() {}
-
 void MenuScene::update(uint32_t dt) {
     m_anim_timer += dt;
+
+    if (m_auto_mode) {
+        m_auto_timer += dt;
+        m_input_timer += dt;
+
+        if (m_input_timer >= AUTO_CYCLE_MS && m_item_count > 1) {
+            m_input_timer = 0;
+            // Avanzar selección
+            if (m_selected < m_item_count - 1) {
+                m_selected++;
+            } else {
+                m_selected = 0;
+            }
+            // Ajustar scroll
+            if (m_selected < m_scroll_offset) {
+                m_scroll_offset = m_selected;
+            } else if (m_selected >= m_scroll_offset + VISIBLE_ITEMS) {
+                m_scroll_offset = m_selected - VISIBLE_ITEMS + 1;
+            }
+        }
+
+        // Auto-seleccionar tras AUTO_SELECT_MS de estar en el mismo item
+        if (m_auto_timer >= AUTO_SELECT_MS) {
+            m_auto_timer = 0;
+            do_select();
+        }
+    }
 }
 
 void MenuScene::draw() {
@@ -62,6 +93,11 @@ void MenuScene::draw() {
 }
 
 uint8_t MenuScene::handle_button(uint8_t btn) {
+    // Al recibir un botón, salir de auto-mode
+    m_auto_mode = false;
+    m_input_timer = 0;
+    m_auto_timer = 0;
+
     switch (btn) {
         case static_cast<uint8_t>(Button::UP):
             if (m_selected > 0) {
@@ -82,22 +118,32 @@ uint8_t MenuScene::handle_button(uint8_t btn) {
             break;
 
         case static_cast<uint8_t>(Button::SELECT):
-            if (m_items[m_selected].target != nullptr) {
-                return MENU_ACTION_CHANGE;
-            }
+            do_select();
             break;
 
         case static_cast<uint8_t>(Button::BACK):
-            return MENU_ACTION_EXIT;
-
+            return 2;
         default:
             break;
     }
-    return MENU_ACTION_NONE;
+    return 0;
 }
 
 const char* MenuScene::name() const {
     return "MenuScene";
+}
+
+void MenuScene::do_select() {
+    if (m_items[m_selected].target != nullptr) {
+        if (m_engine) {
+            m_engine->set_scene(m_items[m_selected].target);
+        }
+    } else {
+        // Items sin target: mostrar info o salir
+        if (std::strcmp(m_items[m_selected].label, "Salir") == 0) {
+            if (m_engine) m_engine->quit();
+        }
+    }
 }
 
 void MenuScene::draw_item(uint8_t index, bool selected) {

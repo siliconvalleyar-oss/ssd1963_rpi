@@ -6,18 +6,25 @@ ImageViewerScene::ImageViewerScene(SSD1963& display, const char* filepath)
     : Scene(display)
     , m_filepath(filepath)
     , m_image_loaded(false)
-    , m_display_timer(0)
+    , m_timer(0)
 {
 }
 
 bool ImageViewerScene::on_enter() {
     m_image_loaded = false;
-    m_display_timer = 0;
+    m_timer = 0;
     return true;
 }
 
 void ImageViewerScene::update(uint32_t dt) {
-    m_display_timer += dt;
+    m_timer += dt;
+
+    // Auto-retorno al menú
+    if (m_image_loaded && m_timer > AUTO_RETURN_MS) {
+        if (m_engine && m_engine->menu_scene()) {
+            m_engine->set_scene(m_engine->menu_scene());
+        }
+    }
 }
 
 void ImageViewerScene::draw() {
@@ -25,10 +32,9 @@ void ImageViewerScene::draw() {
         m_display.clear_screen(BLACK);
         m_display.draw_image_rgb565(m_filepath);
         m_image_loaded = true;
-        std::cout << "[ImageViewer] Loaded: " << m_filepath << "\n";
+        std::cout << "[ImageViewer] Cargado: " << m_filepath << "\n";
     }
 
-    // Info overlay
     char info[64];
     std::snprintf(info, sizeof(info), "%s", m_filepath);
     m_display.draw_string(4, LCD_HEIGHT - 12, info,
@@ -37,7 +43,10 @@ void ImageViewerScene::draw() {
 
 uint8_t ImageViewerScene::handle_button(uint8_t btn) {
     (void)btn;
-    return MENU_ACTION_CHANGE;
+    if (m_engine && m_engine->menu_scene()) {
+        m_engine->set_scene(m_engine->menu_scene());
+    }
+    return 0;
 }
 
 const char* ImageViewerScene::name() const {

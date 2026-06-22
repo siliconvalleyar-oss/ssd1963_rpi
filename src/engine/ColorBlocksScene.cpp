@@ -30,9 +30,16 @@ bool ColorBlocksScene::on_enter() {
 void ColorBlocksScene::update(uint32_t dt) {
     m_timer += dt;
 
-    if (m_phase == 0 && m_blocks_drawn && m_timer > 1500) {
+    if (m_phase == 0 && m_blocks_drawn && m_timer > PHASE_BLOCKS_MS) {
         m_phase = 1;
         m_timer = 0;
+    }
+
+    // Auto-retorno al menú
+    if (m_phase == 1 && m_image_drawn && m_timer > PHASE_IMAGE_MS) {
+        if (m_engine && m_engine->menu_scene()) {
+            m_engine->set_scene(m_engine->menu_scene());
+        }
     }
 }
 
@@ -47,22 +54,24 @@ void ColorBlocksScene::draw() {
                                   m_blocks[i].color, BLACK);
         }
         m_blocks_drawn = true;
-        std::cout << "[ColorBlocks] 7 color blocks drawn\n";
+        std::cout << "[ColorBlocks] 7 bloques de color dibujados\n";
     }
 
     if (m_phase == 1 && !m_image_drawn) {
         m_display.draw_image_rgb565("assets/capibaras.rgb565");
         m_image_drawn = true;
-        std::cout << "[ColorBlocks] Image displayed\n";
+        std::cout << "[ColorBlocks] Imagen mostrada\n";
     }
 }
 
 uint8_t ColorBlocksScene::handle_button(uint8_t btn) {
     if (btn == static_cast<uint8_t>(Button::SELECT) ||
         btn == static_cast<uint8_t>(Button::BACK)) {
-        return MENU_ACTION_CHANGE;
+        if (m_engine && m_engine->menu_scene()) {
+            m_engine->set_scene(m_engine->menu_scene());
+        }
     }
-    return MENU_ACTION_NONE;
+    return 0;
 }
 
 const char* ColorBlocksScene::name() const {

@@ -6,83 +6,59 @@
 #include <config_hw.hpp>
 #include <color.hpp>
 
-#define ENGINE_VERSION "2.0.0"
+#define ENGINE_VERSION "2.1.0"
 
 /*! \enum EngineState
  *  \brief Estados del ciclo de vida del motor. */
 enum class EngineState : uint8_t {
-    INIT,       ///< Inicializando componentes
-    RUNNING,    ///< Ejecutando escena activa
-    SLEEP,      ///< Suspensión de bajo consumo
-    EXIT        ///< Solicitud de salida
+    INIT,
+    RUNNING,
+    EXIT
 };
 
 /*! \enum Button
  *  \brief Mapeo de botones GPIO para entrada de usuario. */
 enum class Button : uint8_t {
     NONE   = 0,
-    UP     = 1,  ///< GPIO 7  - Navegar arriba / anterior
-    DOWN   = 2,  ///< GPIO 8  - Navegar abajo / siguiente
-    SELECT = 3,  ///< GPIO 9  - Seleccionar / entrar
-    BACK   = 4   ///< GPIO 10 - Retroceder / salir
+    UP     = 1,
+    DOWN   = 2,
+    SELECT = 3,
+    BACK   = 4
 };
 
 /*! \class GameEngine
- *  \brief Motor de juegos principal.
+ *  \brief Motor principal.
  *
- *  Gestiona el ciclo de vida de escenas, entrada de usuario,
- *  temporización y control de GPIO. Sigue un patrón de máquina
- *  de estados con escenas intercambiables. */
+ *  Gestiona el ciclo de escenas, entrada de usuario, temporización.
+ *  Las escenas pueden solicitar cambios mediante get_engine(). */
 class GameEngine {
 public:
     GameEngine();
     ~GameEngine();
 
-    /*! \brief Inicializa GPIO, driver LCD y engine.
-     *  \return true si todo se inicializa correctamente. */
     bool init();
-
-    /*! \brief Bucle principal del motor. */
     void run();
-
-    /*! \brief Solicita la salida del bucle principal. */
     void quit();
 
-    /*! \brief Cambia a una nueva escena.
-     *  \param scene Puntero a la escena (el engine NO toma ownership). */
     void set_scene(Scene* scene);
+    void set_menu_scene(Scene* scene);
+    Scene* menu_scene() const;
 
-    /*! \brief Obtiene el driver del display.
-     *  \return Referencia al SSD1963. */
     SSD1963& display();
 
-    /*! \brief Lee el estado actual de los botones GPIO.
-     *  \return Botón presionado (o NONE). */
     Button read_buttons();
-
-    /*! \brief Obtiene el estado del motor.
-     *  \return EngineState actual. */
     EngineState state() const;
-
-    /*! \brief Obtiene el tiempo transcurrido desde el inicio en ms.
-     *  \return Milisegundos desde init(). */
     uint32_t elapsed_ms() const;
-
-    /*! \brief Configura pines GPIO como entrada para botones.
-     *  \param enable true para habilitar, false para deshabilitar. */
     void enable_buttons(bool enable);
 
 private:
-    SSD1963         m_display;     ///< Driver del display TFT
-    Scene*          m_active_scene; ///< Escena actualmente activa
-    EngineState     m_state;       ///< Estado interno del motor
-    uint32_t        m_start_time;  ///< Timestamp de inicio (us)
-    bool            m_buttons_enabled; ///< Flag de botones habilitados
+    SSD1963      m_display;
+    Scene*       m_active_scene;  ///< Escena activa actual
+    Scene*       m_menu_scene;    ///< Escena del menú (para retorno)
+    EngineState  m_state;
+    uint32_t     m_start_time;
+    bool         m_buttons_enabled;
 
-    /*! \brief Procesa la entrada de usuario y la delega a la escena. */
     void process_input();
-
-    /*! \brief Temporizador de precisión usando busy-wait.
-     *  \param ms Milisegundos a esperar. */
     void engine_delay(uint32_t ms);
 };

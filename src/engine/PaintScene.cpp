@@ -32,10 +32,15 @@ bool PaintScene::on_enter() {
 void PaintScene::update(uint32_t dt) {
     m_timer += dt;
 
-    if (m_demo_mode && m_timer > 50) {
-        m_timer = 0;
+    // Auto-retorno al menú
+    if (m_timer > AUTO_RETURN_MS) {
+        if (m_engine && m_engine->menu_scene()) {
+            m_engine->set_scene(m_engine->menu_scene());
+        }
+        return;
+    }
 
-        // Dibujo automático: espiral de colores
+    if (m_demo_mode && m_timer % 50 < dt) {
         float t = m_pattern_step * 0.05f;
         uint16_t cx = LCD_WIDTH / 2;
         uint16_t cy = LCD_HEIGHT / 2;
@@ -58,17 +63,14 @@ void PaintScene::update(uint32_t dt) {
 }
 
 void PaintScene::draw() {
-    // Crosshair del cursor
     m_display.draw_pixel(m_cursor_x, m_cursor_y, WHITE);
 
-    // Barra de paleta inferior
     uint16_t bar_y = LCD_HEIGHT - 12;
     for (uint8_t i = 0; i < 8; i++) {
         m_display.fill_rect(i * (LCD_WIDTH / 8), bar_y,
                             (LCD_WIDTH / 8) - 1, 10, PALETTE[i]);
     }
-    m_display.draw_rect(m_brush_color == RED ? 0 : 0,
-                        bar_y - 1, LCD_WIDTH, 12, RGB565CONVERT(80, 80, 80));
+    m_display.draw_rect(0, bar_y - 1, LCD_WIDTH, 12, RGB565CONVERT(80, 80, 80));
 }
 
 uint8_t PaintScene::handle_button(uint8_t btn) {
@@ -83,11 +85,14 @@ uint8_t PaintScene::handle_button(uint8_t btn) {
             next_color();
             break;
         case static_cast<uint8_t>(Button::BACK):
-            return MENU_ACTION_CHANGE;
+            if (m_engine && m_engine->menu_scene()) {
+                m_engine->set_scene(m_engine->menu_scene());
+            }
+            break;
         default:
             break;
     }
-    return MENU_ACTION_NONE;
+    return 0;
 }
 
 const char* PaintScene::name() const {

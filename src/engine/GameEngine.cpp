@@ -3,7 +3,6 @@
 #include <unistd.h>
 #include <iostream>
 
-// Pines GPIO para botones (no conflictivos con el display)
 #define BTN_UP     RPI_GPIO_P1_26
 #define BTN_DOWN   RPI_GPIO_P1_24
 #define BTN_SELECT RPI_GPIO_P1_21
@@ -11,6 +10,7 @@
 
 GameEngine::GameEngine()
     : m_active_scene(nullptr)
+    , m_menu_scene(nullptr)
     , m_state(EngineState::INIT)
     , m_start_time(0)
     , m_buttons_enabled(false)
@@ -18,9 +18,7 @@ GameEngine::GameEngine()
 }
 
 GameEngine::~GameEngine() {
-    if (m_buttons_enabled) {
-        enable_buttons(false);
-    }
+    if (m_buttons_enabled) enable_buttons(false);
 }
 
 bool GameEngine::init() {
@@ -28,7 +26,6 @@ bool GameEngine::init() {
         std::cerr << "[ENGINE] Error: bcm2835_init() failed\n";
         return false;
     }
-
     m_display.setup_gpio();
     m_display.init();
     m_display.clear_screen(BLACK);
@@ -45,7 +42,7 @@ void GameEngine::run() {
     if (m_state != EngineState::RUNNING) return;
 
     uint32_t last_time = bcm2835_st_read();
-    const uint32_t FRAME_TIME = 33; // ~30 FPS
+    const uint32_t FRAME_TIME = 33;
 
     while (m_state == EngineState::RUNNING) {
         uint32_t now = bcm2835_st_read();
@@ -75,14 +72,25 @@ void GameEngine::quit() {
 }
 
 void GameEngine::set_scene(Scene* scene) {
+    if (scene == m_active_scene) return;
     if (m_active_scene) {
+        std::cout << "[ENGINE] Exiting scene:  " << m_active_scene->name() << "\n";
         m_active_scene->on_exit();
     }
     m_active_scene = scene;
     if (m_active_scene) {
+        m_active_scene->set_engine(this);
         std::cout << "[ENGINE] Entering scene: " << m_active_scene->name() << "\n";
         m_active_scene->on_enter();
     }
+}
+
+void GameEngine::set_menu_scene(Scene* scene) {
+    m_menu_scene = scene;
+}
+
+Scene* GameEngine::menu_scene() const {
+    return m_menu_scene;
 }
 
 SSD1963& GameEngine::display() {
@@ -91,12 +99,10 @@ SSD1963& GameEngine::display() {
 
 Button GameEngine::read_buttons() {
     if (!m_buttons_enabled) return Button::NONE;
-
     if (bcm2835_gpio_lev(BTN_UP) == LOW)     return Button::UP;
     if (bcm2835_gpio_lev(BTN_DOWN) == LOW)   return Button::DOWN;
-    if (bcm2835_gpio_lev(BTN_SELECT) == LOW)  return Button::SELECT;
-    if (bcm2835_gpio_lev(BTN_BACK) == LOW)    return Button::BACK;
-
+    if (bcm2835_gpio_lev(BTN_SELECT) == LOW) return Button::SELECT;
+    if (bcm2835_gpio_lev(BTN_BACK) == LOW)   return Button::BACK;
     return Button::NONE;
 }
 
@@ -126,13 +132,9 @@ void GameEngine::enable_buttons(bool enable) {
 
 void GameEngine::process_input() {
     if (!m_active_scene) return;
-
     Button btn = read_buttons();
     if (btn != Button::NONE) {
-        uint8_t action = m_active_scene->handle_button(static_cast<uint8_t>(btn));
-        if (action == MENU_ACTION_EXIT) {
-            quit();
-        }
+        m_active_scene->handle_button(static_cast<uint8_t>(btn));
         engine_delay(200);
     }
 }

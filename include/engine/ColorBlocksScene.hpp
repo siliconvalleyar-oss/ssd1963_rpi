@@ -3,10 +3,7 @@
 #include <engine/Scene.hpp>
 
 /*! \class ColorBlocksScene
- *  \brief Demo de bloques de colores.
- *
- *  Muestra 7 bloques de colores básicos (RGBYCMW)
- *  y luego transiciona a imagen o menú. */
+ *  \brief Demo de bloques de colores con auto-retorno al menú. */
 class ColorBlocksScene : public Scene {
 public:
     explicit ColorBlocksScene(SSD1963& display);
@@ -27,11 +24,13 @@ private:
 
     static constexpr uint16_t BLOCK_W = 45;
     static constexpr uint16_t BLOCK_H = 45;
-    static constexpr uint16_t BLOCK_GAP = 10;
 
-    ColorBlock  m_blocks[7];       ///< Array de bloques de color
-    bool        m_blocks_drawn;    ///< Flag de bloques dibujados
-    bool        m_image_drawn;     ///< Flag de imagen mostrada
-    uint32_t    m_timer;           ///< Temporizador de transición
-    uint8_t     m_phase;           ///< Fase: 0=bloques, 1=imagen
+    ColorBlock  m_blocks[7];
+    bool        m_blocks_drawn;
+    bool        m_image_drawn;
+    uint32_t    m_timer;
+    uint8_t     m_phase;
+
+    static constexpr uint32_t PHASE_BLOCKS_MS = 2000;
+    static constexpr uint32_t PHASE_IMAGE_MS  = 5000;
 };

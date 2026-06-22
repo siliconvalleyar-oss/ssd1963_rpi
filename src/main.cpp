@@ -71,8 +71,9 @@ int main() {
     main_menu.add_item("Salir",                nullptr,      WHITE);
 
     // -----------------------------------------------------------------
-    // 4. Iniciar con el menú principal
+    // 4. Registrar el menú en el engine y arrancar
     // -----------------------------------------------------------------
+    engine.set_menu_scene(&main_menu);
     engine.set_scene(&main_menu);
 
     // -----------------------------------------------------------------

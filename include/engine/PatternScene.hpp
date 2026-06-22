@@ -2,22 +2,17 @@
 
 #include <engine/Scene.hpp>
 
-/*! \enum PatternType
- *  \brief Tipos de patrones de prueba. */
 enum class PatternType : uint8_t {
-    COLOR_BARS    = 0,  ///< Barras de color verticales
-    GRADIENT      = 1,  ///< Gradiente suave
-    CHECKERBOARD  = 2,  ///< Patrón de damero
-    GRID          = 3,  ///< Cuadrícula fina
-    RAINBOW       = 4,  ///< Arcoíris horizontal
-    COUNT         = 5   ///< Número total de patrones
+    COLOR_BARS    = 0,
+    GRADIENT      = 1,
+    CHECKERBOARD  = 2,
+    GRID          = 3,
+    RAINBOW       = 4,
+    COUNT         = 5
 };
 
 /*! \class PatternScene
- *  \brief Escena de patrones de prueba para display.
- *
- *  Genera varios patrones de video útiles para verificar
- *  la calidad de imagen y calibración del TFT. */
+ *  \brief Generador de patrones de prueba con auto-ciclo y auto-retorno. */
 class PatternScene : public Scene {
 public:
     explicit PatternScene(SSD1963& display);
@@ -29,26 +24,19 @@ public:
     const char* name() const override;
 
 private:
-    PatternType m_current;           ///< Patrón activo
-    uint32_t    m_timer;             ///< Temporizador de auto-cambio
-    bool        m_auto_cycle;        ///< true = cambia solo cada N segundos
-    uint32_t    m_frame_count;       ///< Contador de frames para animación
+    PatternType m_current;
+    uint32_t    m_timer;
+    bool        m_auto_cycle;
+    uint32_t    m_frame_count;
+    uint32_t    m_total_timer;
 
-    /*! \brief Dibuja barras de color verticales. */
+    static constexpr uint32_t PATTERN_CYCLE_MS = 3000;
+    static constexpr uint32_t AUTO_RETURN_MS   = 18000;
+
     void draw_color_bars();
-
-    /*! \brief Dibuja gradiente suave. */
     void draw_gradient();
-
-    /*! \brief Dibuja patrón de damero. */
     void draw_checkerboard();
-
-    /*! \brief Dibuja cuadrícula. */
     void draw_grid();
-
-    /*! \brief Dibuja arcoíris. */
     void draw_rainbow();
-
-    /*! \brief Convierte HSV a RGB565 para gradientes. */
     uint16_t hsv_to_rgb565(uint8_t h, uint8_t s, uint8_t v);
 };

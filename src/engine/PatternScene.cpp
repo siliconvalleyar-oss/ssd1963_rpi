@@ -9,6 +9,7 @@ PatternScene::PatternScene(SSD1963& display)
     , m_timer(0)
     , m_auto_cycle(true)
     , m_frame_count(0)
+    , m_total_timer(0)
 {
 }
 
@@ -16,19 +17,29 @@ bool PatternScene::on_enter() {
     m_current = PatternType::COLOR_BARS;
     m_timer = 0;
     m_frame_count = 0;
+    m_total_timer = 0;
     m_auto_cycle = true;
     return true;
 }
 
 void PatternScene::update(uint32_t dt) {
     m_timer += dt;
+    m_total_timer += dt;
     m_frame_count++;
 
-    if (m_auto_cycle && m_timer > 3000) {
+    // Cambiar patrón cada PATTERN_CYCLE_MS
+    if (m_auto_cycle && m_timer > PATTERN_CYCLE_MS) {
         m_timer = 0;
         uint8_t next = (static_cast<uint8_t>(m_current) + 1) %
                        static_cast<uint8_t>(PatternType::COUNT);
         m_current = static_cast<PatternType>(next);
+    }
+
+    // Auto-retorno al menú
+    if (m_total_timer > AUTO_RETURN_MS) {
+        if (m_engine && m_engine->menu_scene()) {
+            m_engine->set_scene(m_engine->menu_scene());
+        }
     }
 }
 
@@ -69,11 +80,14 @@ uint8_t PatternScene::handle_button(uint8_t btn) {
             break;
         }
         case static_cast<uint8_t>(Button::BACK):
-            return MENU_ACTION_CHANGE;
+            if (m_engine && m_engine->menu_scene()) {
+                m_engine->set_scene(m_engine->menu_scene());
+            }
+            break;
         default:
             break;
     }
-    return MENU_ACTION_NONE;
+    return 0;
 }
 
 const char* PatternScene::name() const {

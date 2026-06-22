@@ -3,10 +3,7 @@
 #include <engine/Scene.hpp>
 
 /*! \class PaintScene
- *  \brief Escena de pintura simple.
- *
- *  Permite dibujar trazos en pantalla usando patrones
- *  predefinidos o simulando entrada. */
+ *  \brief Escena de pintura/dibujo automático con auto-retorno. */
 class PaintScene : public Scene {
 public:
     explicit PaintScene(SSD1963& display);
@@ -18,18 +15,17 @@ public:
     const char* name() const override;
 
 private:
-    static constexpr uint16_t BRUSH_SIZE = 6;  ///< Tamaño del pincel
+    static constexpr uint16_t BRUSH_SIZE = 6;
 
-    uint16_t    m_cursor_x;         ///< Posición X del cursor
-    uint16_t    m_cursor_y;         ///< Posición Y del cursor
-    uint16_t    m_brush_color;      ///< Color actual del pincel
-    uint8_t     m_pattern_step;     ///< Paso del patrón automático
-    bool        m_demo_mode;        ///< true = dibujo automático
-    uint32_t    m_timer;            ///< Temporizador de animación
+    uint16_t    m_cursor_x;
+    uint16_t    m_cursor_y;
+    uint16_t    m_brush_color;
+    uint8_t     m_pattern_step;
+    bool        m_demo_mode;
+    uint32_t    m_timer;
 
-    /*! \brief Conjunto de colores para el pincel. */
     static const uint16_t PALETTE[8];
+    static constexpr uint32_t AUTO_RETURN_MS = 10000;
 
-    /*! \brief Cambia al siguiente color de la paleta. */
     void next_color();
 };
