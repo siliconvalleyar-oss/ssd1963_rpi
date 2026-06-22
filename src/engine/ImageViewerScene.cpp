@@ -1,6 +1,7 @@
 #include <engine/ImageViewerScene.hpp>
 #include <engine/GameEngine.hpp>
 #include <cstdio>
+#include <iostream>
 
 static uint16_t rgb(uint8_t r, uint8_t g, uint8_t b) {
     return RGB565CONVERT(r, g, b);
