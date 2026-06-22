@@ -1,6 +1,3 @@
-# =========================================================================
-# Makefile — ARCADE PHOTO (SSD1963 Game Engine v3)
-# =========================================================================
 CXX       = g++
 CXXFLAGS  = -Iinclude -std=c++11 -Wall -Wextra -O2
 LDFLAGS   = -lbcm2835 -lm
@@ -14,8 +11,10 @@ SRCS      = $(SRC_DIR)/main.cpp \
             $(SRC_DIR)/ssd1963.cpp \
             $(ENG_DIR)/GameEngine.cpp \
             $(ENG_DIR)/MenuScene.cpp \
-            $(ENG_DIR)/ColorBlocksScene.cpp \
+            $(ENG_DIR)/Sprite.cpp \
+            $(ENG_DIR)/SpaceShooterScene.cpp \
             $(ENG_DIR)/ImageViewerScene.cpp \
+            $(ENG_DIR)/ColorBlocksScene.cpp \
             $(ENG_DIR)/PatternScene.cpp
 
 OBJS      = $(patsubst %.cpp,$(OBJ_DIR)/%.o,$(notdir $(SRCS)))
@@ -41,7 +40,6 @@ $(OBJ_DIR)/%.o: $(ENG_DIR)/%.cpp
 
 clean:
 	rm -rf $(OBJ_DIR)/*.o $(TARGET)
-	@echo "[Make] clean OK"
 
 run: $(TARGET)
 	sudo ./$(TARGET)
@@ -56,14 +54,10 @@ remote-run:
 	ssh $(PI_HOST) "cd $(PI_DIR) && make run"
 
 help:
-	@echo "╔════════════════════════════════════════╗"
-	@echo "║     ARCADE PHOTO — Makefile Help       ║"
-	@echo "╠════════════════════════════════════════╣"
-	@echo "║  all           Compilar                 ║"
-	@echo "║  run           Compilar + ejecutar      ║"
-	@echo "║  clean         Limpiar                  ║"
-	@echo "║  install-deps  Instalar libbcm2835      ║"
-	@echo "║  remote-build  SSH a Pi y compilar      ║"
-	@echo "║  remote-run    SSH, compilar y ejecutar ║"
-	@echo "╚════════════════════════════════════════╝"
-	@echo "  PI_HOST=$(PI_HOST)  PI_DIR=$(PI_DIR)"
+	@echo "ARCADE PHOTO — Makefile"
+	@echo "  all           Compilar"
+	@echo "  run           Compilar + ejecutar (sudo)"
+	@echo "  clean         Limpiar"
+	@echo "  install-deps  Instalar libbcm2835"
+	@echo "  remote-build  SSH a Pi y compilar"
+	@echo "  remote-run    SSH, compilar y ejecutar"
