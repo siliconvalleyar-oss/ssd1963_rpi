@@ -2,13 +2,18 @@
 #include <engine/GameEngine.hpp>
 #include <cstdio>
 
-ImageViewerScene::ImageViewerScene(SSD1963& display, const char* filepath)
+static uint16_t rgb(uint8_t r, uint8_t g, uint8_t b) {
+    return RGB565CONVERT(r, g, b);
+}
+
+ImageViewerScene::ImageViewerScene(SSD1963& display, const char* filepath,
+                                   const char* caption)
     : Scene(display)
     , m_filepath(filepath)
+    , m_caption(caption)
     , m_image_loaded(false)
     , m_timer(0)
-{
-}
+{}
 
 bool ImageViewerScene::on_enter() {
     m_image_loaded = false;
@@ -18,9 +23,7 @@ bool ImageViewerScene::on_enter() {
 
 void ImageViewerScene::update(uint32_t dt) {
     m_timer += dt;
-
-    // Auto-retorno al menú
-    if (m_image_loaded && m_timer > AUTO_RETURN_MS) {
+    if (m_image_loaded && m_timer > SHOW_MS) {
         if (m_engine && m_engine->menu_scene()) {
             m_engine->set_scene(m_engine->menu_scene());
         }
@@ -29,31 +32,38 @@ void ImageViewerScene::update(uint32_t dt) {
 
 void ImageViewerScene::draw() {
     if (!m_image_loaded) {
+        // Transición: wipe de negro a imagen
         m_display.clear_screen(BLACK);
         m_display.draw_image_rgb565(m_filepath);
         m_image_loaded = true;
-        std::cout << "[ImageViewer] Cargado: " << m_filepath << "\n";
+        std::cout << "[Gallery] " << m_filepath << "\n";
     }
 
-    char info[64];
-    std::snprintf(info, sizeof(info), "%s", m_filepath);
-    m_display.draw_string(4, LCD_HEIGHT - 12, info,
-                          RGB565CONVERT(150, 150, 150), BLACK);
-}
+    draw_frame();
 
-uint8_t ImageViewerScene::handle_button(uint8_t btn) {
-    (void)btn;
-    if (m_engine && m_engine->menu_scene()) {
-        m_engine->set_scene(m_engine->menu_scene());
-    }
-    return 0;
+    // Créditos/caption abajo
+    m_display.draw_string_centered(LCD_WIDTH / 2, LCD_HEIGHT - 10,
+                                   m_caption, rgb(180, 180, 200), BLACK);
 }
 
 const char* ImageViewerScene::name() const {
     return "ImageViewerScene";
 }
 
-void ImageViewerScene::set_filepath(const char* filepath) {
+void ImageViewerScene::set_filepath(const char* filepath, const char* caption) {
     m_filepath = filepath;
+    m_caption  = caption;
     m_image_loaded = false;
+}
+
+void ImageViewerScene::draw_frame() {
+    // Marco tipo polaroid/arcade alrededor de la imagen
+    for (uint16_t x = 0; x < LCD_WIDTH; x++) {
+        m_display.draw_pixel(x, 0,                       rgb(255, 200, 0));
+        m_display.draw_pixel(x, LCD_HEIGHT - 1,           rgb(255, 200, 0));
+    }
+    for (uint16_t y = 0; y < LCD_HEIGHT; y++) {
+        m_display.draw_pixel(0, y,                       rgb(255, 200, 0));
+        m_display.draw_pixel(LCD_WIDTH - 1, y,           rgb(255, 200, 0));
+    }
 }

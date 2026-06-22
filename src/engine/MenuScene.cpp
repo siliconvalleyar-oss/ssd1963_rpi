@@ -1,19 +1,19 @@
 #include <engine/MenuScene.hpp>
 #include <engine/GameEngine.hpp>
 #include <cstring>
-#include <cstdio>
+#include <cstdlib>
+
+static uint16_t rgb(uint8_t r, uint8_t g, uint8_t b) {
+    return RGB565CONVERT(r, g, b);
+}
 
 MenuScene::MenuScene(SSD1963& display, const char* title)
     : Scene(display)
     , m_title(title)
     , m_item_count(0)
     , m_selected(0)
-    , m_scroll_offset(0)
-    , m_anim_timer(0)
-    , m_bg_color(RGB565CONVERT(20, 20, 30))
-    , m_auto_timer(0)
-    , m_input_timer(0)
-    , m_auto_mode(true)
+    , m_timer(0)
+    , m_star_timer(0)
 {
     std::memset(m_items, 0, sizeof(m_items));
 }
@@ -28,168 +28,121 @@ void MenuScene::add_item(const char* label, Scene* target, uint16_t color) {
 
 bool MenuScene::on_enter() {
     m_selected = 0;
-    m_scroll_offset = 0;
-    m_anim_timer = 0;
-    m_auto_timer = 0;
-    m_input_timer = 0;
-    m_auto_mode = true;
+    m_timer = 0;
+    m_star_timer = 0;
     return true;
 }
 
 void MenuScene::update(uint32_t dt) {
-    m_anim_timer += dt;
+    m_timer += dt;
+    m_star_timer += dt;
 
-    if (m_auto_mode) {
-        m_auto_timer += dt;
-        m_input_timer += dt;
+    if (m_star_timer > 50) m_star_timer = 0;
 
-        if (m_input_timer >= AUTO_CYCLE_MS && m_item_count > 1) {
-            m_input_timer = 0;
-            // Avanzar selección
-            if (m_selected < m_item_count - 1) {
-                m_selected++;
-            } else {
-                m_selected = 0;
-            }
-            // Ajustar scroll
-            if (m_selected < m_scroll_offset) {
-                m_scroll_offset = m_selected;
-            } else if (m_selected >= m_scroll_offset + VISIBLE_ITEMS) {
-                m_scroll_offset = m_selected - VISIBLE_ITEMS + 1;
-            }
-        }
+    // Auto-cycle highlight
+    if (m_timer >= CYCLE_MS && m_timer < SELECT_MS) {
+        m_timer = 0;
+        m_selected = (m_selected + 1) % m_item_count;
+    }
 
-        // Auto-seleccionar tras AUTO_SELECT_MS de estar en el mismo item
-        if (m_auto_timer >= AUTO_SELECT_MS) {
-            m_auto_timer = 0;
-            do_select();
-        }
+    // Auto-select
+    if (m_timer >= SELECT_MS) {
+        m_timer = 0;
+        do_select();
     }
 }
 
 void MenuScene::draw() {
-    m_display.clear_screen(m_bg_color);
+    draw_starfield();
+    draw_cabinet_art();
 
-    uint16_t center_x = LCD_WIDTH / 2;
+    // Título arcade centrado
+    uint16_t cx = LCD_WIDTH / 2;
+    uint16_t ty = 14;
+    m_display.draw_string_centered(cx, ty,     m_title, rgb(255, 200, 0),   rgb(10, 10, 30));
+    m_display.draw_string_centered(cx, ty + 1, m_title, rgb(200, 150, 0),  rgb(10, 10, 30));
+    m_display.draw_string_centered(cx, ty + 2, m_title, rgb(255, 220, 80), rgb(10, 10, 30));
 
-    // Título
-    m_display.draw_string_centered(center_x, 8, m_title, CYAN, m_bg_color);
-
-    // Línea separadora
-    for (uint16_t x = 20; x < LCD_WIDTH - 20; x++) {
-        m_display.draw_pixel(x, 28, RGB565CONVERT(60, 60, 80));
+    // Separador neón
+    for (uint16_t x = 30; x < LCD_WIDTH - 30; x++) {
+        uint16_t c = (x / 4) % 2 ? rgb(255, 0, 128) : rgb(0, 200, 255);
+        m_display.draw_pixel(x, 30, c);
     }
 
-    // Items visibles
-    uint8_t start = m_scroll_offset;
-    uint8_t end = m_scroll_offset + VISIBLE_ITEMS;
-    if (end > m_item_count) end = m_item_count;
-
-    for (uint8_t i = start; i < end; i++) {
-        draw_item(i, (i == static_cast<uint8_t>(m_selected)));
+    // Items
+    uint16_t start_y = 44;
+    for (uint8_t i = 0; i < m_item_count; i++) {
+        draw_item(i, i == static_cast<uint8_t>(m_selected));
     }
 
-    draw_scrollbar();
+    // Footer arcade
+    m_display.draw_string_centered(cx, LCD_HEIGHT - 14,
+                                   "AUTO-DEMO MODE",
+                                   rgb(80, 80, 120), rgb(10, 10, 30));
 }
 
-uint8_t MenuScene::handle_button(uint8_t btn) {
-    // Al recibir un botón, salir de auto-mode
-    m_auto_mode = false;
-    m_input_timer = 0;
-    m_auto_timer = 0;
+const char* MenuScene::name() const { return "MenuScene"; }
 
-    switch (btn) {
-        case static_cast<uint8_t>(Button::UP):
-            if (m_selected > 0) {
-                m_selected--;
-                if (m_selected < m_scroll_offset) {
-                    m_scroll_offset = m_selected;
-                }
-            }
-            break;
+void MenuScene::draw_starfield() {
+    static uint8_t seed = 0;
+    seed++;
+    m_display.fill_rect(0, 0, LCD_WIDTH, LCD_HEIGHT, rgb(8, 8, 28));
 
-        case static_cast<uint8_t>(Button::DOWN):
-            if (m_selected < m_item_count - 1) {
-                m_selected++;
-                if (m_selected >= m_scroll_offset + VISIBLE_ITEMS) {
-                    m_scroll_offset = m_selected - VISIBLE_ITEMS + 1;
-                }
-            }
-            break;
-
-        case static_cast<uint8_t>(Button::SELECT):
-            do_select();
-            break;
-
-        case static_cast<uint8_t>(Button::BACK):
-            return 2;
-        default:
-            break;
+    // Estrellas pseudoaleatorias animadas
+    for (int i = 0; i < 60; i++) {
+        uint16_t sx = (i * 137 + seed * 3) % LCD_WIDTH;
+        uint16_t sy = (i * 251 + seed * 7) % LCD_HEIGHT;
+        uint8_t  br = 80 + ((i * 13 + seed) % 60);
+        m_display.draw_pixel(sx, sy, rgb(br / 3, br / 3, br));
     }
-    return 0;
 }
 
-const char* MenuScene::name() const {
-    return "MenuScene";
-}
-
-void MenuScene::do_select() {
-    if (m_items[m_selected].target != nullptr) {
-        if (m_engine) {
-            m_engine->set_scene(m_items[m_selected].target);
-        }
-    } else {
-        // Items sin target: mostrar info o salir
-        if (std::strcmp(m_items[m_selected].label, "Salir") == 0) {
-            if (m_engine) m_engine->quit();
-        }
+void MenuScene::draw_cabinet_art() {
+    // Panel lateral izquierdo (decoración arcade)
+    for (uint16_t y = 32; y < LCD_HEIGHT - 20; y++) {
+        m_display.draw_pixel(2, y,  rgb(255, 0, 80));
+        m_display.draw_pixel(3, y,  rgb(200, 0, 60));
+        m_display.draw_pixel(LCD_WIDTH - 3, y, rgb(0, 200, 255));
+        m_display.draw_pixel(LCD_WIDTH - 4, y, rgb(0, 150, 200));
     }
 }
 
 void MenuScene::draw_item(uint8_t index, bool selected) {
-    uint16_t y = 36 + (index - m_scroll_offset) * (ITEM_HEIGHT + ITEM_MARGIN);
-    uint16_t item_x = 15;
-    uint16_t item_w = LCD_WIDTH - 30;
-    uint16_t color = m_items[index].color;
+    uint16_t iy = 44 + index * 38;
+    uint16_t ix = 16;
+    uint16_t iw = LCD_WIDTH - 32;
+    uint16_t col = m_items[index].color;
 
     if (selected) {
-        m_display.draw_rect(item_x, y, item_w, ITEM_HEIGHT, RGB565CONVERT(60, 100, 180));
-        m_display.fill_rect(item_x + 1, y + 1, item_w - 2, ITEM_HEIGHT - 2,
-                            RGB565CONVERT(40, 70, 140));
+        // Brillo pulsante
+        uint16_t glow = 120 + ((m_timer / 3) % 80);
+        m_display.draw_rect(ix, iy, iw, 30, rgb(glow, glow, 255));
+        m_display.fill_rect(ix + 1, iy + 1, iw - 2, 28, rgb(20, 20, 60));
     }
 
-    uint16_t box_size = ITEM_HEIGHT - 8;
-    m_display.fill_rect(item_x + 6, y + 4, box_size, box_size, color);
-    m_display.draw_rect(item_x + 6, y + 4, box_size, box_size, WHITE);
+    // Caja de color (como un cartucho)
+    m_display.fill_rect(ix + 4, iy + 4, 22, 22, col);
+    m_display.draw_rect(ix + 4, iy + 4, 22, 22, selected ? WHITE : rgb(60, 60, 80));
 
-    m_display.draw_string(item_x + box_size + 14,
-                          y + (ITEM_HEIGHT - 8) / 2,
-                          m_items[index].label,
-                          selected ? WHITE : RGB565CONVERT(200, 200, 200),
-                          selected ? RGB565CONVERT(40, 70, 140) : m_bg_color);
+    // Nombre del item
+    uint16_t text_col = selected ? WHITE : rgb(180, 180, 200);
+    m_display.draw_string(ix + 32, iy + 8, m_items[index].label, text_col,
+                          selected ? rgb(20, 20, 60) : rgb(8, 8, 28));
 
     if (selected) {
-        uint16_t pulse = (m_anim_timer / 4) % 255;
-        uint16_t indicator_x = item_x + item_w - 14;
-        uint16_t indicator_color = RGB565CONVERT(pulse, pulse, 255);
-        m_display.draw_string(indicator_x, y + (ITEM_HEIGHT - 8) / 2, ">", indicator_color,
-                              RGB565CONVERT(40, 70, 140));
+        // Indicador "▶" animado
+        uint16_t pulse = 128 + ((m_timer / 2) % 128);
+        m_display.draw_string(ix + iw - 16, iy + 8, "\x10",
+                              rgb(pulse, pulse, 255), rgb(20, 20, 60));
     }
 }
 
-void MenuScene::draw_scrollbar() {
-    if (m_item_count <= VISIBLE_ITEMS) return;
-
-    uint16_t sb_x = LCD_WIDTH - 6;
-    uint16_t sb_y = 36;
-    uint16_t sb_h = VISIBLE_ITEMS * (ITEM_HEIGHT + ITEM_MARGIN);
-
-    m_display.draw_rect(sb_x, sb_y, 4, sb_h, RGB565CONVERT(60, 60, 80));
-
-    float thumb_ratio = static_cast<float>(VISIBLE_ITEMS) / m_item_count;
-    float pos_ratio = static_cast<float>(m_scroll_offset) / (m_item_count - VISIBLE_ITEMS);
-    uint16_t thumb_h = static_cast<uint16_t>(sb_h * thumb_ratio);
-    uint16_t thumb_y = sb_y + static_cast<uint16_t>(pos_ratio * (sb_h - thumb_h));
-
-    m_display.fill_rect(sb_x, thumb_y, 4, thumb_h, RGB565CONVERT(100, 150, 255));
+void MenuScene::do_select() {
+    if (m_items[m_selected].target != nullptr) {
+        if (m_engine) m_engine->set_scene(m_items[m_selected].target);
+    } else {
+        if (std::strcmp(m_items[m_selected].label, "SALIR") == 0) {
+            if (m_engine) m_engine->quit();
+        }
+    }
 }
