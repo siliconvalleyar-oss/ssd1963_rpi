@@ -74,7 +74,7 @@ void MenuScene::draw() {
     // Footer
     char time_buf[16];
     uint32_t remain = (SELECT_MS - m_timer) / 1000;
-    std::snprintf(time_buf, sizeof(time_buf), "auto > %lus", remain);
+    std::snprintf(time_buf, sizeof(time_buf), "auto > %us", remain);
     m_display.draw_string_centered(cx, LCD_HEIGHT - 14, time_buf,
                                    rgb(80, 80, 120), rgb(10, 10, 30));
 }

@@ -2,6 +2,7 @@
 #include <engine/GameEngine.hpp>
 #include <cstdio>
 #include <cstdlib>
+#include <iostream>
 
 static uint16_t rgb(uint8_t r, uint8_t g, uint8_t b) {
     return RGB565CONVERT(r, g, b);
@@ -163,7 +164,7 @@ void SpaceShooterScene::spawn_enemy() {
     }
 }
 
-void SpaceShooterScene::update_bullets(uint32_t dt) {
+void SpaceShooterScene::update_bullets(uint32_t /*dt*/) {
     for (auto& b : m_bullets) {
         if (!b.active) continue;
         b.y -= BULLET_SPEED;

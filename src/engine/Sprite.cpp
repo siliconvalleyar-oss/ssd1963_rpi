@@ -1,6 +1,7 @@
 #include <engine/Sprite.hpp>
 #include <cstdio>
 #include <cstdlib>
+#include <iostream>
 
 Sprite::Sprite() : m_data(nullptr), m_w(0), m_h(0) {}
 
