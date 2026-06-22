@@ -198,10 +198,11 @@ void SSD1963::write_data_bus(uint16_t data) {
         bcm2835_gpio_write_multi(mask, HIGH);
 }
 
-void SSD1963::write_data_bus_strobe(uint16_t data) {
-    write_data_bus(data);
-    WR_LOW();
-    WR_HIGH();
+uint32_t SSD1963::data_to_mask(uint16_t data) {
+    uint32_t m = 0;
+    for (uint8_t i = 0; i < 16; i++)
+        if (data & (1 << i)) m |= (1 << (SSD1963_LCD_D0 + i));
+    return m;
 }
 
 void SSD1963::write_command(uint8_t cmd) {

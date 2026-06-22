@@ -210,22 +210,14 @@ private:
     /** @brief Escribe 16 bits en el bus de datos GPIO usando multi-write. */
     void write_data_bus(uint16_t data);
 
-    /** @brief Writes 16-bit data to bus with WR strobe (CS stays LOW). */
-    void write_data_bus_strobe(uint16_t data);
-
     /** @brief Ciclo de escritura de comando (RS=LOW). */
     void write_command(uint8_t cmd);
 
     /** @brief Ciclo de escritura de datos (RS=HIGH, CS toggles). */
     void write_data(uint16_t data);
 
-    /** @brief Escribe 16 bits al bus calculando previamente la máscara. */
-    static inline uint32_t data_to_mask(uint16_t data) {
-        uint32_t m = 0;
-        for (uint8_t i = 0; i < 16; i++)
-            if (data & (1 << i)) m |= (1 << (SSD1963_LCD_D0 + i));
-        return m;
-    }
+    /** @brief Convierte 16-bit data a máscara GPIO (D0-D15). */
+    static uint32_t data_to_mask(uint16_t data);
 
     /** @brief Define el área activa de escritura en GRAM. */
     void set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
