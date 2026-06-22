@@ -11,8 +11,7 @@ static uint16_t rgb(uint8_t r, uint8_t g, uint8_t b) {
 SpaceShooterScene::SpaceShooterScene(SSD1963& display)
     : Scene(display)
     , m_player_x(0), m_player_y(0), m_prev_px(0), m_prev_py(0)
-    , m_player_dir(1)
-    , m_lives(3), m_score(0)
+    , m_player_dir(1), m_lives(3), m_score(0)
     , m_timer(0), m_shoot_timer(0), m_spawn_timer(0), m_move_timer(0)
     , m_sprites_loaded(false), m_drawn_once(false)
 {
@@ -57,11 +56,9 @@ bool SpaceShooterScene::on_enter() {
 
 void SpaceShooterScene::update(uint32_t dt) {
     m_timer += dt;
-
     if (m_timer > AUTO_RETURN_MS || m_lives == 0) {
-        if (m_engine && m_engine->menu_scene()) {
+        if (m_engine && m_engine->menu_scene())
             m_engine->set_scene(m_engine->menu_scene());
-        }
         return;
     }
 
@@ -91,24 +88,16 @@ void SpaceShooterScene::update(uint32_t dt) {
 }
 
 void SpaceShooterScene::draw() {
-    // --- Erase old positions ---
-    uint16_t bg_for_erase = BG;
-
-    // Player
-    m_display.fill_rect(m_prev_px - 1, m_prev_py - 1,
-                        PLAYER_W + 2, PLAYER_H + 2, bg_for_erase);
-    // Bullets
+    // --- Erase ALL old positions before drawing ---
+    erase(m_prev_px, m_prev_py, PLAYER_W, PLAYER_H);
     for (auto& b : m_bullets) {
-        if (b.active)
-            m_display.fill_rect(b.x, b.y, BULLET_W, BULLET_H, bg_for_erase);
+        if (b.active) erase(b.px, b.py, BULLET_W, BULLET_H);
     }
-    // Enemies
     for (auto& e : m_enemies) {
-        if (e.active)
-            m_display.fill_rect(e.x, e.y, ENEMY_W, ENEMY_H, bg_for_erase);
+        if (e.active) erase(e.px, e.py, ENEMY_W, ENEMY_H);
     }
 
-    // --- Background stars (parallax) ---
+    // --- Stars: erase old, update, draw new ---
     draw_stars();
 
     // --- Static planets (once) ---
@@ -133,9 +122,28 @@ void SpaceShooterScene::draw() {
     // --- HUD ---
     draw_hud();
 
-    // --- Save positions for next frame ---
+    // --- Save current positions as previous for next frame ---
     m_prev_px = m_player_x;
     m_prev_py = m_player_y;
+    for (auto& b : m_bullets) {
+        if (b.active) { b.px = b.x; b.py = b.y; }
+    }
+    for (auto& e : m_enemies) {
+        if (e.active) { e.px = e.x; e.py = e.y; }
+    }
+}
+
+void SpaceShooterScene::erase(float x, float y, uint16_t w, uint16_t h) {
+    int16_t ix = (int16_t)x;
+    int16_t iy = (int16_t)y;
+    if (ix >= 480 || iy >= 272 || ix + (int16_t)w <= 0 || iy + (int16_t)h <= 0)
+        return;
+    if (ix < 0) { w += ix; ix = 0; }
+    if (iy < 0) { h += iy; iy = 0; }
+    if (ix + w > 480) w = 480 - ix;
+    if (iy + h > 272) h = 272 - iy;
+    if (w == 0 || h == 0) return;
+    m_display.fill_rect(ix, iy, w, h, BG);
 }
 
 const char* SpaceShooterScene::name() const { return "SpaceShooterScene"; }
@@ -145,6 +153,8 @@ void SpaceShooterScene::shoot() {
         if (!b.active) {
             b.x = m_player_x + (PLAYER_W - BULLET_W) / 2;
             b.y = m_player_y - BULLET_H;
+            b.px = b.x;
+            b.py = b.y;
             b.active = true;
             break;
         }
@@ -156,6 +166,8 @@ void SpaceShooterScene::spawn_enemy() {
         if (!e.active) {
             e.x = 10 + (rand() % (460 - ENEMY_W));
             e.y = -ENEMY_H;
+            e.px = e.x;
+            e.py = e.y;
             e.active = true;
             e.hp = 1;
             e.timer = 0;
@@ -164,7 +176,7 @@ void SpaceShooterScene::spawn_enemy() {
     }
 }
 
-void SpaceShooterScene::update_bullets(uint32_t /*dt*/) {
+void SpaceShooterScene::update_bullets(uint32_t) {
     for (auto& b : m_bullets) {
         if (!b.active) continue;
         b.y -= BULLET_SPEED;
@@ -189,15 +201,12 @@ void SpaceShooterScene::check_collisions() {
         if (!b.active) continue;
         for (auto& e : m_enemies) {
             if (!e.active) continue;
-            bool hit = (b.x + BULLET_W > e.x) &&
-                       (b.x < e.x + ENEMY_W) &&
-                       (b.y + BULLET_H > e.y) &&
-                       (b.y < e.y + ENEMY_H);
+            bool hit = (b.x + BULLET_W > e.x) && (b.x < e.x + ENEMY_W) &&
+                       (b.y + BULLET_H > e.y) && (b.y < e.y + ENEMY_H);
             if (hit) {
                 b.active = false;
                 e.active = false;
                 m_score += 10;
-                std::cout << "[Shooter] HIT! score=" << m_score << "\n";
                 break;
             }
         }
@@ -211,9 +220,8 @@ void SpaceShooterScene::check_collisions() {
         if (hit) {
             e.active = false;
             m_lives--;
-            std::cout << "[Shooter] DAMAGE! lives=" << (int)m_lives << "\n";
             if (m_lives == 0)
-                std::cout << "[Shooter] GAME OVER! score=" << m_score << "\n";
+                std::cout << "[Shooter] GAME OVER score=" << m_score << "\n";
         }
     }
 }
@@ -222,13 +230,14 @@ void SpaceShooterScene::draw_hud() {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "SCORE: %04u", m_score);
     m_display.draw_string(4, 2, buf, rgb(255, 255, 100), BG);
-    for (uint8_t i = 0; i < m_lives; i++) {
+    for (uint8_t i = 0; i < m_lives; i++)
         m_display.draw_string(4 + i * 30, LCD_HEIGHT - 12, "v",
                               rgb(255, 80, 80), BG);
-    }
     uint32_t secs = m_timer / 1000;
     std::snprintf(buf, sizeof(buf), "%02u:%02u", secs / 60, secs % 60);
     m_display.draw_string(LCD_WIDTH - 48, 2, buf, rgb(150, 150, 150), BG);
+    m_display.draw_string(LCD_WIDTH - 84, LCD_HEIGHT - 12, "v" ENGINE_VERSION,
+                          rgb(80, 100, 80), BG);
     if (m_lives == 0) {
         m_display.draw_string_centered(LCD_WIDTH / 2, LCD_HEIGHT / 2 - 10,
                                        "GAME OVER", rgb(255, 0, 0), BG);
@@ -240,15 +249,12 @@ void SpaceShooterScene::draw_hud() {
 
 void SpaceShooterScene::draw_stars() {
     for (auto& s : m_stars) {
-        // Erase old star
         m_display.draw_pixel(s.x, (uint16_t)s.y, BG);
-        // Move
         s.y += s.speed * 0.5f;
         if (s.y > LCD_HEIGHT) {
             s.y = 0;
             s.x = rand() % 480;
         }
-        // Draw new star
         uint8_t br = s.brightness;
         m_display.draw_pixel(s.x, (uint16_t)s.y, rgb(br/3, br/3, br));
     }

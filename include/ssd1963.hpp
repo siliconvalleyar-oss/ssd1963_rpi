@@ -28,6 +28,13 @@
 #define BACKLIGHT_ON()  bcm2835_gpio_write(SSD1963_LCD_BACKLIGHT, HIGH)
 #define BACKLIGHT_OFF() bcm2835_gpio_write(SSD1963_LCD_BACKLIGHT, LOW)
 
+// Máscara para todos los pines de datos D0-D15 (12..27)
+#define DATA_PINS_MASK  (uint32_t)( \
+    (1 << 12) | (1 << 13) | (1 << 14) | (1 << 15) | \
+    (1 << 16) | (1 << 17) | (1 << 18) | (1 << 19) | \
+    (1 << 20) | (1 << 21) | (1 << 22) | (1 << 23) | \
+    (1 << 24) | (1 << 25) | (1 << 26) | (1 << 27) )
+
 /*! \def FONT_CHAR_WIDTH
  *  \brief Ancho en píxeles de cada carácter bitmap. */
 /*! \def FONT_CHAR_HEIGHT
@@ -200,14 +207,25 @@ private:
     // Primitivas del bus 8080
     // ---------------------------------------------------------------
 
-    /** @brief Escribe 16 bits en el bus de datos GPIO (bit-banging). */
+    /** @brief Escribe 16 bits en el bus de datos GPIO usando multi-write. */
     void write_data_bus(uint16_t data);
+
+    /** @brief Writes 16-bit data to bus with WR strobe (CS stays LOW). */
+    void write_data_bus_strobe(uint16_t data);
 
     /** @brief Ciclo de escritura de comando (RS=LOW). */
     void write_command(uint8_t cmd);
 
-    /** @brief Ciclo de escritura de datos (RS=HIGH). */
+    /** @brief Ciclo de escritura de datos (RS=HIGH, CS toggles). */
     void write_data(uint16_t data);
+
+    /** @brief Escribe 16 bits al bus calculando previamente la máscara. */
+    static inline uint32_t data_to_mask(uint16_t data) {
+        uint32_t m = 0;
+        for (uint8_t i = 0; i < 16; i++)
+            if (data & (1 << i)) m |= (1 << (SSD1963_LCD_D0 + i));
+        return m;
+    }
 
     /** @brief Define el área activa de escritura en GRAM. */
     void set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);

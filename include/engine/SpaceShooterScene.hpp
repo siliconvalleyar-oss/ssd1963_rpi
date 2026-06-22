@@ -2,9 +2,9 @@
 #include <engine/Scene.hpp>
 #include <engine/Sprite.hpp>
 
-#define MAX_BULLETS  12
-#define MAX_ENEMIES   8
-#define MAX_STARS    40
+#define MAX_BULLETS  8
+#define MAX_ENEMIES   4
+#define MAX_STARS    30
 
 class SpaceShooterScene : public Scene {
 public:
@@ -16,8 +16,8 @@ public:
     const char* name() const override;
 
 private:
-    struct Bullet { float x, y; bool active; };
-    struct Enemy  { float x, y; bool active; uint8_t hp; uint32_t timer; };
+    struct Bullet { float x, y, px, py; bool active; };
+    struct Enemy  { float x, y, px, py; bool active; uint8_t hp; uint32_t timer; };
     struct Star   { uint16_t x; float y; uint8_t speed; uint8_t brightness; };
 
     float   m_player_x, m_player_y;
@@ -43,7 +43,7 @@ private:
     bool     m_sprites_loaded;
     bool     m_drawn_once;
 
-    static constexpr uint16_t BG       = 0x00A3; // rgb(5,5,15)
+    static constexpr uint16_t BG       = 0x00A3;
     static constexpr uint16_t PLAYER_W = 32;
     static constexpr uint16_t PLAYER_H = 32;
     static constexpr uint16_t BULLET_W = 8;
@@ -54,12 +54,13 @@ private:
     static constexpr float PLAYER_SPEED   = 1.5f;
     static constexpr float BULLET_SPEED   = 4.0f;
     static constexpr float ENEMY_SPEED    = 1.0f;
-    static constexpr uint32_t SHOOT_INTERVAL = 400;
-    static constexpr uint32_t SPAWN_INTERVAL = 1800;
+    static constexpr uint32_t SHOOT_INTERVAL = 500;
+    static constexpr uint32_t SPAWN_INTERVAL = 2000;
     static constexpr uint32_t AUTO_RETURN_MS  = 60000;
 
     void spawn_enemy();
     void shoot();
+    void erase(float x, float y, uint16_t w, uint16_t h);
     void update_bullets(uint32_t dt);
     void update_enemies(uint32_t dt);
     void check_collisions();

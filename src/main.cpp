@@ -13,7 +13,7 @@ int main() {
     GameEngine engine;
     if (!engine.init()) return 1;
 
-    MenuScene         menu(engine.display(), "ARCADE PHOTO v5");
+    MenuScene         menu(engine.display(), "ARCADE v" ENGINE_VERSION);
     FontDemoScene     font_demo(engine.display());
     SpaceShooterScene shooter(engine.display());
     ImageViewerScene  viewer(engine.display(), "assets/capibaras.rgb565", "CAPIBARAS");
