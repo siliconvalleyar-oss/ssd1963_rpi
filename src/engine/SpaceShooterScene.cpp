@@ -41,12 +41,12 @@ bool SpaceShooterScene::on_enter() {
 
     if (!m_sprites_loaded) {
         m_sprites_loaded =
-            m_spr_player.load("assets/naves/player.spr")  &&
-            m_spr_enemy.load("assets/naves/enemy.spr")    &&
-            m_spr_bullet.load("assets/naves/bullet.spr")  &&
-            m_spr_planet[0].load("assets/naves/planet_00.spr") &&
-            m_spr_planet[1].load("assets/naves/planet_01.spr") &&
-            m_spr_planet[2].load("assets/naves/planet_02.spr");
+            m_spr_player.load("assets/naves/player.rgb565")  &&
+            m_spr_enemy.load("assets/naves/enemy.rgb565")    &&
+            m_spr_bullet.load("assets/naves/bullet.rgb565")  &&
+            m_spr_planet[0].load("assets/naves/planet_00.rgb565") &&
+            m_spr_planet[1].load("assets/naves/planet_01.rgb565") &&
+            m_spr_planet[2].load("assets/naves/planet_02.rgb565");
     }
 
     m_display.clear_screen(BG);

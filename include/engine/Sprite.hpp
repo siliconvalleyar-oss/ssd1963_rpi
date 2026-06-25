@@ -1,8 +1,9 @@
 #pragma once
 #include <cstdint>
 #include <ssd1963.hpp>
+#include <color.hpp>
 
-#define SPRITE_KEY_COLOR 0x0001
+constexpr RGB565 SPRITE_KEY_COLOR = RGB565(0x0001);
 
 class Sprite {
 public:

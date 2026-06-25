@@ -22,8 +22,8 @@ bool Sprite::load(const char* filepath) {
         fclose(f);
         return false;
     }
-    m_w = hdr[0] | (hdr[1] << 8);
-    m_h = hdr[2] | (hdr[3] << 8);
+    m_w = (hdr[0] << 8) | hdr[1];
+    m_h = (hdr[2] << 8) | hdr[3];
 
     uint32_t n = (uint32_t)m_w * m_h;
     m_data = new uint16_t[n];
@@ -34,12 +34,12 @@ bool Sprite::load(const char* filepath) {
     }
 
     for (uint32_t i = 0; i < n; i++) {
-        uint8_t lo, hi;
-        if (fread(&lo, 1, 1, f) != 1 || fread(&hi, 1, 1, f) != 1) {
+        uint8_t hi, lo;
+        if (fread(&hi, 1, 1, f) != 1 || fread(&lo, 1, 1, f) != 1) {
             m_data[i] = SPRITE_KEY_COLOR;
             continue;
         }
-        m_data[i] = lo | (hi << 8);
+        m_data[i] = (hi << 8) | lo;
     }
 
     fclose(f);

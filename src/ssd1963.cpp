@@ -422,16 +422,32 @@ void SSD1963::draw_image_rgb565(const char* filepath) {
         return;
     }
 
-    set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
+    uint8_t hdr[4];
+    if (fread(hdr, 1, 4, file) != 4) {
+        std::cerr << "[SSD1963] Error leyendo header de " << filepath << std::endl;
+        fclose(file);
+        return;
+    }
+    uint16_t w = (hdr[0] << 8) | hdr[1];
+    uint16_t h = (hdr[2] << 8) | hdr[3];
+
+    if (w != LCD_WIDTH || h != LCD_HEIGHT) {
+        std::cerr << "[SSD1963] Advertencia: " << filepath
+                  << " es " << w << "x" << h
+                  << ", se esperaba " << LCD_WIDTH << "x" << LCD_HEIGHT << std::endl;
+    }
+
+    uint16_t draw_w = (w > LCD_WIDTH) ? LCD_WIDTH : w;
+    uint16_t draw_h = (h > LCD_HEIGHT) ? LCD_HEIGHT : h;
+
+    set_area(0, 0, draw_w - 1, draw_h - 1);
     write_command(SSD1963_WRITE_MEMORY_START);
 
     write_pixel_burst_start();
-    for (uint32_t i = 0; i < LCD_WIDTH * LCD_HEIGHT; i++) {
-        uint8_t high, low;
-        if (fread(&high, 1, 1, file) != 1) break;
-        if (fread(&low, 1, 1, file) != 1) break;
-
-        uint16_t color = ((uint16_t)high << 8) | low;
+    for (uint32_t i = 0; i < (uint32_t)draw_w * draw_h; i++) {
+        uint8_t hi, lo;
+        if (fread(&hi, 1, 1, file) != 1 || fread(&lo, 1, 1, file) != 1) break;
+        uint16_t color = (hi << 8) | lo;
         write_pixel_burst(color);
     }
     write_pixel_burst_end();
