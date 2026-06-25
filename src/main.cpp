@@ -49,9 +49,6 @@ int main() {
         printf("[TEST] %s -> rgb(%3hhu,%3hhu,%3hhu) = 0x%04X\n",
                cols[i].name, cols[i].r, cols[i].g, cols[i].b, color);
         d.clear_screen(color);
-        d.draw_rect(10, 10, 460, 252, rgb565(255,255,0));
-        d.draw_string(20, 20, cols[i].name, rgb565(255,255,255), color);
-        d.draw_string(20, 30, "SIN FRAMEBUFFER", rgb565(200,200,200), color);
         usleep(2000000);
     }
     uint16_t bg = rgb565(8,8,28);
