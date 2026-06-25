@@ -47,17 +47,17 @@ void SSD1963::init() {
 
     // --- PLL startup sequence ---
     write_command(SSD1963_SET_PLL_MN);
-    write_data(50 - 1);  // M=50 → VCO=500MHz
-    write_data(5 - 1);   // N=5  → PLL=100MHz
+    write_data(50 - 1);  // M=50 → VCO=600MHz (con 12MHz)
+    write_data(5 - 1);   // N=5  → PLL=120MHz
     write_data(0x04);    // effectuate
 
     write_command(SSD1963_SET_PLL);
     write_data(0x01);
-    delay_ms(100);
+    delay_ms(10);
 
     write_command(SSD1963_SET_PLL);
     write_data(0x03);
-    delay_ms(5);
+    delay_ms(10);
 
     // --- LCD panel mode ---
     write_command(SSD1963_SET_LCD_MODE);
@@ -78,24 +78,24 @@ void SSD1963::init() {
     write_data((LCD_FPR >> 8) & 0xFF);
     write_data(LCD_FPR & 0xFF);
 
-    // --- Horizontal timing (datasheet: HT-1, HPW-1) ---
+    // --- Horizontal timing ---
     write_command(SSD1963_SET_HOR_PERIOD);
-    write_data(((TFT_HSYNC_PERIOD - 1) >> 8) & 0xFF);
-    write_data((TFT_HSYNC_PERIOD - 1) & 0xFF);
+    write_data((TFT_HSYNC_PERIOD >> 8) & 0xFF);
+    write_data(TFT_HSYNC_PERIOD & 0xFF);
     write_data((TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH) >> 8);
     write_data((TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH) & 0xFF);
-    write_data(TFT_HSYNC_PULSE - 1);
+    write_data(TFT_HSYNC_PULSE);
     write_data(0x00);
     write_data(0x00);
     write_data(0x00);
 
-    // --- Vertical timing (datasheet: VT-1, VPW-1) ---
+    // --- Vertical timing ---
     write_command(SSD1963_SET_VER_PERIOD);
-    write_data(((TFT_VSYNC_PERIOD - 1) >> 8) & 0xFF);
-    write_data((TFT_VSYNC_PERIOD - 1) & 0xFF);
+    write_data((TFT_VSYNC_PERIOD >> 8) & 0xFF);
+    write_data(TFT_VSYNC_PERIOD & 0xFF);
     write_data((TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH) >> 8);
     write_data((TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH) & 0xFF);
-    write_data(TFT_VSYNC_PULSE - 1);
+    write_data(TFT_VSYNC_PULSE);
     write_data(0x00);
     write_data(0x00);
 
