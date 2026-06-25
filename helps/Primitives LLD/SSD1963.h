@@ -13,35 +13,15 @@
  * John Leung		    17/06/2011
  *****************************************************************************/
 
-/*
- *****************************************************************************
- * Revision
- * by John Leung of TechToys Co. (www.TechToys.com.hk)
- *
- * Date: 28th June 2012
- * 1. 	Add support for 8-bit interface with PIC18F24J10-I/SP
- * 		#if defined (__18CXX)... & 	#define BUS_WIDTH	8
- * 2.	Add #elif defined (PIC18F24JXXX) to support a new EVK with 
- *		PIC18F24J10-I/SP onboard
- *
- *****************************************************************************
-*/
 #ifndef _SSD1963_H
 #define _SSD1963_H
 
-#include "./system.h"				//Define the hardware platform, system clock speed etc.
-#include "./SSD1963_CMD.h"		//include the command table for SSD1963
-#include "./TimeDelay.h"			//required for DelayMs(xx) software delay
-#include "./TFT.h"				//configuration for individual TFT panels
-
-#if defined (__18CXX)
-	#define BUS_WIDTH	8
-#elif defined (__PIC32MX__)
-	#define BUS_WIDTH	16
-#endif
+#include "system.h"				//Define the hardware platform, system clock speed etc.
+#include "SSD1963_CMD.h"		//include the command table for SSD1963
+#include "TimeDelay.h"			//required for DelayMs(xx) software delay
+#include "TFT.h"				//configuration for individual TFT panels
 
 extern WORD	_color;
-
 
 /*
 *****************************************************************************
@@ -90,6 +70,7 @@ extern WORD	_color;
 
 	//No IO port set for data bus because PMP module is used for the Microchip series
 #elif defined (PIC32MX_EVK_RD4)
+
 	//Definitions for TE pin of SSD1963
 	#define TE_TRIS_BIT	   		TRISGbits.TRISG15	
 	#define TE_PORT_BIT	   		PORTGbits.RG15
@@ -114,34 +95,6 @@ extern WORD	_color;
 	#define RD_TRIS_BIT		   	TRISDbits.TRISD5
 	#define RD_LAT_BIT		   	LATDbits.LATD5
 	//No IO port set for data bus because PMP module is used for the Microchip series
-
-#elif defined (PIC18F24JXXX)
-
-	#define DAT					LATC
-	#define DAT_TRIS			TRISC
-	//Definitions for TE pin of SSD1963
-	#define TE_TRIS_BIT	   		TRISBbits.TRISB0
-	#define TE_PORT_BIT	   		PORTBbits.RB0
-		
-	// Definitions for reset pin
-	#define RST_TRIS_BIT       	TRISAbits.TRISA1
-	#define RST_LAT_BIT        	LATAbits.LATA1
-		
-	//Definition for RS pin
-	#define RS_TRIS_BIT			TRISAbits.TRISA2
-	#define RS_LAT_BIT			LATAbits.LATA2
-		
-	// Definitions for CS pin
-	#define CS_TRIS_BIT        	TRISBbits.TRISB2
-	#define CS_LAT_BIT         	LATBbits.LATB2
-		
-	// Definition for WR pin
-	#define WR_TRIS_BIT		   	TRISAbits.TRISA0
-	#define WR_LAT_BIT		   	LATAbits.LATA0
-		
-	// Definition for RD pin
-	#define RD_TRIS_BIT		   	TRISAbits.TRISA3
-	#define RD_LAT_BIT		   	LATAbits.LATA3
 
 #endif
 
@@ -188,8 +141,6 @@ extern WORD	_color;
 #define LIGHTMAGENTA        RGB565CONVERT(255,  128,    255)
 #define YELLOW              RGB565CONVERT(255,  255,    128)
 #define WHITE               RGB565CONVERT(255,  255,    255)
-#define SKY               RGB565CONVERT(200,  255,    255)
-#define CLOUD               RGB565CONVERT(254,254,254)
                             
 #define GRAY0       	    RGB565CONVERT(224,  224,    224)
 #define GRAY1         	    RGB565CONVERT(192,  192,    192)   
@@ -389,6 +340,5 @@ void SetBacklight(BYTE intensity);
 * Note:
 ********************************************************************/
 void SetTearingCfg(BOOL state, BOOL mode);
-//void SetArea(SHORT start_x, SHORT start_y, SHORT end_x, SHORT end_y);
 
 #endif // _SSD1963_H

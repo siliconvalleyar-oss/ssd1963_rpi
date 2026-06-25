@@ -1,30 +1,16 @@
-/*
- *****************************************************************************
- * Revision
- * by John Leung of TechToys Co. (www.TechToys.com.hk)
- *
- * Date: 28th June 2012
- * 1. 	Add support for TY700TFT800480_R3
- *
- *****************************************************************************
-*/
-
 /*********************************************************************
 * Define TFT panel here
 *********************************************************************/
-#define TY430TFT480272 		0
-#define TY500TFT800480 		1
-#define TY700TFT800480 		2
-#define TY700TFT800480_R3	3
+#define TY430TFT480272 	0
+#define TY500TFT800480 	1
+#define TY700TFT800480 	2
 #define YOUR_PANEL		4
 
 
-#define DISPLAY_PANEL TY430TFT480272
+//#define DISPLAY_PANEL TY430TFT480272
 //#define DISPLAY_PANEL TY500TFT800480
-//#define DISPLAY_PANEL TY700TFT800480
-//#define DISPLAY_PANEL TY700TFT800480_R3
+#define DISPLAY_PANEL TY700TFT800480
 //#define DISPLAY_PANEL YOUR_PANEL
-
 
 /*
 ***********************************************************************
@@ -217,64 +203,6 @@
 	#define LCD_SPCLK	0
 	#define LCD_SPDAT	0
 	/* End of definition for TY700TFT800480 */
-
-#elif (DISPLAY_PANEL == TY700TFT800480_R3)
-	/*
-	*********************************************************************
-	* TIMING PARAMETERS FOR 7" TFT PANEL (800x480) version 2 high lumin
-	* PART# TY700TFT800480_R3
-	*********************************************************************
-	*/
-	/*********************************************************************
-	* Overview: Horizontal and vertical display resolution
-	*                  (from the glass datasheet).
-	*********************************************************************/
-	#define DISP_HOR_RESOLUTION				800
-	#define DISP_VER_RESOLUTION				480
-	/*********************************************************************
-	* Overview: Image orientation (can be 0, 90, 180, 270 degrees).
-	*********************************************************************/
-	#define DISP_ORIENTATION				0
-	/*********************************************************************
-	* Overview: Panel Data Width
-	*********************************************************************/
-	#define DISP_DATA_WIDTH                 24
-	/*********************************************************************
-	* Overview: LSHIFT Polarity Swap
-	* If defined LSHIFT is a falling trigger
-	*********************************************************************/
-	//#define DISP_INV_LSHIFT
-	/*********************************************************************
-	* Overview: Horizontal synchronization timing in pixels
-	*                  (from the glass datasheet).
-	*********************************************************************/
-	#define DISP_HOR_PULSE_WIDTH		3 
-	#define DISP_HOR_BACK_PORCH			88
-	#define DISP_HOR_FRONT_PORCH		37	
-
-
-	/*********************************************************************
-	* Overview: Vertical synchronization timing in lines
-	*                  (from the glass datasheet).
-	*********************************************************************/
-	#define DISP_VER_PULSE_WIDTH		3
-	#define DISP_VER_BACK_PORCH			32	
-	#define DISP_VER_FRONT_PORCH		10
-
-
-	/*********************************************************************
-	* Definition for SPI interface for SSD1963 
-	* Hardware dependent!
-	*********************************************************************/
-	#define GPIO3 3
-	#define GPIO2 2
-	#define GPIO1 1
-	#define GPIO0 0
-	#define LCD_RESET (1<<GPIO0)		//LCD Reset signal (Reset for display panel, NOT ssd1963)
-	#define LCD_SPENA	0
-	#define LCD_SPCLK	0
-	#define LCD_SPDAT	0
-	/* End of definition for DISPLAY_PANEL == TY700TFT800480_R3 */
 
 #elif (DISPLAY_PANEL == YOUR_PANEL)
 	//...your TFT parameters to be defined here

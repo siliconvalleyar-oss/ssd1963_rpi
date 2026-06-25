@@ -43,8 +43,8 @@ PAT	2010.03.07	ADDED include "Compiler.h"
 #endif
 //#include "Compiler.h"
 //#include "HardwareProfile.h"
-#include "./system.h"
-#include "./TimeDelay.h" 
+#include "system.h"
+#include "TimeDelay.h" 
 
 /****************************************************************************
   Function:

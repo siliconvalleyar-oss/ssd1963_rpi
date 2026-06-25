@@ -33,7 +33,7 @@ AKN	2009.10.14	FILE CREATED
 AKN	2009.10.15	CHANGED C18 DELAY ROUTINE TO DECREMENT ENTIRE NUMBER OF CYCLES
 *******************************************************************************/
 
-#include "./GenericTypedefs.h"
+#include "GenericTypedefs.h"
 
 /****************************************************************************
   Function:
