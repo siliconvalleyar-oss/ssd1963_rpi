@@ -44,7 +44,16 @@ int main() {
         {255,255,0,"AMARILLO"}, {255,0,255,"MAGENTA"}, {0,255,255,"CIAN"},
         {255,255,255,"BLANCO"}
     };
-    for (uint32_t i = 0; i < 7; i++) {
+    // Primero los que fallaban (magenta, cian, blanco)
+    for (int32_t i = 6; i >= 4; i--) {
+        uint16_t color = rgb565(cols[i].r, cols[i].g, cols[i].b);
+        printf("[TEST] %s -> rgb(%3hhu,%3hhu,%3hhu) = 0x%04X\n",
+               cols[i].name, cols[i].r, cols[i].g, cols[i].b, color);
+        d.clear_screen(color);
+        usleep(2000000);
+    }
+    // Luego los que funcionaban (rojo, verde, azul, amarillo)
+    for (int32_t i = 3; i >= 0; i--) {
         uint16_t color = rgb565(cols[i].r, cols[i].g, cols[i].b);
         printf("[TEST] %s -> rgb(%3hhu,%3hhu,%3hhu) = 0x%04X\n",
                cols[i].name, cols[i].r, cols[i].g, cols[i].b, color);
