@@ -69,9 +69,9 @@ void SSD1963::init() {
     write_command(SSD1963_SOFT_RESET);
     delay_ms(10);
 
-    // --- LCD panel mode (matching PIC32 ref for TY430TFT480272) ---
+    // --- LCD panel mode ---
     write_command(SSD1963_SET_LCD_MODE);
-    write_data(0x10);   // A4=1 color depth enhance, A2=0 falling edge LSHIFT
+    write_data(0x0C);   // A2=1 rising edge LSHIFT, TFT mode
     write_data(0x00);
     write_data((LCD_WIDTH - 1) >> 8);
     write_data((LCD_WIDTH - 1) & 0xFF);
