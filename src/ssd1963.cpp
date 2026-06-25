@@ -135,31 +135,23 @@ void SSD1963::init() {
     write_command(SSD1963_SOFT_RESET);
     delay_ms(10);
 
-    // --- PLL startup sequence (ref: ssd1963-master) ---
-    // 1) Disable PLL first
-    write_command(SSD1963_SET_PLL);
-    write_data(0x00);
-
-    // 2) Set multiplier M, divider N, effectuate (0x04)
+    // --- PLL startup sequence ---
+    // 1) Configure PLL multiplier M, divider N, effectuate
     //    Fpll = Fin * M / N,  with M,N = value+1 per datasheet
     write_command(SSD1963_SET_PLL_MN);
     write_data(50 - 1);  // M=50
     write_data(5 - 1);   // N=5
     write_data(0x04);    // effectuate
 
-    // 3) Enable PLL and wait 100ms to stabilise
+    // 2) Enable PLL and wait to stabilise
     write_command(SSD1963_SET_PLL);
     write_data(0x01);
     delay_ms(100);
 
-    // 4) Switch PLL as system clock
+    // 3) Switch PLL as system clock
     write_command(SSD1963_SET_PLL);
     write_data(0x03);
     delay_ms(5);
-
-    // 5) Soft reset after PLL config
-    write_command(SSD1963_SOFT_RESET);
-    delay_ms(10);
 
     // --- LCD panel mode ---
     write_command(SSD1963_SET_LCD_MODE);
