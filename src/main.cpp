@@ -31,6 +31,25 @@ int main() {
     menu.add_item("PATRONES",       &patterns);
     menu.add_item("SALIR",          nullptr);
 
+    // === TEST: renderizado directo (sin FrameBuffer) ===
+    SSD1963& d = engine.display();
+    static constexpr uint16_t RGB(uint8_t r, uint8_t g, uint8_t b) {
+        return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+    }
+    uint16_t colors[] = { RGB(255,0,0), RGB(0,255,0), RGB(0,0,255),
+                          RGB(255,255,0), RGB(255,0,255), RGB(0,255,255),
+                          RGB(255,255,255) };
+    for (uint32_t flash = 0; flash < 7; flash++) {
+        d.clear_screen(colors[flash % 7]);
+        d.draw_rect(10, 10, 460, 252, RGB(255,255,0));
+        d.draw_string(20, 20, "TEST DIRECTO", RGB(255,255,255), colors[flash % 7]);
+        d.draw_string(20, 30, "SIN FRAMEBUFFER", RGB(200,200,200), colors[flash % 7]);
+        engine.engine_delay(300);
+    }
+    d.clear_screen(RGB(8,8,28));
+
+    // === FIN TEST ===
+
     engine.set_menu_scene(&menu);
     engine.set_scene(&menu);
 
