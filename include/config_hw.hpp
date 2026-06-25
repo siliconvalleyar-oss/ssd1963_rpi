@@ -48,7 +48,7 @@ constexpr uint16_t TFT_VSYNC_BACK_PORCH   = 2;
 constexpr uint16_t TFT_VSYNC_FRONT_PORCH  = 2;
 constexpr uint16_t TFT_VSYNC_PERIOD = LCD_HEIGHT + TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH + TFT_VSYNC_FRONT_PORCH;
 
-// Frecuencia de píxel: este valor se puede ajustar
-constexpr uint32_t LCD_FPR = 0x01E848; // 2.0 MHz para SYSCLK = 100MHz
-
-//constexpr uint32_t LCD_FPR = 0x01E848;
+// Frecuencia de píxel: PCLK = SYSCLK × (FPR + 1) / 2^20
+// Para 480×272@60Hz con SYSCLK=100MHz → PCLK ≈ 9MHz
+// FPR = (9e6 × 2^20 / 100e6) - 1 = 94371 ≈ 0x0170A3
+constexpr uint32_t LCD_FPR = 0x0170A3;

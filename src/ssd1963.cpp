@@ -47,39 +47,31 @@ void SSD1963::init() {
     write_command(SSD1963_SOFT_RESET);
     delay_ms(10);
 
-    // --- PLL startup sequence (matching reference library) ---
-
-    // 1) Turn display OFF before touching PLL
-    write_command(SSD1963_BLANK_DISPLAY);
-
-    // 2) Disable PLL and system clock before reprogramming
-    write_command(SSD1963_SET_PLL);
-    write_data(0x00);
-
-    // 3) Configure PLL multiplier M, divider N, effectuate
-    //    Fpll = Fin * M / N,  with M,N = value+1 per datasheet
+    // --- PLL startup per datasheet Rev 1.1 sec 9.67 ---
+    // Configure PLL multiplier M, divider N, effectuate
+    // Fpll = Fin * M / N,  with M,N = value+1 per datasheet
     write_command(SSD1963_SET_PLL_MN);
-    write_data(50 - 1);  // M=50
-    write_data(5 - 1);   // N=5
+    write_data(50 - 1);  // M=50  → VCO = 10MHz × 50 = 500MHz
+    write_data(5 - 1);   // N=5   → PLL = 500MHz / 5 = 100MHz
     write_data(0x04);    // effectuate
 
-    // 4) Enable PLL and wait to stabilise
+    // Enable PLL
     write_command(SSD1963_SET_PLL);
     write_data(0x01);
-    delay_ms(100);
+    delay_ms(5);
 
-    // 5) Switch PLL as system clock
+    // Switch PLL as system clock
     write_command(SSD1963_SET_PLL);
     write_data(0x03);
     delay_ms(5);
 
-    // 6) Soft reset after PLL config (works when PLL is properly initialised)
+    // Soft reset after PLL switch (per datasheet program sequence)
     write_command(SSD1963_SOFT_RESET);
-    delay_ms(5);
+    delay_ms(10);
 
-    // --- LCD panel mode ---
+    // --- LCD panel mode (matching PIC32 ref for TY430TFT480272) ---
     write_command(SSD1963_SET_LCD_MODE);
-    write_data(0x0C);
+    write_data(0x10);   // A4=1 color depth enhance, A2=0 falling edge LSHIFT
     write_data(0x00);
     write_data((LCD_WIDTH - 1) >> 8);
     write_data((LCD_WIDTH - 1) & 0xFF);
