@@ -49,7 +49,7 @@ void SSD1963::init() {
     write_command(SSD1963_SET_PLL_MN);
     write_data(50 - 1);  // M=50 → VCO=600MHz (con 12MHz)
     write_data(5 - 1);   // N=5  → PLL=120MHz
-    write_data(0x04);    // effectuate
+    write_data(0x54);    // ICP=0.96mA + effectuate (needed for 600MHz VCO)
 
     write_command(SSD1963_SET_PLL);
     write_data(0x01);
@@ -61,13 +61,16 @@ void SSD1963::init() {
 
     // --- LCD panel mode ---
     write_command(SSD1963_SET_LCD_MODE);
-    write_data(0x0C);
-    write_data(0x00);
+    write_data(0x20);    // TFT mode, 24-bit bus (ref value for TY430TFT480272)
+    write_data(0x00);    // Hsync+Vsync mode
     write_data((LCD_WIDTH - 1) >> 8);
     write_data((LCD_WIDTH - 1) & 0xFF);
     write_data((LCD_HEIGHT - 1) >> 8);
     write_data((LCD_HEIGHT - 1) & 0xFF);
-    write_data(0x00);
+    write_data(0x00);    // RGB sequence
+
+    write_command(SSD1963_SET_PIXEL_FORMAT);
+    write_data(0x55);    // 16bpp RGB565 (ref value)
 
     write_command(SSD1963_SET_PIXEL_DATA_INTERFACE);
     write_data(SSD1963_PDI_16BIT565);
