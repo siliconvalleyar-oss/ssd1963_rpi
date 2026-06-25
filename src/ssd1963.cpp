@@ -61,7 +61,7 @@ void SSD1963::init() {
 
     // --- LCD panel mode ---
     write_command(SSD1963_SET_LCD_MODE);
-    write_data(0x20);    // TFT mode, 24-bit bus (ref value for TY430TFT480272)
+    write_data(0x0C);    // TFT mode, 16-bit bus (bit 2=1 for 16-bit data)
     write_data(0x00);    // Hsync+Vsync mode
     write_data((LCD_WIDTH - 1) >> 8);
     write_data((LCD_WIDTH - 1) & 0xFF);
