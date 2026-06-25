@@ -49,7 +49,7 @@ void SSD1963::init() {
     write_command(SSD1963_SET_PLL_MN);
     write_data(50 - 1);  // M=50 → VCO=600MHz (con 12MHz)
     write_data(5 - 1);   // N=5  → PLL=120MHz
-    write_data(0x54);    // ICP=0.96mA + effectuate (needed for 600MHz VCO)
+    write_data(0x04);    // effectuate (original working value)
 
     write_command(SSD1963_SET_PLL);
     write_data(0x01);
@@ -68,9 +68,6 @@ void SSD1963::init() {
     write_data((LCD_HEIGHT - 1) >> 8);
     write_data((LCD_HEIGHT - 1) & 0xFF);
     write_data(0x00);    // RGB sequence
-
-    write_command(SSD1963_SET_PIXEL_FORMAT);
-    write_data(0x55);    // 16bpp RGB565 (ref value)
 
     write_command(SSD1963_SET_PIXEL_DATA_INTERFACE);
     write_data(SSD1963_PDI_16BIT565);
