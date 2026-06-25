@@ -326,9 +326,12 @@ void SSD1963::draw_pixels(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
 }
 
 void SSD1963::draw_buffer(const uint16_t* data) {
-    set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
-    write_command(SSD1963_WRITE_MEMORY_START);
-    pixels_burst(this, (uint32_t)LCD_WIDTH * LCD_HEIGHT, data);
+    // Dividir en filas individuales para evitar ráfaga larga que corrompe el display
+    for (uint16_t y = 0; y < LCD_HEIGHT; y++) {
+        set_area(0, y, LCD_WIDTH - 1, y);
+        write_command(SSD1963_WRITE_MEMORY_START);
+        pixels_burst(this, LCD_WIDTH, data + (uint32_t)y * LCD_WIDTH);
+    }
 }
 
 void SSD1963::draw_image_rgb565(const char* filepath) {
