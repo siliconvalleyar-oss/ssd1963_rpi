@@ -102,6 +102,7 @@ void SpaceShooterScene::draw(FrameBuffer& fb) {
     // --- Static planets (once) ---
     if (!m_drawn_once) {
         m_drawn_once = true;
+        fb.clear(BG);
         fb.draw_sprite(20,  20,  m_spr_planet[0]);
         fb.draw_sprite(340, 150, m_spr_planet[1]);
         fb.draw_sprite(200, 100, m_spr_planet[2]);

@@ -7,6 +7,13 @@
 #include <color.hpp>
 #include <font_8x8.hpp>
 
+// Retardo NOP para timing del bus 8080 (~43ns con 30 NOPs a 700MHz)
+#define BUS_WAIT  do { __asm__ __volatile__( \
+    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
+    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
+    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop" );\
+} while(0)
+
 SSD1963::SSD1963() {}
 
 void SSD1963::delay_ms(uint32_t ms) {
@@ -30,30 +37,44 @@ void SSD1963::setup_gpio() {
 }
 
 void SSD1963::init() {
+    // Hardware reset
     RESET_LOW();
     delay_ms(10);
     RESET_HIGH();
     delay_ms(10);
 
+    // Soft reset
     write_command(SSD1963_SOFT_RESET);
     delay_ms(10);
 
-    // --- PLL startup sequence ---
-    // 1) Configure PLL multiplier M, divider N, effectuate
+    // --- PLL startup sequence (matching reference library) ---
+
+    // 1) Turn display OFF before touching PLL
+    write_command(SSD1963_BLANK_DISPLAY);
+
+    // 2) Disable PLL and system clock before reprogramming
+    write_command(SSD1963_SET_PLL);
+    write_data(0x00);
+
+    // 3) Configure PLL multiplier M, divider N, effectuate
     //    Fpll = Fin * M / N,  with M,N = value+1 per datasheet
     write_command(SSD1963_SET_PLL_MN);
     write_data(50 - 1);  // M=50
     write_data(5 - 1);   // N=5
     write_data(0x04);    // effectuate
 
-    // 2) Enable PLL and wait to stabilise
+    // 4) Enable PLL and wait to stabilise
     write_command(SSD1963_SET_PLL);
     write_data(0x01);
     delay_ms(100);
 
-    // 3) Switch PLL as system clock
+    // 5) Switch PLL as system clock
     write_command(SSD1963_SET_PLL);
     write_data(0x03);
+    delay_ms(5);
+
+    // 6) Soft reset after PLL config (works when PLL is properly initialised)
+    write_command(SSD1963_SOFT_RESET);
     delay_ms(5);
 
     // --- LCD panel mode ---
@@ -116,7 +137,9 @@ void SSD1963::write_command(uint8_t cmd) {
     CS_LOW();
     write_data_bus(cmd);
     WR_LOW();
+    BUS_WAIT;
     WR_HIGH();
+    BUS_WAIT;
     CS_HIGH();
 }
 
@@ -125,7 +148,9 @@ void SSD1963::write_data(uint16_t data) {
     CS_LOW();
     write_data_bus(data);
     WR_LOW();
+    BUS_WAIT;
     WR_HIGH();
+    BUS_WAIT;
     CS_HIGH();
 }
 
@@ -137,6 +162,7 @@ void SSD1963::write_pixel_burst_start() {
 void SSD1963::write_pixel_burst(uint16_t data) {
     write_data_bus(data);
     WR_LOW();
+    BUS_WAIT;
     WR_HIGH();
 }
 
