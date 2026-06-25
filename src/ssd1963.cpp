@@ -144,7 +144,6 @@ void SSD1963::write_pixel_burst_start() {
 void SSD1963::write_pixel_burst(uint16_t data) {
     write_data_bus(data);
     WR_LOW();
-    __asm__ __volatile__("nop\nnop\nnop\nnop\nnop");
     WR_HIGH();
 }
 
