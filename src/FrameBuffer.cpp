@@ -3,6 +3,7 @@
 #include <engine/Sprite.hpp>
 #include <cstring>
 #include <cstdio>
+#include <iostream>
 #include <algorithm>
 
 FrameBuffer::FrameBuffer() {
