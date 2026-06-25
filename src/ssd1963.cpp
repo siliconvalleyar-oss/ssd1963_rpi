@@ -135,18 +135,33 @@ void SSD1963::init() {
     write_command(SSD1963_SOFT_RESET);
     delay_ms(10);
 
-    write_command(SSD1963_SET_PLL_MN);
-    write_data(49);
-    write_data(4);
-    write_data(4);
+    // --- PLL startup sequence (ref: ssd1963-master) ---
+    // 1) Disable PLL first
+    write_command(SSD1963_SET_PLL);
+    write_data(0x00);
 
+    // 2) Set multiplier M, divider N, effectuate (0x04)
+    //    Fpll = Fin * M / N,  with M,N = value+1 per datasheet
+    write_command(SSD1963_SET_PLL_MN);
+    write_data(50 - 1);  // M=50
+    write_data(5 - 1);   // N=5
+    write_data(0x04);    // effectuate
+
+    // 3) Enable PLL and wait 100ms to stabilise
     write_command(SSD1963_SET_PLL);
     write_data(0x01);
-    delay_ms(10);
+    delay_ms(100);
+
+    // 4) Switch PLL as system clock
     write_command(SSD1963_SET_PLL);
     write_data(0x03);
+    delay_ms(5);
+
+    // 5) Soft reset after PLL config
+    write_command(SSD1963_SOFT_RESET);
     delay_ms(10);
 
+    // --- LCD panel mode ---
     write_command(SSD1963_SET_LCD_MODE);
     write_data(0x0C);
     write_data(0x00);
@@ -159,27 +174,30 @@ void SSD1963::init() {
     write_command(SSD1963_SET_PIXEL_DATA_INTERFACE);
     write_data(SSD1963_PDI_16BIT565);
 
+    // --- Pixel clock (LSHIFT frequency) ---
     write_command(SSD1963_SET_LSHIFT_FREQ);
     write_data((LCD_FPR >> 16) & 0xFF);
     write_data((LCD_FPR >> 8) & 0xFF);
     write_data(LCD_FPR & 0xFF);
 
+    // --- Horizontal timing (datasheet: HT-1, HPW-1) ---
     write_command(SSD1963_SET_HOR_PERIOD);
-    write_data((TFT_HSYNC_PERIOD >> 8) & 0xFF);
-    write_data(TFT_HSYNC_PERIOD & 0xFF);
+    write_data(((TFT_HSYNC_PERIOD - 1) >> 8) & 0xFF);
+    write_data((TFT_HSYNC_PERIOD - 1) & 0xFF);
     write_data((TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH) >> 8);
     write_data((TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH) & 0xFF);
-    write_data(TFT_HSYNC_PULSE);
+    write_data(TFT_HSYNC_PULSE - 1);
     write_data(0x00);
     write_data(0x00);
     write_data(0x00);
 
+    // --- Vertical timing (datasheet: VT-1, VPW-1) ---
     write_command(SSD1963_SET_VER_PERIOD);
-    write_data((TFT_VSYNC_PERIOD >> 8) & 0xFF);
-    write_data(TFT_VSYNC_PERIOD & 0xFF);
+    write_data(((TFT_VSYNC_PERIOD - 1) >> 8) & 0xFF);
+    write_data((TFT_VSYNC_PERIOD - 1) & 0xFF);
     write_data((TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH) >> 8);
     write_data((TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH) & 0xFF);
-    write_data(TFT_VSYNC_PULSE);
+    write_data(TFT_VSYNC_PULSE - 1);
     write_data(0x00);
     write_data(0x00);
 
@@ -188,15 +206,14 @@ void SSD1963::init() {
     BACKLIGHT_ON();
 }
 
+static inline uint32_t data_to_mask(uint16_t data) {
+    return ((uint32_t)data) << 12;   // D0=pin12 … D15=pin27
+}
+
 void SSD1963::write_data_bus(uint16_t data) {
-    for (uint8_t pin = SSD1963_LCD_D0; pin <= SSD1963_LCD_D15; pin++) {
-        bcm2835_gpio_write(pin, LOW);
-    }
-    for (uint8_t i = 0; i < 16; i++) {
-        if (data & (1 << i)) {
-            bcm2835_gpio_write(SSD1963_LCD_D0 + i, HIGH);
-        }
-    }
+    uint32_t mask = data_to_mask(data);
+    bcm2835_gpio_clr_multi(DATA_PINS_MASK);
+    bcm2835_gpio_set_multi(mask);
 }
 
 void SSD1963::write_command(uint8_t cmd) {
@@ -214,6 +231,21 @@ void SSD1963::write_data(uint16_t data) {
     write_data_bus(data);
     WR_LOW();
     WR_HIGH();
+    CS_HIGH();
+}
+
+void SSD1963::write_pixel_burst_start() {
+    RS_HIGH();
+    CS_LOW();
+}
+
+void SSD1963::write_pixel_burst(uint16_t data) {
+    write_data_bus(data);
+    WR_LOW();
+    WR_HIGH();
+}
+
+void SSD1963::write_pixel_burst_end() {
     CS_HIGH();
 }
 
@@ -235,12 +267,24 @@ void SSD1963::set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
 // Operaciones de dibujo (usando write_data estándar con CS toggling)
 // =========================================================================
 
+static void fill_burst(SSD1963* d, uint32_t count, uint16_t color) {
+    d->write_pixel_burst_start();
+    for (uint32_t i = 0; i < count; i++)
+        d->write_pixel_burst(color);
+    d->write_pixel_burst_end();
+}
+
+static void pixels_burst(SSD1963* d, uint32_t count, const uint16_t* data) {
+    d->write_pixel_burst_start();
+    for (uint32_t i = 0; i < count; i++)
+        d->write_pixel_burst(data[i]);
+    d->write_pixel_burst_end();
+}
+
 void SSD1963::clear_screen(uint16_t color) {
     set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
     write_command(SSD1963_WRITE_MEMORY_START);
-    for (uint32_t i = 0; i < LCD_WIDTH * LCD_HEIGHT; i++) {
-        write_data(color);
-    }
+    fill_burst(this, LCD_WIDTH * LCD_HEIGHT, color);
 }
 
 void SSD1963::draw_pixel(uint16_t x, uint16_t y, uint16_t color) {
@@ -252,9 +296,7 @@ void SSD1963::draw_pixel(uint16_t x, uint16_t y, uint16_t color) {
 void SSD1963::draw_block(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
     set_area(x, y, x + width - 1, y + height - 1);
     write_command(SSD1963_WRITE_MEMORY_START);
-    for (uint32_t i = 0; i < (uint32_t)width * height; i++) {
-        write_data(color);
-    }
+    fill_burst(this, (uint32_t)width * height, color);
 }
 
 void SSD1963::fill_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
@@ -378,10 +420,7 @@ void SSD1963::draw_pixels(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
                           const uint16_t* data) {
     set_area(x, y, x + w - 1, y + h - 1);
     write_command(SSD1963_WRITE_MEMORY_START);
-    uint32_t n = (uint32_t)w * h;
-    for (uint32_t i = 0; i < n; i++) {
-        write_data(data[i]);
-    }
+    pixels_burst(this, (uint32_t)w * h, data);
 }
 
 void SSD1963::draw_image_rgb565(const char* filepath) {
@@ -394,14 +433,16 @@ void SSD1963::draw_image_rgb565(const char* filepath) {
     set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
     write_command(SSD1963_WRITE_MEMORY_START);
 
+    write_pixel_burst_start();
     for (uint32_t i = 0; i < LCD_WIDTH * LCD_HEIGHT; i++) {
         uint8_t high, low;
         if (fread(&high, 1, 1, file) != 1) break;
         if (fread(&low, 1, 1, file) != 1) break;
 
         uint16_t color = ((uint16_t)high << 8) | low;
-        write_data(color);
+        write_pixel_burst(color);
     }
+    write_pixel_burst_end();
 
     fclose(file);
 }
