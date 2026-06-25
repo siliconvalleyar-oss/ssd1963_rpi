@@ -37,41 +37,31 @@ void SSD1963::setup_gpio() {
 }
 
 void SSD1963::init() {
-    // Hardware reset
     RESET_LOW();
     delay_ms(10);
     RESET_HIGH();
     delay_ms(10);
 
-    // Soft reset
     write_command(SSD1963_SOFT_RESET);
     delay_ms(10);
 
-    // --- PLL startup per datasheet Rev 1.1 sec 9.67 ---
-    // Configure PLL multiplier M, divider N, effectuate
-    // Fpll = Fin * M / N,  with M,N = value+1 per datasheet
+    // --- PLL startup sequence ---
     write_command(SSD1963_SET_PLL_MN);
-    write_data(50 - 1);  // M=50  → VCO = 10MHz × 50 = 500MHz
-    write_data(5 - 1);   // N=5   → PLL = 500MHz / 5 = 100MHz
+    write_data(50 - 1);  // M=50 → VCO=500MHz
+    write_data(5 - 1);   // N=5  → PLL=100MHz
     write_data(0x04);    // effectuate
 
-    // Enable PLL
     write_command(SSD1963_SET_PLL);
     write_data(0x01);
-    delay_ms(5);
+    delay_ms(100);
 
-    // Switch PLL as system clock
     write_command(SSD1963_SET_PLL);
     write_data(0x03);
     delay_ms(5);
 
-    // Soft reset after PLL switch (per datasheet program sequence)
-    write_command(SSD1963_SOFT_RESET);
-    delay_ms(10);
-
     // --- LCD panel mode ---
     write_command(SSD1963_SET_LCD_MODE);
-    write_data(0x0C);   // A2=1 rising edge LSHIFT, TFT mode
+    write_data(0x0C);
     write_data(0x00);
     write_data((LCD_WIDTH - 1) >> 8);
     write_data((LCD_WIDTH - 1) & 0xFF);
