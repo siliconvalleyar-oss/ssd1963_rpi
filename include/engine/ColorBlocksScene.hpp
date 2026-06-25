@@ -1,5 +1,6 @@
 #pragma once
 #include <engine/Scene.hpp>
+#include <FrameBuffer.hpp>
 
 class ColorBlocksScene : public Scene {
 public:
@@ -7,7 +8,7 @@ public:
 
     bool on_enter() override;
     void update(uint32_t dt) override;
-    void draw() override;
+    void draw(FrameBuffer& fb) override;
     const char* name() const override;
 
 private:

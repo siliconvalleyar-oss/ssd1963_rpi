@@ -49,7 +49,6 @@ bool SpaceShooterScene::on_enter() {
             m_spr_planet[2].load("assets/naves/planet_02.rgb565");
     }
 
-    m_display.clear_screen(BG);
     std::cout << "[Shooter] START! lives=" << (int)m_lives << "\n";
     return true;
 }
@@ -87,40 +86,40 @@ void SpaceShooterScene::update(uint32_t dt) {
     check_collisions();
 }
 
-void SpaceShooterScene::draw() {
+void SpaceShooterScene::draw(FrameBuffer& fb) {
     // --- Erase ALL old positions before drawing ---
-    erase(m_prev_px, m_prev_py, PLAYER_W, PLAYER_H);
+    erase(fb, m_prev_px, m_prev_py, PLAYER_W, PLAYER_H);
     for (auto& b : m_bullets) {
-        if (b.active) erase(b.px, b.py, BULLET_W, BULLET_H);
+        if (b.active) erase(fb, b.px, b.py, BULLET_W, BULLET_H);
     }
     for (auto& e : m_enemies) {
-        if (e.active) erase(e.px, e.py, ENEMY_W, ENEMY_H);
+        if (e.active) erase(fb, e.px, e.py, ENEMY_W, ENEMY_H);
     }
 
     // --- Stars: erase old, update, draw new ---
-    draw_stars();
+    draw_stars(fb);
 
     // --- Static planets (once) ---
     if (!m_drawn_once) {
         m_drawn_once = true;
-        m_spr_planet[0].draw(m_display, 20,  20);
-        m_spr_planet[1].draw(m_display, 340, 150);
-        m_spr_planet[2].draw(m_display, 200, 100);
+        fb.draw_sprite(20,  20,  m_spr_planet[0]);
+        fb.draw_sprite(340, 150, m_spr_planet[1]);
+        fb.draw_sprite(200, 100, m_spr_planet[2]);
     }
 
     // --- Draw sprites at new positions ---
     for (auto& b : m_bullets) {
         if (b.active)
-            m_spr_bullet.draw(m_display, (int16_t)b.x, (int16_t)b.y);
+            fb.draw_sprite((int16_t)b.x, (int16_t)b.y, m_spr_bullet);
     }
     for (auto& e : m_enemies) {
         if (e.active)
-            m_spr_enemy.draw(m_display, (int16_t)e.x, (int16_t)e.y);
+            fb.draw_sprite((int16_t)e.x, (int16_t)e.y, m_spr_enemy);
     }
-    m_spr_player.draw(m_display, (int16_t)m_player_x, (int16_t)m_player_y);
+    fb.draw_sprite((int16_t)m_player_x, (int16_t)m_player_y, m_spr_player);
 
     // --- HUD ---
-    draw_hud();
+    draw_hud(fb);
 
     // --- Save current positions as previous for next frame ---
     m_prev_px = m_player_x;
@@ -133,7 +132,7 @@ void SpaceShooterScene::draw() {
     }
 }
 
-void SpaceShooterScene::erase(float x, float y, uint16_t w, uint16_t h) {
+void SpaceShooterScene::erase(FrameBuffer& fb, float x, float y, uint16_t w, uint16_t h) {
     int16_t ix = (int16_t)x;
     int16_t iy = (int16_t)y;
     if (ix >= 480 || iy >= 272 || ix + (int16_t)w <= 0 || iy + (int16_t)h <= 0)
@@ -143,7 +142,7 @@ void SpaceShooterScene::erase(float x, float y, uint16_t w, uint16_t h) {
     if (ix + w > 480) w = 480 - ix;
     if (iy + h > 272) h = 272 - iy;
     if (w == 0 || h == 0) return;
-    m_display.fill_rect(ix, iy, w, h, BG);
+    fb.fill_rect(ix, iy, w, h, BG);
 }
 
 const char* SpaceShooterScene::name() const { return "SpaceShooterScene"; }
@@ -226,36 +225,36 @@ void SpaceShooterScene::check_collisions() {
     }
 }
 
-void SpaceShooterScene::draw_hud() {
+void SpaceShooterScene::draw_hud(FrameBuffer& fb) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "SCORE: %04u", m_score);
-    m_display.draw_string(4, 2, buf, rgb(255, 255, 100), BG);
+    fb.draw_string(4, 2, buf, rgb(255, 255, 100), BG);
     for (uint8_t i = 0; i < m_lives; i++)
-        m_display.draw_string(4 + i * 30, LCD_HEIGHT - 12, "v",
-                              rgb(255, 80, 80), BG);
+        fb.draw_string(4 + i * 30, LCD_HEIGHT - 12, "v",
+                      rgb(255, 80, 80), BG);
     uint32_t secs = m_timer / 1000;
     std::snprintf(buf, sizeof(buf), "%02u:%02u", secs / 60, secs % 60);
-    m_display.draw_string(LCD_WIDTH - 48, 2, buf, rgb(150, 150, 150), BG);
-    m_display.draw_string(LCD_WIDTH - 84, LCD_HEIGHT - 12, ENGINE_VERSION,
-                          rgb(80, 100, 80), BG);
+    fb.draw_string(LCD_WIDTH - 48, 2, buf, rgb(150, 150, 150), BG);
+    fb.draw_string(LCD_WIDTH - 84, LCD_HEIGHT - 12, ENGINE_VERSION,
+                  rgb(80, 100, 80), BG);
     if (m_lives == 0) {
-        m_display.draw_string_centered(LCD_WIDTH / 2, LCD_HEIGHT / 2 - 10,
-                                       "GAME OVER", rgb(255, 0, 0), BG);
+        fb.draw_string_centered(LCD_WIDTH / 2, LCD_HEIGHT / 2 - 10,
+                               "GAME OVER", rgb(255, 0, 0), BG);
         std::snprintf(buf, sizeof(buf), "SCORE: %u", m_score);
-        m_display.draw_string_centered(LCD_WIDTH / 2, LCD_HEIGHT / 2 + 10,
-                                       buf, rgb(255, 255, 0), BG);
+        fb.draw_string_centered(LCD_WIDTH / 2, LCD_HEIGHT / 2 + 10,
+                               buf, rgb(255, 255, 0), BG);
     }
 }
 
-void SpaceShooterScene::draw_stars() {
+void SpaceShooterScene::draw_stars(FrameBuffer& fb) {
     for (auto& s : m_stars) {
-        m_display.draw_pixel(s.x, (uint16_t)s.y, BG);
+        fb.set_pixel(s.x, (uint16_t)s.y, BG);
         s.y += s.speed * 0.5f;
         if (s.y > LCD_HEIGHT) {
             s.y = 0;
             s.x = rand() % 480;
         }
         uint8_t br = s.brightness;
-        m_display.draw_pixel(s.x, (uint16_t)s.y, rgb(br/3, br/3, br));
+        fb.set_pixel(s.x, (uint16_t)s.y, rgb(br/3, br/3, br));
     }
 }

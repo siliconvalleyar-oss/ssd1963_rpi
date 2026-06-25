@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <ssd1963.hpp>
+#include <FrameBuffer.hpp>
 #include <engine/Scene.hpp>
 #include <config_hw.hpp>
 #include <color.hpp>
@@ -27,6 +28,7 @@ public:
 
 private:
     SSD1963      m_display;
+    FrameBuffer  m_fb;
     Scene*       m_active_scene;
     Scene*       m_menu_scene;
     EngineState  m_state;

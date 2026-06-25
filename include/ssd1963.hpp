@@ -240,6 +240,4 @@ private:
     // Fuente bitmap 8x8 (ASCII 0x20-0x7F)
     // ---------------------------------------------------------------
 
-    /** @brief Tabla de fuente bitmap 8x8 para caracteres ASCII imprimibles. */
-    static const uint8_t m_font_8x8[95][8];
 };

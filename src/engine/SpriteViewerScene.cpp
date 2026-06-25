@@ -48,18 +48,18 @@ void SpriteViewerScene::update(uint32_t dt) {
     }
 }
 
-void SpriteViewerScene::draw() {
+void SpriteViewerScene::draw(FrameBuffer& fb) {
     if (m_drawn) return;
     m_drawn = true;
 
-    m_display.clear_screen(rgb(10, 10, 30));
+    fb.clear(rgb(10, 10, 30));
 
     if (m_idx >= m_count) return;
 
     Entry& e = m_entries[m_idx];
     if (!e.loaded) {
-        m_display.draw_string_centered(LCD_WIDTH / 2, LCD_HEIGHT / 2 - 4,
-                                       "NO IMAGE", rgb(255, 0, 0), rgb(10, 10, 30));
+        fb.draw_string_centered(LCD_WIDTH / 2, LCD_HEIGHT / 2 - 4,
+                               "NO IMAGE", rgb(255, 0, 0), rgb(10, 10, 30));
         return;
     }
 
@@ -69,13 +69,13 @@ void SpriteViewerScene::draw() {
     if (sx < 0) sx = 0;
     if (sy < 0) sy = 0;
 
-    e.sprite.draw(m_display, sx, sy);
+    fb.draw_sprite(sx, sy, e.sprite);
 
     // Label abajo
     char buf[64];
     std::snprintf(buf, sizeof(buf), "[%d/%d] %s", m_idx + 1, m_count, e.label);
-    m_display.draw_string_centered(LCD_WIDTH / 2, LCD_HEIGHT - 10,
-                                   buf, rgb(200, 200, 100), rgb(10, 10, 30));
+    fb.draw_string_centered(LCD_WIDTH / 2, LCD_HEIGHT - 10,
+                           buf, rgb(200, 200, 100), rgb(10, 10, 30));
 }
 
 const char* SpriteViewerScene::name() const {

@@ -25,61 +25,61 @@ void PatternScene::update(uint32_t dt) {
     }
 }
 
-void PatternScene::draw() {
+void PatternScene::draw(FrameBuffer& fb) {
     switch (m_current) {
-        case PatternType::COLOR_BARS:   draw_color_bars();   break;
-        case PatternType::GRADIENT:     draw_gradient();     break;
-        case PatternType::CHECKERBOARD: draw_checkerboard(); break;
-        case PatternType::GRID:         draw_grid();         break;
-        case PatternType::RAINBOW:      draw_rainbow();      break;
+        case PatternType::COLOR_BARS:   draw_color_bars(fb);   break;
+        case PatternType::GRADIENT:     draw_gradient(fb);     break;
+        case PatternType::CHECKERBOARD: draw_checkerboard(fb); break;
+        case PatternType::GRID:         draw_grid(fb);         break;
+        case PatternType::RAINBOW:      draw_rainbow(fb);      break;
         default: break;
     }
     const char* names[] = {"COLOR BARS","GRADIENT","CHECKER","GRID","RAINBOW"};
     uint8_t idx = static_cast<uint8_t>(m_current);
     char buf[32];
     std::snprintf(buf, sizeof(buf), "[ %s ]", names[idx]);
-    m_display.draw_string_centered(LCD_WIDTH/2, 4, buf, WHITE, BLACK);
+    fb.draw_string_centered(LCD_WIDTH/2, 4, buf, WHITE, BLACK);
     std::snprintf(buf, sizeof(buf), "Pattern %d/%d", idx+1, (int)PatternType::COUNT);
-    m_display.draw_string(4, LCD_HEIGHT-12, buf, RGB565CONVERT(150,150,150), BLACK);
+    fb.draw_string(4, LCD_HEIGHT-12, buf, RGB565CONVERT(150,150,150), BLACK);
 }
 
 const char* PatternScene::name() const { return "PatternScene"; }
 
-void PatternScene::draw_color_bars() {
+void PatternScene::draw_color_bars(FrameBuffer& fb) {
     const uint16_t cols[] = {WHITE,YELLOW,CYAN,GREEN,MAGENTA,RED,BLUE,BLACK};
     uint16_t w = LCD_WIDTH / 8;
     for (uint8_t i = 0; i < 8; i++)
-        m_display.fill_rect(i*w, 0, w, LCD_HEIGHT, cols[i]);
+        fb.fill_rect(i*w, 0, w, LCD_HEIGHT, cols[i]);
 }
 
-void PatternScene::draw_gradient() {
+void PatternScene::draw_gradient(FrameBuffer& fb) {
     for (uint16_t x = 0; x < LCD_WIDTH; x++)
         for (uint16_t y = 0; y < LCD_HEIGHT; y++)
-            m_display.draw_pixel(x, y, hsv((x*240)/LCD_WIDTH, 255, 255));
+            fb.set_pixel(x, y, hsv((x*240)/LCD_WIDTH, 255, 255));
 }
 
-void PatternScene::draw_checkerboard() {
+void PatternScene::draw_checkerboard(FrameBuffer& fb) {
     const uint16_t SZ = 30;
     for (uint16_t y = 0; y < LCD_HEIGHT; y += SZ)
         for (uint16_t x = 0; x < LCD_WIDTH; x += SZ)
-            m_display.fill_rect(x, y, SZ, SZ,
-                                ((x/SZ)+(y/SZ))%2 ? BLACK : WHITE);
+            fb.fill_rect(x, y, SZ, SZ,
+                        ((x/SZ)+(y/SZ))%2 ? BLACK : WHITE);
 }
 
-void PatternScene::draw_grid() {
-    m_display.clear_screen(BLACK);
+void PatternScene::draw_grid(FrameBuffer& fb) {
+    fb.clear(BLACK);
     for (uint16_t x = 0; x < LCD_WIDTH; x += 20)
         for (uint16_t y = 0; y < LCD_HEIGHT; y++)
-            m_display.draw_pixel(x, y, RGB565CONVERT(0,100,0));
+            fb.set_pixel(x, y, RGB565CONVERT(0,100,0));
     for (uint16_t y = 0; y < LCD_HEIGHT; y += 20)
         for (uint16_t x = 0; x < LCD_WIDTH; x++)
-            m_display.draw_pixel(x, y, RGB565CONVERT(0,100,0));
+            fb.set_pixel(x, y, RGB565CONVERT(0,100,0));
 }
 
-void PatternScene::draw_rainbow() {
+void PatternScene::draw_rainbow(FrameBuffer& fb) {
     for (uint16_t y = 0; y < LCD_HEIGHT; y++)
         for (uint16_t x = 0; x < LCD_WIDTH; x++)
-            m_display.draw_pixel(x, y, hsv((y*240)/LCD_HEIGHT, 255, 255));
+            fb.set_pixel(x, y, hsv((y*240)/LCD_HEIGHT, 255, 255));
 }
 
 uint16_t PatternScene::hsv(uint8_t h, uint8_t s, uint8_t v) {

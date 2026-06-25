@@ -73,21 +73,21 @@ void MenuScene::do_select() {
     }
 }
 
-void MenuScene::draw() {
+void MenuScene::draw(FrameBuffer& fb) {
     if (m_drawn) return;
     m_drawn = true;
 
-    m_display.clear_screen(rgb(8, 8, 28));
+    fb.clear(rgb(8, 8, 28));
     uint16_t cx = LCD_WIDTH / 2;
     uint8_t  sc = 2;
 
     // Título
-    m_display.draw_string_centered_scaled(cx, 4, m_title,
-                                          rgb(255, 200, 80), rgb(8, 8, 28), sc);
+    fb.draw_string_centered_scaled(cx, 4, m_title,
+                                  rgb(255, 200, 80), rgb(8, 8, 28), sc);
 
     // Línea separadora
     for (uint16_t x = 10; x < LCD_WIDTH - 10; x++)
-        m_display.draw_pixel(x, 26, rgb(200, 0, 120));
+        fb.set_pixel(x, 26, rgb(200, 0, 120));
 
     // Items
     for (uint8_t i = 0; i < m_count; i++) {
@@ -98,22 +98,22 @@ void MenuScene::draw() {
         if (i == m_cur) {
             uint16_t bg = (m_phase == HOLD) ? rgb(80, 40, 20) : rgb(30, 50, 100);
             const char* arrow = (m_phase == HOLD) ? ">>" : ">";
-            m_display.fill_rect(4, iy - 1, LCD_WIDTH - 8, 18, bg);
-            m_display.draw_string_scaled(8,  iy, arrow,
-                                         rgb(255, 200, 100), bg, sc);
-            m_display.draw_string_scaled(28, iy, buf,
-                                         rgb(255, 255, 255), bg, sc);
+            fb.fill_rect(4, iy - 1, LCD_WIDTH - 8, 18, bg);
+            fb.draw_string_scaled(8,  iy, arrow,
+                                 rgb(255, 200, 100), bg, sc);
+            fb.draw_string_scaled(28, iy, buf,
+                                 rgb(255, 255, 255), bg, sc);
         } else {
-            m_display.draw_string_scaled(28, iy, buf,
-                                         rgb(150, 150, 180), rgb(8, 8, 28), sc);
+            fb.draw_string_scaled(28, iy, buf,
+                                 rgb(150, 150, 180), rgb(8, 8, 28), sc);
         }
     }
 
     // Footer
     char footer[24];
     std::snprintf(footer, sizeof(footer), "[%d/%d]", m_target + 1, m_count);
-    m_display.draw_string_centered(cx, LCD_HEIGHT - 12, footer,
-                                   rgb(80, 80, 120), rgb(8, 8, 28));
+    fb.draw_string_centered(cx, LCD_HEIGHT - 12, footer,
+                           rgb(80, 80, 120), rgb(8, 8, 28));
 }
 
 const char* MenuScene::name() const {

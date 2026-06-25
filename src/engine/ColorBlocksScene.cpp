@@ -16,7 +16,6 @@ ColorBlocksScene::ColorBlocksScene(SSD1963& display) : Scene(display)
 bool ColorBlocksScene::on_enter() {
     m_blocks_drawn = m_image_drawn = false;
     m_timer = 0; m_phase = 0;
-    m_display.clear_screen(BLACK);
     return true;
 }
 
@@ -31,17 +30,18 @@ void ColorBlocksScene::update(uint32_t dt) {
     }
 }
 
-void ColorBlocksScene::draw() {
+void ColorBlocksScene::draw(FrameBuffer& fb) {
     if (!m_blocks_drawn) {
+        fb.clear(BLACK);
         for (uint8_t i = 0; i < 7; i++) {
-            m_display.draw_block(m_blocks[i].x, m_blocks[i].y, BW, BH, m_blocks[i].color);
-            m_display.draw_string(m_blocks[i].x + 2, m_blocks[i].y + BH + 4,
-                                  m_blocks[i].name, m_blocks[i].color, BLACK);
+            fb.fill_rect(m_blocks[i].x, m_blocks[i].y, BW, BH, m_blocks[i].color);
+            fb.draw_string(m_blocks[i].x + 2, m_blocks[i].y + BH + 4,
+                          m_blocks[i].name, m_blocks[i].color, BLACK);
         }
         m_blocks_drawn = true;
     }
     if (m_phase == 1 && !m_image_drawn) {
-        m_display.draw_image_rgb565("assets/capibaras.rgb565");
+        fb.draw_image_rgb565("assets/capibaras.rgb565");
         m_image_drawn = true;
     }
 }

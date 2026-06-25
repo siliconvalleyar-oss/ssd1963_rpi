@@ -31,20 +31,19 @@ void ImageViewerScene::update(uint32_t dt) {
     }
 }
 
-void ImageViewerScene::draw() {
+void ImageViewerScene::draw(FrameBuffer& fb) {
     if (!m_image_loaded) {
-        // Transición: wipe de negro a imagen
-        m_display.clear_screen(BLACK);
-        m_display.draw_image_rgb565(m_filepath);
+        fb.clear(BLACK);
+        fb.draw_image_rgb565(m_filepath);
         m_image_loaded = true;
         std::cout << "[Gallery] " << m_filepath << "\n";
     }
 
-    draw_frame();
+    draw_frame(fb);
 
     // Créditos/caption abajo
-    m_display.draw_string_centered(LCD_WIDTH / 2, LCD_HEIGHT - 10,
-                                   m_caption, rgb(180, 180, 200), BLACK);
+    fb.draw_string_centered(LCD_WIDTH / 2, LCD_HEIGHT - 10,
+                           m_caption, rgb(180, 180, 200), BLACK);
 }
 
 const char* ImageViewerScene::name() const {
@@ -57,14 +56,13 @@ void ImageViewerScene::set_filepath(const char* filepath, const char* caption) {
     m_image_loaded = false;
 }
 
-void ImageViewerScene::draw_frame() {
-    // Marco tipo polaroid/arcade alrededor de la imagen
+void ImageViewerScene::draw_frame(FrameBuffer& fb) {
     for (uint16_t x = 0; x < LCD_WIDTH; x++) {
-        m_display.draw_pixel(x, 0,                       rgb(255, 200, 0));
-        m_display.draw_pixel(x, LCD_HEIGHT - 1,           rgb(255, 200, 0));
+        fb.set_pixel(x, 0,                       rgb(255, 200, 0));
+        fb.set_pixel(x, LCD_HEIGHT - 1,           rgb(255, 200, 0));
     }
     for (uint16_t y = 0; y < LCD_HEIGHT; y++) {
-        m_display.draw_pixel(0, y,                       rgb(255, 200, 0));
-        m_display.draw_pixel(LCD_WIDTH - 1, y,           rgb(255, 200, 0));
+        fb.set_pixel(0, y,                       rgb(255, 200, 0));
+        fb.set_pixel(LCD_WIDTH - 1, y,           rgb(255, 200, 0));
     }
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include <engine/Scene.hpp>
+#include <FrameBuffer.hpp>
 
 enum class PatternType : uint8_t {
     COLOR_BARS, GRADIENT, CHECKERBOARD, GRID, RAINBOW, COUNT
@@ -11,7 +12,7 @@ public:
 
     bool on_enter() override;
     void update(uint32_t dt) override;
-    void draw() override;
+    void draw(FrameBuffer& fb) override;
     const char* name() const override;
 
 private:
@@ -22,10 +23,10 @@ private:
     static constexpr uint32_t PAT_MS   = 3000;
     static constexpr uint32_t TOTAL_MS = 18000;
 
-    void draw_color_bars();
-    void draw_gradient();
-    void draw_checkerboard();
-    void draw_grid();
-    void draw_rainbow();
+    void draw_color_bars(FrameBuffer& fb);
+    void draw_gradient(FrameBuffer& fb);
+    void draw_checkerboard(FrameBuffer& fb);
+    void draw_grid(FrameBuffer& fb);
+    void draw_rainbow(FrameBuffer& fb);
     uint16_t hsv(uint8_t h, uint8_t s, uint8_t v);
 };

@@ -4,6 +4,7 @@
 #include <color.hpp>
 
 class GameEngine;
+class FrameBuffer;
 
 class Scene {
 public:
@@ -15,7 +16,7 @@ public:
     virtual bool on_enter() { return true; }
     virtual void on_exit()  {}
     virtual void update(uint32_t dt) = 0;
-    virtual void draw() = 0;
+    virtual void draw(FrameBuffer& fb) = 0;
     virtual const char* name() const = 0;
 
 protected:

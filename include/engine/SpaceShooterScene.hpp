@@ -1,6 +1,7 @@
 #pragma once
 #include <engine/Scene.hpp>
 #include <engine/Sprite.hpp>
+#include <FrameBuffer.hpp>
 
 #define MAX_BULLETS  8
 #define MAX_ENEMIES   4
@@ -12,7 +13,7 @@ public:
 
     bool on_enter() override;
     void update(uint32_t dt) override;
-    void draw() override;
+    void draw(FrameBuffer& fb) override;
     const char* name() const override;
 
 private:
@@ -60,11 +61,11 @@ private:
 
     void spawn_enemy();
     void shoot();
-    void erase(float x, float y, uint16_t w, uint16_t h);
+    void erase(FrameBuffer& fb, float x, float y, uint16_t w, uint16_t h);
     void update_bullets(uint32_t dt);
     void update_enemies(uint32_t dt);
     void check_collisions();
-    void draw_hud();
-    void draw_stars();
+    void draw_hud(FrameBuffer& fb);
+    void draw_stars(FrameBuffer& fb);
     void draw_planets();
 };

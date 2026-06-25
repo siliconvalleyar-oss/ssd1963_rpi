@@ -1,6 +1,7 @@
 #pragma once
 #include <engine/Scene.hpp>
 #include <engine/Sprite.hpp>
+#include <FrameBuffer.hpp>
 
 #define SPRITE_VIEWER_MAX 32
 
@@ -11,7 +12,7 @@ public:
     bool add_sprite(const char* filepath, const char* label);
     bool on_enter() override;
     void update(uint32_t dt) override;
-    void draw() override;
+    void draw(FrameBuffer& fb) override;
     const char* name() const override;
 
 private:

@@ -3,7 +3,8 @@
 #include <iostream>
 
 GameEngine::GameEngine()
-    : m_active_scene(nullptr)
+    : m_fb()
+    , m_active_scene(nullptr)
     , m_menu_scene(nullptr)
     , m_state(EngineState::INIT)
     , m_start_time(0)
@@ -18,7 +19,8 @@ bool GameEngine::init() {
     }
     m_display.setup_gpio();
     m_display.init();
-    m_display.clear_screen(BLACK);
+    m_fb.clear(BLACK);
+    m_fb.flush(m_display);
 
     m_start_time = bcm2835_st_read();
     m_state = EngineState::RUNNING;
@@ -45,7 +47,8 @@ void GameEngine::run() {
 
         if (m_active_scene) {
             m_active_scene->update(dt);
-            m_active_scene->draw();
+            m_active_scene->draw(m_fb);
+            m_fb.flush(m_display);
         }
     }
     std::cout << "[ENGINE] Shutdown.\n";
