@@ -202,6 +202,19 @@ public:
      *  @param filepath Ruta al archivo .rgb565. */
     void draw_image_rgb565(const char* filepath);
 
+    // ---------------------------------------------------------------
+    // Primitivas de ráfaga (burst) para escritura masiva de píxeles
+    // ---------------------------------------------------------------
+
+    /** @brief Inicia ráfaga de escritura de píxeles (RS=HIGH, CS=LOW, mantiene CS). */
+    void write_pixel_burst_start();
+
+    /** @brief Escribe 1 píxel en ráfaga (solo toggle WR, CS se mantiene LOW). */
+    void write_pixel_burst(uint16_t data);
+
+    /** @brief Termina ráfaga de escritura (CS=HIGH). */
+    void write_pixel_burst_end();
+
 private:
     // ---------------------------------------------------------------
     // Primitivas del bus 8080
@@ -215,15 +228,6 @@ private:
 
     /** @brief Ciclo de escritura de datos (RS=HIGH, CS toggles). */
     void write_data(uint16_t data);
-
-    /** @brief Inicia ráfaga de escritura de píxeles (RS=HIGH, CS=LOW, mantiene CS). */
-    void write_pixel_burst_start();
-
-    /** @brief Escribe 1 píxel en ráfaga (solo toggle WR, CS se mantiene LOW). */
-    void write_pixel_burst(uint16_t data);
-
-    /** @brief Termina ráfaga de escritura (CS=HIGH). */
-    void write_pixel_burst_end();
 
     /** @brief Define el área activa de escritura en GRAM. */
     void set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
