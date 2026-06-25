@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <iostream>
 #include <engine/GameEngine.hpp>
 #include <engine/MenuScene.hpp>
@@ -38,17 +39,24 @@ int main() {
 
     // === TEST: renderizado directo (sin FrameBuffer) ===
     SSD1963& d = engine.display();
-    uint16_t cols[] = { rgb565(255,0,0), rgb565(0,255,0), rgb565(0,0,255),
-                        rgb565(255,255,0), rgb565(255,0,255), rgb565(0,255,255),
-                        rgb565(255,255,255) };
-    for (uint32_t flash = 0; flash < 7; flash++) {
-        d.clear_screen(cols[flash]);
+    struct { uint8_t r,g,b; const char* name; } cols[] = {
+        {255,0,0,"ROJO"}, {0,255,0,"VERDE"}, {0,0,255,"AZUL"},
+        {255,255,0,"AMARILLO"}, {255,0,255,"MAGENTA"}, {0,255,255,"CIAN"},
+        {255,255,255,"BLANCO"}
+    };
+    for (uint32_t i = 0; i < 7; i++) {
+        uint16_t color = rgb565(cols[i].r, cols[i].g, cols[i].b);
+        printf("[TEST] %s -> rgb(%3hhu,%3hhu,%3hhu) = 0x%04X\n",
+               cols[i].name, cols[i].r, cols[i].g, cols[i].b, color);
+        d.clear_screen(color);
         d.draw_rect(10, 10, 460, 252, rgb565(255,255,0));
-        d.draw_string(20, 20, "TEST DIRECTO", rgb565(255,255,255), cols[flash]);
-        d.draw_string(20, 30, "SIN FRAMEBUFFER", rgb565(200,200,200), cols[flash]);
-        usleep(300000);
+        d.draw_string(20, 20, cols[i].name, rgb565(255,255,255), color);
+        d.draw_string(20, 30, "SIN FRAMEBUFFER", rgb565(200,200,200), color);
+        usleep(2000000);
     }
-    d.clear_screen(rgb565(8,8,28));
+    uint16_t bg = rgb565(8,8,28);
+    printf("[TEST] FONDO -> rgb(8,8,28) = 0x%04X\n", bg);
+    d.clear_screen(bg);
     // === FIN TEST ===
 
     engine.set_menu_scene(&menu);
