@@ -202,6 +202,10 @@ public:
      *  @param filepath Ruta al archivo .rgb565. */
     void draw_image_rgb565(const char* filepath);
 
+    /** @brief Envía un framebuffer completo (480x272) al display en un solo burst.
+     *  @param data Arreglo de LCD_WIDTH * LCD_HEIGHT colores RGB565. */
+    void draw_buffer(const uint16_t* data);
+
     // ---------------------------------------------------------------
     // Primitivas de ráfaga (burst) para escritura masiva de píxeles
     // ---------------------------------------------------------------

@@ -11,6 +11,7 @@ BIN_DIR   = bin
 
 SRCS      = $(SRC_DIR)/main.cpp \
             $(SRC_DIR)/ssd1963.cpp \
+            $(SRC_DIR)/FrameBuffer.cpp \
             $(ENG_DIR)/GameEngine.cpp \
             $(ENG_DIR)/MenuScene.cpp \
             $(ENG_DIR)/Sprite.cpp \

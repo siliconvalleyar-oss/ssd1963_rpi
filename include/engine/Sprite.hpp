@@ -19,6 +19,7 @@ public:
     uint16_t width()  const { return m_w; }
     uint16_t height() const { return m_h; }
     bool loaded()     const { return m_data != nullptr; }
+    const uint16_t* data() const { return m_data; }
 
 private:
     uint16_t* m_data;
