@@ -2,9 +2,9 @@
 # Compilación remota en Raspberry Pi via SSH
 set -e
 
-PI_USER="pi"
-PI_HOST="192.168.1.37"
-PI_PASS="zero"
+PI_USER="$1"
+PI_HOST="raspberry.local"
+PI_PASS="$2"
 PI_DIR="/home/pi/src/ssd1963_photo_png_2026_sucess_rgb"
 
 echo "=== Compilando en ${PI_USER}@${PI_HOST}:${PI_DIR} ==="

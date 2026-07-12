@@ -208,7 +208,7 @@ Defined in `include/config_hw.hpp`.
 | `SSD1963_LCD_BACKLIGHT`  | 0          | Backlight control pin      |
 | `LCD_WIDTH`              | 480        | Display width in pixels    |
 | `LCD_HEIGHT`             | 272        | Display height in pixels   |
-| `LCD_FPR`                | 0x01E848   | Pixel clock divider (2 MHz)|
+| `LCD_FPR`                | 0x13332   | Pixel clock divider (~9 MHz)|
 | `TFT_HSYNC_PULSE`        | 41         | H-sync pulse width         |
 | `TFT_HSYNC_BACK_PORCH`   | 2          | H-back porch               |
 | `TFT_HSYNC_FRONT_PORCH`  | 2          | H-front porch              |

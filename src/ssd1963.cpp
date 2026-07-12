@@ -45,6 +45,9 @@ void SSD1963::init() {
     write_command(SSD1963_SOFT_RESET);
     delay_ms(10);
 
+    write_command(SSD1963_EXIT_SLEEP_MODE);
+    delay_ms(10);
+
     // --- PLL startup sequence ---
     write_command(SSD1963_SET_PLL_MN);
     write_data(50 - 1);  // M=50 → VCO=600MHz (con 12MHz)
@@ -57,7 +60,7 @@ void SSD1963::init() {
 
     write_command(SSD1963_SET_PLL);
     write_data(0x03);
-    delay_ms(10);
+    delay_ms(50);
 
     // --- LCD panel mode ---
     write_command(SSD1963_SET_LCD_MODE);
@@ -100,7 +103,7 @@ void SSD1963::init() {
     write_data(0x00);
 
     write_command(SSD1963_ON_DISPLAY);
-    delay_ms(50);
+    delay_ms(100);
     BACKLIGHT_ON();
 }
 
@@ -144,7 +147,9 @@ void SSD1963::write_pixel_burst_start() {
 void SSD1963::write_pixel_burst(uint16_t data) {
     write_data_bus(data);
     WR_LOW();
+    BUS_WAIT;
     WR_HIGH();
+    BUS_WAIT;
 }
 
 void SSD1963::write_pixel_burst_end() {
@@ -163,6 +168,8 @@ void SSD1963::set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
     write_data(y1 & 0xFF);
     write_data(y2 >> 8);
     write_data(y2 & 0xFF);
+
+    delay_ms(1);
 }
 
 // =========================================================================
@@ -184,9 +191,15 @@ static void pixels_burst(SSD1963* d, uint32_t count, const uint16_t* data) {
 }
 
 void SSD1963::clear_screen(uint16_t color) {
-    set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
-    write_command(SSD1963_WRITE_MEMORY_START);
-    fill_burst(this, LCD_WIDTH * LCD_HEIGHT, color);
+    const uint16_t ROWS_PER_BATCH = 32;
+    for (uint16_t y = 0; y < LCD_HEIGHT; y += ROWS_PER_BATCH) {
+        uint16_t h = ROWS_PER_BATCH;
+        if (y + h > LCD_HEIGHT) h = LCD_HEIGHT - y;
+        set_area(0, y, LCD_WIDTH - 1, y + h - 1);
+        write_command(SSD1963_WRITE_MEMORY_START);
+        fill_burst(this, (uint32_t)LCD_WIDTH * h, color);
+        delay_ms(1);
+    }
 }
 
 void SSD1963::draw_pixel(uint16_t x, uint16_t y, uint16_t color) {

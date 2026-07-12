@@ -75,7 +75,7 @@ The SSD1963's internal PLL is configured via:
 3. PLL configuration and activation
 4. LCD mode set (DE mode, RGB565, 480x272)
 5. Pixel data interface (16-bit RGB565)
-6. LSHIFT frequency (pixel clock: 2.0 MHz)
+6. LSHIFT frequency (pixel clock: ~9 MHz)
 7. Horizontal timing registers
 8. Vertical timing registers
 9. Display ON command
@@ -149,4 +149,4 @@ TFT Panel (pixel rendered)
 | V-back porch           | 2      | TFT_VSYNC_BACK_PORCH   |
 | V-front porch          | 2      | TFT_VSYNC_FRONT_PORCH  |
 | V-total period         | 286    | TFT_VSYNC_PERIOD       |
-| Pixel clock (LSHIFT)   | 2.0 MHz| LCD_FPR = 0x01E848    |
+| Pixel clock (LSHIFT)   | ~9 MHz| LCD_FPR = 0x13332     |
