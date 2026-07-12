@@ -1,0 +1,49 @@
+#include <engine/ColorBlocksScene.hpp>
+#include <engine/GameEngine.hpp>
+#include <cstdio>
+
+ColorBlocksScene::ColorBlocksScene(SSD1963& display) : Scene(display)
+    , m_blocks_drawn(false), m_image_drawn(false), m_timer(0), m_phase(0) {
+    m_blocks[0] = {  10, 10, RED,     "ROJO"    };
+    m_blocks[1] = {  80, 10, GREEN,   "VERDE"   };
+    m_blocks[2] = { 150, 10, BLUE,    "AZUL"    };
+    m_blocks[3] = { 220, 10, YELLOW,  "AMARILLO"};
+    m_blocks[4] = { 290, 10, CYAN,    "CIAN"    };
+    m_blocks[5] = { 360, 10, MAGENTA, "MAGENTA" };
+    m_blocks[6] = { 430, 10, WHITE,   "BLANCO"  };
+}
+
+bool ColorBlocksScene::on_enter() {
+    m_blocks_drawn = m_image_drawn = false;
+    m_timer = 0; m_phase = 0;
+    return true;
+}
+
+void ColorBlocksScene::update(uint32_t dt) {
+    m_timer += dt;
+    if (m_phase == 0 && m_blocks_drawn && m_timer > T_BLOCKS) {
+        m_phase = 1; m_timer = 0;
+    }
+    if (m_phase == 1 && m_image_drawn && m_timer > T_IMAGE) {
+        if (m_engine && m_engine->menu_scene())
+            m_engine->set_scene(m_engine->menu_scene());
+    }
+}
+
+void ColorBlocksScene::draw(FrameBuffer& fb) {
+    if (!m_blocks_drawn) {
+        fb.clear(BLACK);
+        for (uint8_t i = 0; i < 7; i++) {
+            fb.fill_rect(m_blocks[i].x, m_blocks[i].y, BW, BH, m_blocks[i].color);
+            fb.draw_string(m_blocks[i].x + 2, m_blocks[i].y + BH + 4,
+                          m_blocks[i].name, m_blocks[i].color, BLACK);
+        }
+        m_blocks_drawn = true;
+    }
+    if (m_phase == 1 && !m_image_drawn) {
+        fb.draw_image_rgb565("assets/capibaras.rgb565");
+        m_image_drawn = true;
+    }
+}
+
+const char* ColorBlocksScene::name() const { return "ColorBlocksScene"; }

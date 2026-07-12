@@ -1,17 +1,32 @@
-CXX = g++
-CXXFLAGS = -Iinclude
-LDFLAGS = -lbcm2835
+CXX       = g++
+CXXFLAGS  = -Iinclude -std=c++11 -Wall -Wextra -O2
+VERSION  := $(shell git describe --tags --abbrev=0 2>/dev/null || echo "0.0.0")
+CXXFLAGS += -DVERSION_TAG=\"$(VERSION)\"
+LDFLAGS   = -lbcm2835 -lm
 
-SRC_DIR = src
-OBJ_DIR = obj
-BIN_DIR = bin
+SRC_DIR   = src
+ENG_DIR   = src/engine
+OBJ_DIR   = obj
+BIN_DIR   = bin
 
-SRCS = main.cpp $(SRC_DIR)/ssd1963.cpp
-OBJS = $(patsubst %.cpp, $(OBJ_DIR)/%.o, $(notdir $(SRCS)))
-TARGET = $(BIN_DIR)/ssd1963_app
+SRCS      = $(SRC_DIR)/main.cpp \
+            $(SRC_DIR)/ssd1963.cpp \
+            $(SRC_DIR)/FrameBuffer.cpp \
+            $(ENG_DIR)/GameEngine.cpp \
+            $(ENG_DIR)/MenuScene.cpp \
+            $(ENG_DIR)/Sprite.cpp \
+            $(ENG_DIR)/SpaceShooterScene.cpp \
+            $(ENG_DIR)/FontDemoScene.cpp \
+            $(ENG_DIR)/ImageViewerScene.cpp \
+            $(ENG_DIR)/ColorBlocksScene.cpp \
+            $(ENG_DIR)/PatternScene.cpp \
+            $(ENG_DIR)/SpriteViewerScene.cpp
 
-PI_HOST ?= pi@raspberry.local
-PI_DIR ?= /home/pi/src/ssd1963_photo_png_2026_sucess_rgb
+OBJS      = $(patsubst %.cpp,$(OBJ_DIR)/%.o,$(notdir $(SRCS)))
+TARGET    = $(BIN_DIR)/ssd1963_app
+
+PI_HOST  ?= pi@raspberry.local
+PI_DIR   ?= /home/pi/src/ssd1963_photo_png_2026_sucess_rgb
 
 $(shell mkdir -p $(OBJ_DIR) $(BIN_DIR))
 
@@ -22,10 +37,10 @@ all: $(TARGET)
 $(TARGET): $(OBJS)
 	$(CXX) $^ -o $@ $(LDFLAGS)
 
-$(OBJ_DIR)/%.o: %.cpp
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+$(OBJ_DIR)/%.o: $(ENG_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
@@ -44,11 +59,10 @@ remote-run:
 	ssh $(PI_HOST) "cd $(PI_DIR) && make run"
 
 help:
-	@echo "Targets:"
-	@echo "  make all           - Build $(TARGET)"
-	@echo "  make clean         - Remove build artifacts"
-	@echo "  make run           - Build and run locally (with sudo)"
-	@echo "  make install-deps  - Install libbcm2835 and tools"
-	@echo "  make remote-build  - SSH to Pi and build (remoto)"
-	@echo "  make remote-run    - SSH to Pi, build, and run"
-	@echo "  make help          - Show this help"
+	@echo "ARCADE PHOTO — Makefile"
+	@echo "  all           Compilar"
+	@echo "  run           Compilar + ejecutar (sudo)"
+	@echo "  clean         Limpiar"
+	@echo "  install-deps  Instalar libbcm2835"
+	@echo "  remote-build  SSH a Pi y compilar"
+	@echo "  remote-run    SSH, compilar y ejecutar"

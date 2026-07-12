@@ -39,7 +39,7 @@ cd bcm2835-1.75
 
 Or use the script:
 ```bash
-bash script_tools_ssd1963_rpi/install_deps.sh
+bash script_tools/install_deps.sh
 ```
 
 ## Build & Run
@@ -79,12 +79,12 @@ source PNG → Python PIL → raw .rgb565 (RGB565 big-endian) → display
 ### Converting your own images
 
 ```bash
-python3 script_tools_ssd1963_rpi/convert_png_to_rgb.py input.png output.rgb565
+python3 script_tools/convert_png_to_rgb.py input.png output.rgb565
 ```
 
 Or use the shell wrapper (auto-names output):
 ```bash
-bash script_tools_ssd1963_rpi/convert_png_to_rgb.sh input.png
+bash script_tools/convert_png_to_rgb.sh input.png
 ```
 
 Requirements for conversion: `python3-pil` (`sudo apt install python3-pil`)
@@ -104,7 +104,7 @@ ssd1963_photo_png_2026_sucess_rgb/
 ├── assets/
 │   ├── capibaras.png      # Source image (480x272)
 │   └── capibaras.rgb565   # Pre-converted RGB565 for direct display
-├── script_tools_ssd1963_rpi/
+├── script_tools/
 │   ├── convert_png_to_rgb.py  # PNG → RGB565 converter
 │   ├── convert_png_to_rgb.sh  # Shell wrapper
 │   └── install_deps.sh        # Installs libbcm2835 + build tools
@@ -114,9 +114,17 @@ ssd1963_photo_png_2026_sucess_rgb/
 └── README.md
 ```
 
+## Documentation
+
+- [**Architecture**](ARCHITECTURE.md) — Software architecture, layers, data flow, timing configuration
+- [**Changelog**](CHANGELOG.md) — Version history and release notes
+- [**Hardware Guide**](docs/hardware.md) — Detailed pinout, wiring diagram, connection checklist
+- [**API Reference**](docs/api.md) — Full SSD1963 class API, GPIO macros, commands, color constants
+- [**Development Guide**](docs/development.md) — Setup, build, remote workflow, image pipeline, troubleshooting
+
 ## Troubleshooting
 
-- **"bcm2835.h not found"** – `libbcm2835` is not installed. Run `bash script_tools_ssd1963_rpi/install_deps.sh`.
+- **"bcm2835.h not found"** – `libbcm2835` is not installed. Run `bash script_tools/install_deps.sh`.
 - **No display output** – Check wiring. Backlight on GPIO 0 must be high.
 - **Blurry image** – Verify LCD_FPR in `config_hw.hpp` matches your display's pixel clock.
 - **Permission denied** – Run with `sudo` (GPIO access requires root).

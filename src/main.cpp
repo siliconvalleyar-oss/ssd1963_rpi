@@ -1,60 +1,66 @@
-#include <ssd1963.hpp>
-//#include <ssd1963_cmd.hpp>
-#include <bcm2835.h>
-#include <unistd.h>
-#include <cstdint>
+#include <cstdio>
 #include <iostream>
-#include <color.hpp>
+#include <engine/GameEngine.hpp>
+#include <engine/MenuScene.hpp>
+#include <engine/FontDemoScene.hpp>
+#include <engine/SpaceShooterScene.hpp>
+#include <engine/ImageViewerScene.hpp>
+#include <engine/ColorBlocksScene.hpp>
+#include <engine/PatternScene.hpp>
+#include <engine/SpriteViewerScene.hpp>
+#include <engine/sprite_list.hpp>
+#include <unistd.h>
 
-
-
-void delay_ms(uint32_t ms) {
-    usleep(ms * 1000);
+static uint16_t rgb565(uint8_t r, uint8_t g, uint8_t b) {
+    return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
 }
-//version 3
-
 
 int main() {
+    GameEngine engine;
+    if (!engine.init()) return 1;
 
-    SSD1963 ssd1963;
-    if (!bcm2835_init()) {
-        std::cerr << "Error al inicializar bcm2835" << std::endl;
-        return 1;
-    }
-    ssd1963.setup_gpio();
-    ssd1963.init();
-    // Limpiar toda la pantalla a negro primero
-    ssd1963.clear_screen(BLACK);
-    delay_ms(500);
-    struct ColorBlock {
-        uint16_t x;
-        uint16_t y;
-        uint16_t color;
-        const char* name;
-    };
-    // Bloques grandes 60x60, distribuidos horizontalmente
-    ColorBlock blocks[] = {
-        {10, 10, RED, "RED"},
-        {80, 10, GREEN, "GREEN"},
-        {150, 10, BLUE, "BLUE"},
-        {220, 10, YELLOW, "YELLOW"},
-        {290, 10, CYAN, "CYAN"},
-        {360, 10, MAGENTA, "MAGENTA"},
-        {430, 10, WHITE, "WHITE"},
-        // Aquí podrías agregar más o cambiar posición si tu pantalla es más ancha
-    };
-    const uint16_t block_width = 45;
-    const uint16_t block_height = 45;
-    for (const auto& block : blocks) {
-        std::cout << "Dibujando bloque color: " << block.name << " en (" << block.x << ", " << block.y << ")" << std::endl;
-        ssd1963.draw_block(block.x, block.y, block_width, block_height, block.color);
-        // Sin delay para que quede fijo rápido
-    }
-//    std::cout << "Fin del test de colores." << std::endl;
- delay_ms(900);
+    MenuScene         menu(engine.display(), "ARCADE " ENGINE_VERSION);
+    FontDemoScene     font_demo(engine.display());
+    SpaceShooterScene shooter(engine.display());
+    ImageViewerScene  viewer(engine.display(), "assets/capibaras.rgb565", "CAPIBARAS");
+    ColorBlocksScene  color_blocks(engine.display());
+    PatternScene      patterns(engine.display());
+    SpriteViewerScene sprites(engine.display());
 
-    ssd1963.draw_image_rgb565("assets/capibaras.rgb565");
-    bcm2835_close();
+    populate_sprites(sprites);
+
+    menu.add_item("FONT DEMO",      &font_demo);
+    menu.add_item("SPACE SHOOTER",  &shooter);
+    menu.add_item("VER FOTO",       &viewer);
+    menu.add_item("NAVES",          &sprites);
+    menu.add_item("COLORES",        &color_blocks);
+    menu.add_item("PATRONES",       &patterns);
+    menu.add_item("SALIR",          nullptr);
+
+    // === TEST: renderizado directo (sin FrameBuffer) ===
+    SSD1963& d = engine.display();
+    struct { uint8_t r,g,b; const char* name; } cols[] = {
+        {255,0,0,"ROJO"}, {0,255,0,"VERDE"}, {0,0,255,"AZUL"},
+        {255,255,0,"AMARILLO"}, {255,0,255,"MAGENTA"}, {0,255,255,"CIAN"},
+        {255,255,255,"BLANCO"}
+    };
+    for (uint32_t i = 0; i < 7; i++) {
+        uint16_t color = rgb565(cols[i].r, cols[i].g, cols[i].b);
+        printf("[TEST] %s -> rgb(%3hhu,%3hhu,%3hhu) = 0x%04X\n",
+               cols[i].name, cols[i].r, cols[i].g, cols[i].b, color);
+        d.clear_screen(color);
+        usleep(2000000);
+    }
+    uint16_t bg = rgb565(8,8,28);
+    printf("[TEST] FONDO -> rgb(8,8,28) = 0x%04X\n", bg);
+    d.clear_screen(bg);
+    // === FIN TEST ===
+
+    engine.set_menu_scene(&menu);
+    engine.set_scene(&menu);
+
+    std::cout << "[MAIN] ARCADE " << ENGINE_VERSION << " iniciado\n";
+    engine.run();
+    std::cout << "[MAIN] Fin.\n";
     return 0;
 }
-
