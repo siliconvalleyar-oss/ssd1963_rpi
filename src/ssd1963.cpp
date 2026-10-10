@@ -17,7 +17,6 @@
 // Retardo 74HC595 timing (~1us per toggle) - stable for shift register
 #define SR_WAIT  do { bcm2835_delayMicroseconds(1); } while(0)
 
-static void shift_out_16bits(uint16_t data);
 
 SSD1963::SSD1963() {}
 
