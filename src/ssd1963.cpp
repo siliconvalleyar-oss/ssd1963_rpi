@@ -35,7 +35,6 @@ void SSD1963::setup_gpio() {
     bcm2835_gpio_fsel(SSD1963_LCD_RESET, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(SSD1963_LCD_BACKLIGHT, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(SSD1963_LCD_TE, BCM2835_GPIO_FSEL_INPT);   // TE as input
-    bcm2835_gpio_fsel(SSD1963_LCD_PW1, BCM2835_GPIO_FSEL_INPT);  // PW1 as input
 
     SR_SER_LOW();
     SR_SRCLK_LOW();
@@ -161,36 +160,22 @@ void SSD1963::init() {
     write_command(SSD1963_ON_DISPLAY);
     delay_ms(100);
 
-    // Configure GPIO0 for backlight control
+    // Configure GPIO0 for backlight control (SSD1963 GPIO0 = HIGH for panel enable)
     write_command(SSD1963_SET_GPIO_CONF);
     write_data(0x0F); // GPIO0-3 as output, controlled by host
     write_data(0x01); // GPIO0 as output
 
-    // Backlight via SSD1963 PWM (pin PWM -> driver backlight panel)
-    // Comando 0xBE (SSD1963_SET_PWM_FC). NO usar SSD1963_SET_PWM_CONF (= 0x53).
-    //   P1: PWMF   -> frecuencia = PLL / (256 * PWMF) / 256  (PWMF=14 -> ~130Hz @120MHz)
-    //   P2: PWM    -> duty = PWM/256 (0xFF = casi maximo, 0x00 = siempre apagado)
-    //   P3: C[3]=0 PWM controlado por host, C[0]=1 PWM habilitado
-    //   P4-P6: parametros de DBC (no se usan con DBC deshabilitado)
-    write_command(SSD1963_SET_PWM_FC);  // 0xBE (correcto para PWM)
-    write_data(0x0E);     // PWMF = 14 (~130Hz @ 120MHz PLL)
-    write_data(0xFF);     // Duty cycle = 255/256 (max brightness)
-    write_data(0x01);     // PWM enabled, controlled by host (C[3]=0, C[0]=1)
-    write_data(0x00);
-    write_data(0x00);
-    write_data(0x00);
-
-    // Disable DBC, use manual PWM
+    // Disable DBC
     write_command(SSD1963_SET_DBC_CONF);  // 0xD0
     write_data(0x00);     // DBC disabled
 
     printf("[INIT] SSD1963 initialization complete\n");
 
-    // Backlight ON (using SSD1963 GPIO0)
+    // Backlight ON (using SSD1963 GPIO0 + Pi GPIO for BL_EN)
     write_command(SSD1963_SET_GPIO_VALUE);
     write_data(0x01); // GPIO0 = HIGH
 
-    BACKLIGHT_ON(); // Also set Pi GPIO0 (BL_EN)
+    BACKLIGHT_ON(); // Pi GPIO for BL_EN
 }
 
 void SSD1963::shutdown() {
