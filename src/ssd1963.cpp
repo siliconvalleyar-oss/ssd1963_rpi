@@ -8,18 +8,10 @@
 #include <font_8x8.hpp>
 
 // Retardo para timing del bus 8080 (WR pulse width + data hold)
-#define BUS_WAIT  do { __asm__ __volatile__( \
-    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
-    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
-    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop" );\
-} while(0)
+#define BUS_WAIT  do { bcm2835_delayMicroseconds(1); } while(0)
 
-// Retardo 74HC595 timing (~500ns per toggle) - stable but fast enough
-#define SR_WAIT  do { __asm__ __volatile__( \
-    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
-    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
-    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop" );\
-} while(0)
+// Retardo 74HC595 timing (~1us per toggle) - stable and measurable
+#define SR_WAIT  do { bcm2835_delayMicroseconds(1); } while(0)
 
 static void shift_out_16bits(uint16_t data);
 
