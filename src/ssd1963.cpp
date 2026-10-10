@@ -91,25 +91,26 @@ void SSD1963::init() {
     shift_out_16bits(0x0000);
     delay_ms(5);
 
-    // --- PLL startup sequence (SINGLE, CORRECT) ---
-    // Ref clk = 12MHz (typical crystal)
-    // M = 49 -> VCO = 12 * 50 = 600MHz (250-800MHz OK)
-    // N = 4  -> PLL = 600 / 5 = 120MHz
-    printf("[INIT] Configuring PLL (M=49, N=4, PLL=120MHz)...\n");
+    // --- PLL startup sequence (matching working reference) ---
+    // Ref clk = 10MHz (typical crystal on SSD1963 modules)
+    // M = 2 -> VCO = 10 * (45+1) = 460MHz (250-800MHz OK)
+    // N = 45 -> PLL = 460 / (2+1) = 153MHz
+    // Reference uses: N=45 (0x2D), M=2 (0x02), effectuate=0x04
+    printf("[INIT] Configuring PLL (M=2, N=45, PLL=153MHz)...\n");
     write_command(SSD1963_SET_PLL_MN);
-    write_data(49);   // M = 49 (0x31)
-    write_data(4);    // N = 4  (0x04)
+    write_data(45);   // N = 45 (0x2D)
+    write_data(2);    // M = 2  (0x02)
     write_data(0x04); // C[2]=1: effectuate M and N
 
     write_command(SSD1963_SET_PLL);
     write_data(0x01); // Enable PLL
-    delay_ms(100);    // Wait for PLL to lock
+    delay_ms(10);     // Wait for PLL to stabilize (reference uses 10ms)
 
     write_command(SSD1963_SET_PLL);
     write_data(0x03); // Lock PLL (use PLL as sysclk)
-    delay_ms(100);    // Wait for PLL lock
+    delay_ms(12);     // Wait for PLL lock (reference uses 12ms)
 
-    // --- LCD panel mode ---
+    // --- LCD panel mode (matching working reference) ---
 #if USE_8BIT_MODE
     write_command(SSD1963_SET_LCD_MODE);
     write_data(0x08);    // TFT mode, 18-bit panel (A[5]=0), 8-bit MCU bus
@@ -123,9 +124,9 @@ void SSD1963::init() {
     write_command(SSD1963_SET_PIXEL_DATA_INTERFACE);
     write_data(SSD1963_PDI_8BIT);
 #else
-    // 16-bit MCU bus, panel config from config_hw.hpp
+    // 16-bit MCU bus, 24-bit panel mode (matching reference)
     write_command(SSD1963_SET_LCD_MODE);
-    write_data(LCD_MODE_CONFIG);  // Panel config (default 0x0C = 18-bit)
+    write_data(LCD_MODE_CONFIG);  // 0x20 = 24-bit panel, LSHIFT falling, sync active low
     write_data(0x00);    // TFT type: 00/01 = TFT mode
     write_data((LCD_WIDTH - 1) >> 8);   // HDP high = 0x01
     write_data((LCD_WIDTH - 1) & 0xFF); // HDP low  = 0xDF (479)
@@ -134,64 +135,88 @@ void SSD1963::init() {
     write_data(0x00);    // RGB sequence
 
     write_command(SSD1963_SET_PIXEL_DATA_INTERFACE);
-    write_data(SSD1963_PDI_16BIT565);
+    write_data(SSD1963_PDI_16BIT565);  // 0x03 = 16-bit 565 format
 #endif
 
     // --- Pixel clock (LSHIFT frequency) ---
     // PCLK = PLL * (LCD_FPR + 1) / 2^20
-    // For 480x272@60Hz: ~9MHz pixel clock
-    // With PLL=120MHz: LCD_FPR = 0x13332 ≈ 9MHz
+    // Reference: PLL=150MHz, FPR=0x00FFBE → PCLK ≈ 9.3MHz
     printf("[INIT] Setting LSHIFT freq (LCD_FPR=0x%05X)...\n", LCD_FPR);
     write_command(SSD1963_SET_LSHIFT_FREQ);
     write_data((LCD_FPR >> 16) & 0xFF);
     write_data((LCD_FPR >> 8) & 0xFF);
     write_data(LCD_FPR & 0xFF);
 
-    // --- Horizontal timing ---
-    // HT = 525, HPS = 43, HPW = 41, LPS = 0
+    // --- Horizontal timing (matching reference) ---
+    // HT = 480 + 43 + 8 + 1 = 532 (but HT register stores HT-1 = 531 = 0x0213)
+    // HPS = 43 (back porch)
+    // HPW = 1-1 = 0
+    // LPS = 0
     printf("[INIT] Setting horizontal timing (HT=%d, HPS=%d, HPW=%d)...\n",
            TFT_HSYNC_PERIOD, TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH, TFT_HSYNC_PULSE);
     write_command(SSD1963_SET_HOR_PERIOD);
-    write_data((TFT_HSYNC_PERIOD >> 8) & 0xFF);
-    write_data(TFT_HSYNC_PERIOD & 0xFF);
+    // HT-1
+    write_data(((TFT_HSYNC_PERIOD - 1) >> 8) & 0xFF);
+    write_data((TFT_HSYNC_PERIOD - 1) & 0xFF);
+    // HPS = pulse + back porch
     write_data((TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH) >> 8);
     write_data((TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH) & 0xFF);
-    write_data(TFT_HSYNC_PULSE);
-    write_data(0x00);
-    write_data(0x00);
-    write_data(0x00);
+    // HPW = pulse - 1
+    write_data(TFT_HSYNC_PULSE - 1);
+    write_data(0x00);   // LPS high
+    write_data(0x00);   // LPS low
+    write_data(0x00);   // LPSPP
 
     // --- Vertical timing ---
-    // VT = 286, VPS = 12, VPW = 10, FPS = 0
+    // VT = 272 + 12 + 8 + 1 = 293 (VT-1 = 292 = 0x0124)
+    // VPS = 12 (back porch)
+    // VPW = 1-1 = 0
+    // FPS = 0
     printf("[INIT] Setting vertical timing (VT=%d, VPS=%d, VPW=%d)...\n",
            TFT_VSYNC_PERIOD, TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH, TFT_VSYNC_PULSE);
     write_command(SSD1963_SET_VER_PERIOD);
-    write_data((TFT_VSYNC_PERIOD >> 8) & 0xFF);
-    write_data(TFT_VSYNC_PERIOD & 0xFF);
+    // VT-1
+    write_data(((TFT_VSYNC_PERIOD - 1) >> 8) & 0xFF);
+    write_data((TFT_VSYNC_PERIOD - 1) & 0xFF);
+    // VPS = pulse + back porch
     write_data((TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH) >> 8);
     write_data((TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH) & 0xFF);
-    write_data(TFT_VSYNC_PULSE);
-    write_data(0x00);
-    write_data(0x00);
+    // VPW = pulse - 1
+    write_data(TFT_VSYNC_PULSE - 1);
+    write_data(0x00);   // FPS high
+    write_data(0x00);   // FPS low
 
     // --- Turn on display ---
     write_command(SSD1963_ON_DISPLAY);
     delay_ms(100);
 
-    // Configure GPIO0 for backlight control (SSD1963 GPIO0 = HIGH for panel enable)
-    write_command(SSD1963_SET_GPIO_CONF);
-    write_data(0x0F); // GPIO0-3 as output, controlled by host
-    write_data(0x01); // GPIO0 as output
+    // Configure PWM for backlight (matching reference)
+    // SET_PWM_FC (0xBE): PWMF=5 (~380Hz @ 150MHz), PWM=0xFE (max), C[3]=0/host, C[0]=1/enable
+    write_command(SSD1963_SET_PWM_FC);  // 0xBE
+    write_data(0x05);     // PWMF = 5
+    write_data(0xFE);     // PWM duty = 254/256 (max)
+    write_data(0x01);     // C[3]=0 (host), C[0]=1 (enable)
+    write_data(0x00);     // D (DBC manual brightness)
+    write_data(0x00);     // E (DBC min brightness)
+    write_data(0x00);     // F (brightness prescaler)
 
-    // Disable DBC
+    // Disable DBC (Dynamic Backlight Control)
     write_command(SSD1963_SET_DBC_CONF);  // 0xD0
     write_data(0x00);     // DBC disabled
 
-    printf("[INIT] SSD1963 initialization complete\n");
+    // Configure GPIO0 for backlight enable
+    write_command(SSD1963_SET_GPIO_CONF);  // 0xB8
+    write_data(0x03);     // GPIO0-1 as output, controlled by host
+    write_data(0x01);     // GPIO0 as normal GPIO
 
-    // SSD1963 GPIO0 = HIGH for panel enable
-    write_command(SSD1963_SET_GPIO_VALUE);
-    write_data(0x01); // GPIO0 = HIGH
+    // Set GPIO0 HIGH for panel enable
+    write_command(SSD1963_SET_GPIO_VALUE);  // 0xBA
+    write_data(0x01);     // GPIO0 = HIGH
+
+    // Backlight ON via Pi GPIO
+    BACKLIGHT_ON();
+
+    printf("[INIT] SSD1963 initialization complete\n");
 }
 
 void SSD1963::shutdown() {

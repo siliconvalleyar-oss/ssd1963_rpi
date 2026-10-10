@@ -4,7 +4,7 @@
 
 // Definición de pines - 74HC595 Shift Registers
 // Configura USE_8BIT_MODE para probar con 1 solo 74HC595 (8 bits D0-D7)
-#define USE_8BIT_MODE  1   // 1 = 8 bits (1x 74HC595), 0 = 16 bits (2x 74HC595)
+#define USE_8BIT_MODE  0   // 0 = 16 bits (2x 74HC595), 1 = 8 bits (1x 74HC595)
 
 constexpr uint8_t SSD1963_SR_SER   = 1;  // Serial data input (pin 14 of first 74HC595)
 constexpr uint8_t SSD1963_SR_SRCLK = 19; // Shift register clock (pin 11 of both 74HC595)
@@ -30,35 +30,23 @@ static constexpr uint16_t LCD_WIDTH = 480;
 static constexpr uint16_t LCD_HEIGHT = 272;
 
 
-// Sincronización horizontal - From reference (tmp/Graphics/Tft.h for TFT480X272)
-constexpr uint16_t TFT_HSYNC_PULSE        = 41;  // DISP_HOR_PULSE_WIDTH
-constexpr uint16_t TFT_HSYNC_BACK_PORCH   = 2;   // DISP_HOR_BACK_PORCH
-constexpr uint16_t TFT_HSYNC_FRONT_PORCH  = 2;   // DISP_HOR_FRONT_PORCH
+// Sincronización horizontal - From working reference (tmp/4.3inch SSD1963 STM32)
+constexpr uint16_t TFT_HSYNC_PULSE        = 1;   // SSD_HOR_PULSE_WIDTH
+constexpr uint16_t TFT_HSYNC_BACK_PORCH   = 43;  // SSD_HOR_BACK_PORCH
+constexpr uint16_t TFT_HSYNC_FRONT_PORCH  = 8;   // SSD_HOR_FRONT_PORCH
 constexpr uint16_t TFT_HSYNC_PERIOD = LCD_WIDTH + TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH + TFT_HSYNC_FRONT_PORCH;
 
-// Sincronización vertical - From reference (tmp/Graphics/Tft.h for TFT480X272)
-constexpr uint16_t TFT_VSYNC_PULSE        = 10;  // DISP_VER_PULSE_WIDTH
-constexpr uint16_t TFT_VSYNC_BACK_PORCH   = 2;   // DISP_VER_BACK_PORCH
-constexpr uint16_t TFT_VSYNC_FRONT_PORCH  = 2;   // DISP_VER_FRONT_PORCH
+// Sincronización vertical - From working reference (tmp/4.3inch SSD1963 STM32)
+constexpr uint16_t TFT_VSYNC_PULSE        = 1;   // SSD_VER_PULSE_WIDTH
+constexpr uint16_t TFT_VSYNC_BACK_PORCH   = 12;  // SSD_VER_BACK_PORCH
+constexpr uint16_t TFT_VSYNC_FRONT_PORCH  = 8;   // SSD_VER_FRONT_PORCH
 constexpr uint16_t TFT_VSYNC_PERIOD = LCD_HEIGHT + TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH + TFT_VSYNC_FRONT_PORCH;
 
-// Frecuencia de píxel: PCLK = SYSCLK × (FPR + 1) / 2^20
-// Oscilador 12MHz → PLL = 12MHz × 50 / 5 = 120MHz
-// Para 480×272@60Hz con PLL=120MHz: FPR = 0x13332 (≈9MHz)
-// (mismo valor que referencia PIC32 para idéntico panel)
-constexpr uint32_t LCD_FPR = 0x13332;
+// Frecuencia de píxel: PCLK = PLL * (FPR + 1) / 2^20
+// Reference: 10MHz xtal, PLL=150MHz (M=2, N=45) → FPR = 0x00FFBE for ~9.3MHz
+// Our 12MHz osc: M=49, N=4 → PLL=120MHz → adjust FPR accordingly
+constexpr uint32_t LCD_FPR = 0x00FFBE;
 
-// SET_LCD_MODE (0xB0) parameter A - panel configuration
-// A[5]: TFT panel data width (0=18-bit, 1=24-bit)
-// A[4]: Color depth enhancement (0=disable, 1=enable FRC/dithering)
-// A[3]: TFT FRC enable (0=dithering, 1=FRC) - ignored if A[5]=1
-// A[2]: LSHIFT polarity (0=falling edge, 1=rising edge)
-// A[1]: LLINE polarity (0=active low, 1=active high)
-// A[0]: LFRAME polarity (0=active low, 1=active high)
-//
-// Common values for 480x272 panels (from tmp/Graphics reference):
-// 0x10 = 0b00010000 = 24-bit panel, no FRC, LSHIFT rising, sync active low
-// 0x0C = 0b00001100 = 18-bit panel, no FRC, LSHIFT falling, sync active low
-// 0x0E = 0b00001110 = 18-bit panel, FRC enabled, LSHIFT falling, sync active low
-// 0x08 = 0b00001000 = 18-bit panel, 8-bit MCU bus
-#define LCD_MODE_CONFIG 0x10  // 24-bit panel, rising edge LSHIFT (matching reference)
+// SET_LCD_MODE (0xB0) parameter A - panel configuration (from working reference)
+// 0x20 = 24-bit panel, no FRC, LSHIFT falling, sync active low
+#define LCD_MODE_CONFIG 0x20
