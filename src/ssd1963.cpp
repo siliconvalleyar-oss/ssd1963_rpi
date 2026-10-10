@@ -13,6 +13,8 @@
 // Retardo 74HC595 timing (~200-500ns per toggle) - ajustable
 #define SR_WAIT  do { bcm2835_delayMicroseconds(2); } while(0)
 
+static void shift_out_16bits(uint16_t data);
+
 SSD1963::SSD1963() {}
 
 void SSD1963::delay_ms(uint32_t ms) {
