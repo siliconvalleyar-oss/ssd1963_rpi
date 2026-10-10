@@ -37,6 +37,10 @@
 #define SR_RCLK_LOW()   bcm2835_gpio_write(SSD1963_SR_RCLK, LOW)
 #define SR_RCLK_HIGH()  bcm2835_gpio_write(SSD1963_SR_RCLK, HIGH)
 
+// SSD1963 status inputs
+#define TE_READ()       bcm2835_gpio_lev(SSD1963_LCD_TE)
+#define PW1_READ()      bcm2835_gpio_lev(SSD1963_LCD_PW1)
+
 /*! \def FONT_CHAR_WIDTH
  *  \brief Ancho en píxeles de cada carácter bitmap. */
 /*! \def FONT_CHAR_HEIGHT
