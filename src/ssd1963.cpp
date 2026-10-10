@@ -14,8 +14,12 @@
     "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop" );\
 } while(0)
 
-// Retardo 74HC595 timing (~5us per toggle) - MAXIMUM STABILITY for continuous operation
-#define SR_WAIT  do { bcm2835_delayMicroseconds(5); } while(0)
+// Retardo 74HC595 timing (~500ns per toggle) - stable but fast enough for SSD1963
+#define SR_WAIT  do { __asm__ __volatile__( \
+    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
+    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
+    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop" );\
+} while(0)
 
 static void shift_out_16bits(uint16_t data);
 

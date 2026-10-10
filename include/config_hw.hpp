@@ -58,4 +58,4 @@ constexpr uint32_t LCD_FPR = 0x13332;
 // 0x2C = 0b00101100 = 24-bit panel, no FRC, LSHIFT falling, sync active low
 // 0x0E = 0b00001110 = 18-bit panel, FRC enabled, LSHIFT falling, sync active low
 // 0x08 = 0b00001000 = 18-bit panel, 8-bit MCU bus
-#define LCD_MODE_CONFIG 0x0C  // Change to test: 0x0C, 0x2C, 0x0E, etc.
+#define LCD_MODE_CONFIG 0x0C  // Default: 18-bit panel, standard timing
