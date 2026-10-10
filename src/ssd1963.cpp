@@ -14,12 +14,8 @@
     "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop" );\
 } while(0)
 
-// Retardo 74HC595 timing (~500ns per toggle) - stable but fast enough for SSD1963
-#define SR_WAIT  do { __asm__ __volatile__( \
-    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
-    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
-    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop" );\
-} while(0)
+// Retardo 74HC595 timing (~1.5us per toggle) - stable for continuous operation
+#define SR_WAIT  do { bcm2835_delayMicroseconds(1); } while(0)
 
 static void shift_out_16bits(uint16_t data);
 
@@ -242,6 +238,7 @@ void SSD1963::shift_out_16bits(uint16_t data) {
     SR_WAIT;  // Extra hold for RCLK high
     SR_RCLK_LOW();
     SR_WAIT;  // Extra hold time after latch
+    SR_WAIT;  // Additional hold after latch
 }
 
 void SSD1963::write_data_bus(uint16_t data) {
