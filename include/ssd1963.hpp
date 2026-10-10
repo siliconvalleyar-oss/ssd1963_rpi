@@ -237,6 +237,12 @@ private:
     /** @brief Define el área activa de escritura en GRAM. */
     void set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
 
+    /** @brief Shift out 16 bits to 74HC595 with periodic re-sync. */
+    static void shift_out_16bits(uint16_t data);
+
+    // Shift register re-sync counter (prevents drift in continuous operation)
+    uint32_t m_shift_count;
+
     // ---------------------------------------------------------------
     // Fuente bitmap 8x8 (ASCII 0x20-0x7F)
     // ---------------------------------------------------------------

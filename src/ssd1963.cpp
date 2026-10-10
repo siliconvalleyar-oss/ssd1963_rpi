@@ -14,8 +14,10 @@
     "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop" );\
 } while(0)
 
-// Retardo 74HC595 timing (~300-500ns per toggle) - stable for continuous operation
+// Retardo 74HC595 timing (~1-2us per toggle) - stable for continuous operation
 #define SR_WAIT  do { __asm__ __volatile__( \
+    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
+    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
     "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
     "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
     "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop" );\
@@ -23,7 +25,7 @@
 
 static void shift_out_16bits(uint16_t data);
 
-SSD1963::SSD1963() {}
+SSD1963::SSD1963() : m_shift_count(0) {}
 
 void SSD1963::delay_ms(uint32_t ms) {
     usleep(ms * 1000);
@@ -241,7 +243,16 @@ static inline void shift_out_16bits(uint16_t data) {
 }
 
 void SSD1963::write_data_bus(uint16_t data) {
-    shift_out_16bits(data);
+    // Periodic re-sync every 50000 shift-outs to prevent drift
+    if (++m_shift_count >= 50000) {
+        m_shift_count = 0;
+        // Re-sync: clear then set all bits
+        shift_out_16bits(0x0000);
+        shift_out_16bits(0xFFFF);
+        shift_out_16bits(data);
+    } else {
+        shift_out_16bits(data);
+    }
 }
 
 void SSD1963::write_command(uint8_t cmd) {
