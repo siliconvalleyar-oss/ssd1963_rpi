@@ -207,8 +207,8 @@ void SSD1963::shutdown() {
 void SSD1963::shift_out_16bits(uint16_t data) {
 #if USE_8BIT_MODE
     // 8-bit mode: only first 74HC595 (D0-D7)
-    // Send lower 8 bits only, MSB first (bit 7 -> bit 0)
-    for (int8_t i = 7; i >= 0; i--) {
+    // Send lower 8 bits only, LSB first (bit 0 -> bit 7)
+    for (int8_t i = 0; i < 8; i++) {
         if (data & (1 << i)) {
             SR_SER_HIGH();
         } else {
@@ -224,7 +224,8 @@ void SSD1963::shift_out_16bits(uint16_t data) {
     // First 74HC595 Q0-Q7 = D0-D7
     // Second 74HC595 Q0-Q7 = D8-D15
     // Connection: SER -> 1st chip -> Q7' -> SER 2nd chip -> 2nd chip
-    for (int8_t i = 15; i >= 0; i--) {
+    // LSB FIRST: bit 0 -> bit 15 (correct mapping for daisy chain)
+    for (int8_t i = 0; i < 16; i++) {
         if (data & (1 << i)) {
             SR_SER_HIGH();
         } else {
