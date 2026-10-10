@@ -15,7 +15,7 @@ constexpr uint8_t SSD1963_LCD_RS    = 4;  // Data/Command selection
 constexpr uint8_t SSD1963_LCD_CS    = 5;  // Chip select
 constexpr uint8_t SSD1963_LCD_RESET = 6;  // Reset
 constexpr uint8_t SSD1963_LCD_TE      = 13; // Tearing Effect (INPUT from SSD1963)
-constexpr uint8_t SSD1963_LCD_PW1     = 12; // PW1/PWM backlight (INPUT from SSD1963) - was 13
+constexpr uint8_t SSD1963_LCD_PW1     = 0;  // PW1/PWM backlight (INPUT from SSD1963) - was 13, now free pin 0
 constexpr uint8_t SSD1963_LCD_BACKLIGHT = 12; // Backlight control (GPIO 12 - user requested)
 
 
