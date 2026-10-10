@@ -7,19 +7,11 @@
 #include <color.hpp>
 #include <font_8x8.hpp>
 
-// Retardo NOP para timing del bus 8080 (~43ns con 30 NOPs a 700MHz)
-#define BUS_WAIT  do { __asm__ __volatile__( \
-    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
-    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
-    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop" );\
-} while(0)
+// Retardo para timing del bus 8080 (WR pulse width + data hold)
+#define BUS_WAIT  do { bcm2835_delayMicroseconds(1); } while(0)
 
-// Retardo corto para 74HC595 timing (~200ns)
-#define SR_WAIT  do { __asm__ __volatile__( \
-    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
-    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
-    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop" );\
-} while(0)
+// Retardo lento para 74HC595 timing (~1-2us per toggle)
+#define SR_WAIT  do { bcm2835_delayMicroseconds(1); } while(0)
 
 SSD1963::SSD1963() {}
 
@@ -139,6 +131,7 @@ static inline void shift_out_16bits(uint16_t data) {
     SR_RCLK_HIGH();
     SR_WAIT;
     SR_RCLK_LOW();
+    SR_WAIT;  // Extra hold time after latch
 }
 
 void SSD1963::write_data_bus(uint16_t data) {
