@@ -7,10 +7,14 @@
 #include <color.hpp>
 #include <font_8x8.hpp>
 
-// Retardo para timing del bus 8080 (WR pulse width + data hold)
-#define BUS_WAIT  do { bcm2835_delayMicroseconds(1); } while(0)
+// Retardo para timing del bus 8080 (WR pulse width + data hold) - ~50ns
+#define BUS_WAIT  do { __asm__ __volatile__( \
+    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
+    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
+    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop" );\
+} while(0)
 
-// Retardo 74HC595 timing (~1us per toggle) - stable and measurable
+// Retardo 74HC595 timing (~1us per toggle) - stable for shift register
 #define SR_WAIT  do { bcm2835_delayMicroseconds(1); } while(0)
 
 static void shift_out_16bits(uint16_t data);
