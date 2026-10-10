@@ -14,8 +14,8 @@
     "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop" );\
 } while(0)
 
-// Retardo 74HC595 timing (~1.5us per toggle) - stable for continuous operation
-#define SR_WAIT  do { bcm2835_delayMicroseconds(1); } while(0)
+// Retardo 74HC595 timing (~2.5us per toggle) - maximum stability
+#define SR_WAIT  do { bcm2835_delayMicroseconds(2); } while(0)
 
 static void shift_out_16bits(uint16_t data);
 
