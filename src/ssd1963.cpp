@@ -57,6 +57,10 @@ void SSD1963::init() {
     WR_HIGH();
     CS_HIGH();
     
+    // 2. BACKLIGHT ON at startup (Pi GPIO for BL_EN)
+    printf("[INIT] Backlight ON...\n");
+    BACKLIGHT_ON();
+    
     // 2. Hardware reset sequence: RST LOW -> wait 500ms -> RST HIGH
     printf("[INIT] Hardware reset SSD1963 (RST LOW 500ms)...\n");
     RESET_LOW();
@@ -185,11 +189,9 @@ void SSD1963::init() {
 
     printf("[INIT] SSD1963 initialization complete\n");
 
-    // Backlight ON (using SSD1963 GPIO0 + Pi GPIO for BL_EN)
+    // SSD1963 GPIO0 = HIGH for panel enable
     write_command(SSD1963_SET_GPIO_VALUE);
     write_data(0x01); // GPIO0 = HIGH
-
-    BACKLIGHT_ON(); // Pi GPIO for BL_EN
 }
 
 void SSD1963::shutdown() {
