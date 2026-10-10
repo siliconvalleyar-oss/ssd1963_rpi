@@ -162,10 +162,23 @@ void SSD1963::init() {
     write_command(SSD1963_ON_DISPLAY);
     delay_ms(100);
 
-    // Configure GPIO0 for backlight control (if not using PWM)
+    // Configure GPIO0 for backlight control
     write_command(SSD1963_SET_GPIO_CONF);
     write_data(0x0F); // GPIO0-3 as output, controlled by host
     write_data(0x01); // GPIO0 as output
+
+    // Force backlight via SSD1963 PWM (PW1 pin)
+    write_command(SSD1963_SET_PWM_CONF);  // 0xBE
+    write_data(0x0E);     // PWMF[7:0] = 14 (freq ~300Hz @ 120MHz PLL)
+    write_data(0xFF);     // Duty cycle = 255/256 (max brightness)
+    write_data(0x09);     // PWM enabled, controlled by host (C[3]=1, C[0]=1)
+    write_data(0xFF);     // DBC manual brightness = max
+    write_data(0x00);     // DBC min brightness = 0
+    write_data(0x00);     // Brightness prescaler = off
+
+    // Disable DBC, use manual PWM
+    write_command(SSD1963_SET_DBC_CONF);  // 0xD0
+    write_data(0x00);     // DBC disabled
 
     printf("[INIT] SSD1963 initialization complete\n");
 
@@ -173,7 +186,7 @@ void SSD1963::init() {
     write_command(SSD1963_SET_GPIO_VALUE);
     write_data(0x01); // GPIO0 = HIGH
 
-    BACKLIGHT_ON(); // Also set Pi GPIO12
+    BACKLIGHT_ON(); // Also set Pi GPIO0 (BL_EN)
 }
 
 void SSD1963::shutdown() {
