@@ -14,8 +14,10 @@
     "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop" );\
 } while(0)
 
-// Retardo corto para 74HC595 timing (~100ns)
+// Retardo corto para 74HC595 timing (~200ns)
 #define SR_WAIT  do { __asm__ __volatile__( \
+    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
+    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
     "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop" );\
 } while(0)
 
@@ -119,8 +121,9 @@ void SSD1963::init() {
 
 static inline void shift_out_16bits(uint16_t data) {
     // Shift out 16 bits MSB first (bit 15 -> bit 0)
-    // First 74HC595 gets bits 7-0 (D0-D7)
-    // Second 74HC595 gets bits 15-8 (D8-D15)
+    // First 74HC595 Q0-Q7 = D0-D7
+    // Second 74HC595 Q0-Q7 = D8-D15
+    // Connection: SER -> 1st chip -> Q7' -> SER 2nd chip -> 2nd chip
     for (int8_t i = 15; i >= 0; i--) {
         if (data & (1 << i)) {
             SR_SER_HIGH();
