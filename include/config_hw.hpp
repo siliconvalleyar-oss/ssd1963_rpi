@@ -24,7 +24,7 @@ constexpr uint8_t SSD1963_LCD_RS    = 4;   // Data/Command selection
 constexpr uint8_t SSD1963_LCD_CS    = 5;   // Chip select
 constexpr uint8_t SSD1963_LCD_RESET = 6;   // Reset
 constexpr uint8_t SSD1963_LCD_TE      = 0;   // Tearing Effect (INPUT from SSD1963)
-constexpr uint8_t SSD1963_LCD_PW1     = 13;  // PW1/PWM backlight (INPUT from SSD1963)
+constexpr uint8_t SSD1963_LCD_PW1     = 7;   // PW1/PWM backlight (INPUT from SSD1963) - TEMP: GPIO7
 constexpr uint8_t SSD1963_LCD_BACKLIGHT = 1;  // Backlight enable (OUTPUT - software controlled via Pi GPIO 1)
 
 // Dimensiones del display
