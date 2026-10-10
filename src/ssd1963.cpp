@@ -88,14 +88,14 @@ void SSD1963::init() {
     shift_out_16bits(0x0000);
     delay_ms(5);
 
-    // --- PLL startup sequence (matching working reference) ---
-    // Ref clk = 10MHz (typical crystal on SSD1963 modules)
-    // M = 2 -> VCO = 10 * (45+1) = 460MHz (250-800MHz OK)
-    // N = 45 -> PLL = 460 / (2+1) = 153MHz
-    // Reference uses: N=45 (0x2D), M=2 (0x02), effectuate=0x04
-    printf("[INIT] Configuring PLL (M=2, N=45, PLL=153MHz)...\n");
+    // --- PLL startup sequence (matching working reference with 10MHz crystal) ---
+    // Ref clk = 10MHz (physical crystal on SSD1963 modules)
+    // PLL = 10MHz * (N+1) / (M+1)
+    // For 150MHz: N=44, M=2 → 10MHz * 45 / 3 = 150MHz
+    // Reference uses: N=44 (0x2C), M=2 (0x02), effectuate=0x04
+    printf("[INIT] Configuring PLL (M=2, N=44, PLL=150MHz)...\n");
     write_command(SSD1963_SET_PLL_MN);
-    write_data(45);   // N = 45 (0x2D)
+    write_data(44);   // N = 44 (0x2C)
     write_data(2);    // M = 2  (0x02)
     write_data(0x04); // C[2]=1: effectuate M and N
 
