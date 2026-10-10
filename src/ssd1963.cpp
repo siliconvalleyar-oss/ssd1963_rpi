@@ -331,6 +331,9 @@ void SSD1963::clear_screen(uint16_t color) {
         fill_burst(this, (uint32_t)LCD_WIDTH * h, color);
         delay_ms(1);
     }
+    // Frame-end re-sync
+    shift_out_16bits(0x0000);
+    shift_out_16bits(0x0000);
 }
 
 void SSD1963::draw_pixel(uint16_t x, uint16_t y, uint16_t color) {
@@ -343,6 +346,9 @@ void SSD1963::draw_block(uint16_t x, uint16_t y, uint16_t width, uint16_t height
     set_area(x, y, x + width - 1, y + height - 1);
     write_command(SSD1963_WRITE_MEMORY_START);
     fill_burst(this, (uint32_t)width * height, color);
+    // Area-end re-sync
+    shift_out_16bits(0x0000);
+    shift_out_16bits(0x0000);
 }
 
 void SSD1963::fill_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
@@ -476,6 +482,9 @@ void SSD1963::draw_buffer(const uint16_t* data) {
         write_command(SSD1963_WRITE_MEMORY_START);
         pixels_burst(this, LCD_WIDTH, data + (uint32_t)y * LCD_WIDTH);
     }
+    // Frame-end re-sync: clear shift register to prevent drift accumulation
+    shift_out_16bits(0x0000);
+    shift_out_16bits(0x0000);
 }
 
 void SSD1963::draw_image_rgb565(const char* filepath) {
