@@ -41,16 +41,45 @@ void SSD1963::setup_gpio() {
 }
 
 void SSD1963::init() {
+    // === COMPLETE CLEAN SLATE INITIALIZATION ===
+    // 1. Clear 74HC595 shift registers FIRST (shift out zeros)
+    printf("[INIT] Clearing 74HC595 shift registers...\n");
+    shift_out_16bits(0x0000);
+    shift_out_16bits(0x0000);  // double shift to be sure
+    delay_ms(10);
+
+    // 2. Hardware reset SSD1963 with longer timing
+    printf("[INIT] Hardware reset SSD1963...\n");
     RESET_LOW();
-    delay_ms(10);
+    delay_ms(50);   // longer reset pulse
     RESET_HIGH();
-    delay_ms(10);
+    delay_ms(100);  // wait for internal POR
 
+    // 3. Soft reset
     write_command(SSD1963_SOFT_RESET);
+    delay_ms(20);
+
+    // 4. Exit sleep mode
+    write_command(SSD1963_EXIT_SLEEP_MODE);
+    delay_ms(20);
+
+    // 5. Re-clear shift registers after reset (SSD1963 may have clocked garbage)
+    shift_out_16bits(0x0000);
+    delay_ms(5);
+
+    // --- PLL startup sequence ---
+    write_command(SSD1963_SET_PLL_MN);
+    write_data(50 - 1);  // M=50 → VCO=600MHz (con 12MHz)
+    write_data(5 - 1);   // N=5  → PLL=120MHz
+    write_data(0x04);    // effectuate (original working value)
+
+    write_command(SSD1963_SET_PLL);
+    write_data(0x01);
     delay_ms(10);
 
-    write_command(SSD1963_EXIT_SLEEP_MODE);
-    delay_ms(10);
+    write_command(SSD1963_SET_PLL);
+    write_data(0x03);
+    delay_ms(100);  // longer PLL lock time
 
     // --- PLL startup sequence ---
     write_command(SSD1963_SET_PLL_MN);
