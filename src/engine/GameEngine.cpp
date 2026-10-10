@@ -10,7 +10,9 @@ GameEngine::GameEngine()
     , m_start_time(0)
 {}
 
-GameEngine::~GameEngine() {}
+GameEngine::~GameEngine() {
+    m_display.shutdown();
+}
 
 bool GameEngine::init() {
     if (!bcm2835_init()) {
@@ -52,6 +54,7 @@ void GameEngine::run() {
         }
     }
     std::cout << "[ENGINE] Shutdown.\n";
+    m_display.shutdown();
     bcm2835_close();
 }
 

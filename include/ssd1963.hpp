@@ -78,6 +78,9 @@ public:
      *  modo LCD, temporización horizontal/vertical, y encendido. */
     void init();
 
+    /** @brief Apaga el display y limpia shift registers (para reinicio limpio). */
+    void shutdown();
+
     /** @brief Delay de bloqueo en milisegundos.
      *  @param ms Tiempo de espera. */
     void delay_ms(uint32_t ms);
