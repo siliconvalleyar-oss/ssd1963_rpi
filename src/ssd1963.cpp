@@ -166,14 +166,19 @@ void SSD1963::init() {
     write_data(0x0F); // GPIO0-3 as output, controlled by host
     write_data(0x01); // GPIO0 as output
 
-    // Force backlight via SSD1963 PWM (PW1 pin)
-    write_command(SSD1963_SET_PWM_CONF);  // 0xBE
-    write_data(0x0E);     // PWMF[7:0] = 14 (freq ~300Hz @ 120MHz PLL)
+    // Backlight via SSD1963 PWM (pin PWM -> driver backlight panel)
+    // Comando 0xBE (SSD1963_SET_PWM_FC). NO usar SSD1963_SET_PWM_CONF (= 0x53).
+    //   P1: PWMF   -> frecuencia = PLL / (256 * PWMF) / 256  (PWMF=14 -> ~130Hz @120MHz)
+    //   P2: PWM    -> duty = PWM/256 (0xFF = casi maximo, 0x00 = siempre apagado)
+    //   P3: C[3]=0 PWM controlado por host, C[0]=1 PWM habilitado
+    //   P4-P6: parametros de DBC (no se usan con DBC deshabilitado)
+    write_command(SSD1963_SET_PWM_FC);  // 0xBE (correcto para PWM)
+    write_data(0x0E);     // PWMF = 14 (~130Hz @ 120MHz PLL)
     write_data(0xFF);     // Duty cycle = 255/256 (max brightness)
-    write_data(0x09);     // PWM enabled, controlled by host (C[3]=1, C[0]=1)
-    write_data(0xFF);     // DBC manual brightness = max
-    write_data(0x00);     // DBC min brightness = 0
-    write_data(0x00);     // Brightness prescaler = off
+    write_data(0x01);     // PWM enabled, controlled by host (C[3]=0, C[0]=1)
+    write_data(0x00);
+    write_data(0x00);
+    write_data(0x00);
 
     // Disable DBC, use manual PWM
     write_command(SSD1963_SET_DBC_CONF);  // 0xD0
