@@ -14,6 +14,11 @@
     "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop" );\
 } while(0)
 
+// Retardo corto para 74HC595 timing (~100ns)
+#define SR_WAIT  do { __asm__ __volatile__( \
+    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop" );\
+} while(0)
+
 SSD1963::SSD1963() {}
 
 void SSD1963::delay_ms(uint32_t ms) {
@@ -21,14 +26,19 @@ void SSD1963::delay_ms(uint32_t ms) {
 }
 
 void SSD1963::setup_gpio() {
-    for (uint8_t pin = SSD1963_LCD_D0; pin <= SSD1963_LCD_D15; pin++) {
-        bcm2835_gpio_fsel(pin, BCM2835_GPIO_FSEL_OUTP);
-    }
+    bcm2835_gpio_fsel(SSD1963_SR_SER, BCM2835_GPIO_FSEL_OUTP);
+    bcm2835_gpio_fsel(SSD1963_SR_SRCLK, BCM2835_GPIO_FSEL_OUTP);
+    bcm2835_gpio_fsel(SSD1963_SR_RCLK, BCM2835_GPIO_FSEL_OUTP);
+
     bcm2835_gpio_fsel(SSD1963_LCD_RS, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(SSD1963_LCD_WR, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(SSD1963_LCD_CS, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(SSD1963_LCD_RESET, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(SSD1963_LCD_BACKLIGHT, BCM2835_GPIO_FSEL_OUTP);
+
+    SR_SER_LOW();
+    SR_SRCLK_LOW();
+    SR_RCLK_LOW();
     CS_HIGH();
     WR_HIGH();
     RS_HIGH();
@@ -107,14 +117,29 @@ void SSD1963::init() {
     BACKLIGHT_ON();
 }
 
-static inline uint32_t data_to_mask(uint16_t data) {
-    return ((uint32_t)data) << 12;   // D0=pin12 … D15=pin27
+static inline void shift_out_16bits(uint16_t data) {
+    // Shift out 16 bits MSB first (bit 15 -> bit 0)
+    // First 74HC595 gets bits 7-0 (D0-D7)
+    // Second 74HC595 gets bits 15-8 (D8-D15)
+    for (int8_t i = 15; i >= 0; i--) {
+        if (data & (1 << i)) {
+            SR_SER_HIGH();
+        } else {
+            SR_SER_LOW();
+        }
+        SR_WAIT;
+        SR_SRCLK_HIGH();
+        SR_WAIT;
+        SR_SRCLK_LOW();
+    }
+    // Latch the data to outputs
+    SR_RCLK_HIGH();
+    SR_WAIT;
+    SR_RCLK_LOW();
 }
 
 void SSD1963::write_data_bus(uint16_t data) {
-    uint32_t mask = data_to_mask(data);
-    bcm2835_gpio_clr_multi(DATA_PINS_MASK);
-    bcm2835_gpio_set_multi(mask);
+    shift_out_16bits(data);
 }
 
 void SSD1963::write_command(uint8_t cmd) {

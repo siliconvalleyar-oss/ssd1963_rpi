@@ -2,23 +2,11 @@
 #include <cstdint>
 
 
-// Definición de pines
-constexpr uint8_t SSD1963_LCD_D0  = 12;
-constexpr uint8_t SSD1963_LCD_D1  = 13;
-constexpr uint8_t SSD1963_LCD_D2  = 14;
-constexpr uint8_t SSD1963_LCD_D3  = 15;
-constexpr uint8_t SSD1963_LCD_D4  = 16;
-constexpr uint8_t SSD1963_LCD_D5  = 17;
-constexpr uint8_t SSD1963_LCD_D6  = 18;
-constexpr uint8_t SSD1963_LCD_D7  = 19;
-constexpr uint8_t SSD1963_LCD_D8  = 20;
-constexpr uint8_t SSD1963_LCD_D9  = 21;
-constexpr uint8_t SSD1963_LCD_D10 = 22;
-constexpr uint8_t SSD1963_LCD_D11 = 23;
-constexpr uint8_t SSD1963_LCD_D12 = 24;
-constexpr uint8_t SSD1963_LCD_D13 = 25;
-constexpr uint8_t SSD1963_LCD_D14 = 26;
-constexpr uint8_t SSD1963_LCD_D15 = 27;
+// Definición de pines - 74HC595 Shift Registers (2 en serie = 16 bits)
+constexpr uint8_t SSD1963_SR_SER   = 1;  // Serial data input (pin 14 of first 74HC595)
+constexpr uint8_t SSD1963_SR_SRCLK = 19; // Shift register clock (pin 11 of both 74HC595)
+constexpr uint8_t SSD1963_SR_RCLK  = 20; // Storage register clock / latch (pin 12 of both 74HC595)
+
 constexpr uint8_t SSD1963_LCD_WR    = 3;  // Write strobe
 constexpr uint8_t SSD1963_LCD_RS    = 4;  // Data/Command selection
 constexpr uint8_t SSD1963_LCD_CS    = 5;  // Chip select

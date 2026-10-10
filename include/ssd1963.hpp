@@ -28,12 +28,13 @@
 #define BACKLIGHT_ON()  bcm2835_gpio_write(SSD1963_LCD_BACKLIGHT, HIGH)
 #define BACKLIGHT_OFF() bcm2835_gpio_write(SSD1963_LCD_BACKLIGHT, LOW)
 
-// Máscara para todos los pines de datos D0-D15 (12..27)
-#define DATA_PINS_MASK  (uint32_t)( \
-    (1 << 12) | (1 << 13) | (1 << 14) | (1 << 15) | \
-    (1 << 16) | (1 << 17) | (1 << 18) | (1 << 19) | \
-    (1 << 20) | (1 << 21) | (1 << 22) | (1 << 23) | \
-    (1 << 24) | (1 << 25) | (1 << 26) | (1 << 27) )
+// 74HC595 Shift Register control macros
+#define SR_SER_LOW()    bcm2835_gpio_write(SSD1963_SR_SER, LOW)
+#define SR_SER_HIGH()   bcm2835_gpio_write(SSD1963_SR_SER, HIGH)
+#define SR_SRCLK_LOW()  bcm2835_gpio_write(SSD1963_SR_SRCLK, LOW)
+#define SR_SRCLK_HIGH() bcm2835_gpio_write(SSD1963_SR_SRCLK, HIGH)
+#define SR_RCLK_LOW()   bcm2835_gpio_write(SSD1963_SR_RCLK, LOW)
+#define SR_RCLK_HIGH()  bcm2835_gpio_write(SSD1963_SR_RCLK, HIGH)
 
 /*! \def FONT_CHAR_WIDTH
  *  \brief Ancho en píxeles de cada carácter bitmap. */
