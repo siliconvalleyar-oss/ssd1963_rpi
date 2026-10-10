@@ -106,6 +106,19 @@ void SSD1963::init() {
     delay_ms(50);
 
     // --- LCD panel mode ---
+#if USE_8BIT_MODE
+    write_command(SSD1963_SET_LCD_MODE);
+    write_data(0x08);    // TFT mode, 8-bit bus (bit 2=0 for 8-bit data)
+    write_data(0x00);    // Hsync+Vsync mode
+    write_data((LCD_WIDTH - 1) >> 8);
+    write_data((LCD_WIDTH - 1) & 0xFF);
+    write_data((LCD_HEIGHT - 1) >> 8);
+    write_data((LCD_HEIGHT - 1) & 0xFF);
+    write_data(0x00);    // RGB sequence
+
+    write_command(SSD1963_SET_PIXEL_DATA_INTERFACE);
+    write_data(SSD1963_PDI_8BIT);
+#else
     write_command(SSD1963_SET_LCD_MODE);
     write_data(0x0C);    // TFT mode, 16-bit bus (bit 2=1 for 16-bit data)
     write_data(0x00);    // Hsync+Vsync mode
@@ -117,6 +130,7 @@ void SSD1963::init() {
 
     write_command(SSD1963_SET_PIXEL_DATA_INTERFACE);
     write_data(SSD1963_PDI_16BIT565);
+#endif
 
     // --- Pixel clock (LSHIFT frequency) ---
     write_command(SSD1963_SET_LSHIFT_FREQ);
@@ -187,7 +201,22 @@ void SSD1963::init() {
 }
 
 static inline void shift_out_16bits(uint16_t data) {
-    // Shift out 16 bits MSB first (bit 15 -> bit 0)
+#if USE_8BIT_MODE
+    // 8-bit mode: only first 74HC595 (D0-D7)
+    // Send lower 8 bits only, MSB first (bit 7 -> bit 0)
+    for (int8_t i = 7; i >= 0; i--) {
+        if (data & (1 << i)) {
+            SR_SER_HIGH();
+        } else {
+            SR_SER_LOW();
+        }
+        SR_WAIT;
+        SR_SRCLK_HIGH();
+        SR_WAIT;
+        SR_SRCLK_LOW();
+    }
+#else
+    // 16-bit mode: two 74HC595 in series (D0-D15)
     // First 74HC595 Q0-Q7 = D0-D7
     // Second 74HC595 Q0-Q7 = D8-D15
     // Connection: SER -> 1st chip -> Q7' -> SER 2nd chip -> 2nd chip
@@ -202,6 +231,7 @@ static inline void shift_out_16bits(uint16_t data) {
         SR_WAIT;
         SR_SRCLK_LOW();
     }
+#endif
     // Latch the data to outputs
     SR_RCLK_HIGH();
     SR_WAIT;
