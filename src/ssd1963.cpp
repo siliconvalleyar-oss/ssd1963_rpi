@@ -31,16 +31,18 @@ void SSD1963::setup_gpio() {
 
     bcm2835_gpio_fsel(SSD1963_LCD_RS, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(SSD1963_LCD_WR, BCM2835_GPIO_FSEL_OUTP);
+    bcm2835_gpio_fsel(SSD1963_LCD_RD, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(SSD1963_LCD_CS, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(SSD1963_LCD_RESET, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(SSD1963_LCD_BACKLIGHT, BCM2835_GPIO_FSEL_OUTP);
-    bcm2835_gpio_fsel(SSD1963_LCD_TE, BCM2835_GPIO_FSEL_INPT);   // TE as input
+    bcm2835_gpio_fsel(SSD1963_LCD_TE, BCM2835_GPIO_FSEL_INPT);
 
     SR_SER_LOW();
     SR_SRCLK_LOW();
     SR_RCLK_LOW();
     CS_HIGH();
     WR_HIGH();
+    RD_HIGH();   // RD inactivo en HIGH (lectura deshabilitada)
     RS_HIGH();
     RESET_HIGH();
     BACKLIGHT_OFF();
