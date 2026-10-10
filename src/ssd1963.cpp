@@ -10,8 +10,8 @@
 // Retardo para timing del bus 8080 (WR pulse width + data hold)
 #define BUS_WAIT  do { bcm2835_delayMicroseconds(1); } while(0)
 
-// Retardo lento para 74HC595 timing (~1-2us per toggle)
-#define SR_WAIT  do { bcm2835_delayMicroseconds(1); } while(0)
+// Retardo 74HC595 timing (~200-500ns per toggle) - ajustable
+#define SR_WAIT  do { bcm2835_delayMicroseconds(2); } while(0)
 
 SSD1963::SSD1963() {}
 
@@ -108,6 +108,42 @@ void SSD1963::init() {
 
     write_command(SSD1963_ON_DISPLAY);
     delay_ms(100);
+
+    // === DEBUG: Verify 74HC595 shift register mapping ===
+    // Test pattern: write known values and check display
+    printf("[DEBUG] Testing 74HC595 bit mapping...\n");
+    // Red (0xF800) - should show RED if D15-D11=R
+    set_area(0, 0, 479, 271);
+    write_command(SSD1963_WRITE_MEMORY_START);
+    write_pixel_burst_start();
+    for (int i = 0; i < 480*272; i++) write_pixel_burst(0xF800);
+    write_pixel_burst_end();
+    delay_ms(1000);
+
+    // Blue (0x001F) - should show BLUE if D4-D0=B
+    set_area(0, 0, 479, 271);
+    write_command(SSD1963_WRITE_MEMORY_START);
+    write_pixel_burst_start();
+    for (int i = 0; i < 480*272; i++) write_pixel_burst(0x001F);
+    write_pixel_burst_end();
+    delay_ms(1000);
+
+    // Green (0x07E0) - should show GREEN if D10-D5=G
+    set_area(0, 0, 479, 271);
+    write_command(SSD1963_WRITE_MEMORY_START);
+    write_pixel_burst_start();
+    for (int i = 0; i < 480*272; i++) write_pixel_burst(0x07E0);
+    write_pixel_burst_end();
+    delay_ms(1000);
+
+    // White (0xFFFF) - all bits high
+    set_area(0, 0, 479, 271);
+    write_command(SSD1963_WRITE_MEMORY_START);
+    write_pixel_burst_start();
+    for (int i = 0; i < 480*272; i++) write_pixel_burst(0xFFFF);
+    write_pixel_burst_end();
+    delay_ms(1000);
+
     BACKLIGHT_ON();
 }
 
