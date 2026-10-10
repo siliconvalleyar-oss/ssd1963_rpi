@@ -202,7 +202,7 @@ void SSD1963::init() {
     BACKLIGHT_ON();
 }
 
-static inline void shift_out_16bits(uint16_t data) {
+void SSD1963::shift_out_16bits(uint16_t data) {
 #if USE_8BIT_MODE
     // 8-bit mode: only first 74HC595 (D0-D7)
     // Send lower 8 bits only, MSB first (bit 7 -> bit 0)
