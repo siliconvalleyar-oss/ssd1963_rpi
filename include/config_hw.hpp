@@ -44,3 +44,18 @@ constexpr uint16_t TFT_VSYNC_PERIOD = LCD_HEIGHT + TFT_VSYNC_PULSE + TFT_VSYNC_B
 // Para 480×272@60Hz con PLL=120MHz: FPR = 0x13332 (≈9MHz)
 // (mismo valor que referencia PIC32 para idéntico panel)
 constexpr uint32_t LCD_FPR = 0x13332;
+
+// SET_LCD_MODE (0xB0) parameter A - panel configuration
+// A[5]: TFT panel data width (0=18-bit, 1=24-bit)
+// A[4]: Color depth enhancement (0=disable, 1=enable FRC/dithering)
+// A[3]: TFT FRC enable (0=dithering, 1=FRC) - ignored if A[5]=1
+// A[2]: LSHIFT polarity (0=falling edge, 1=rising edge)
+// A[1]: LLINE polarity (0=active low, 1=active high)
+// A[0]: LFRAME polarity (0=active low, 1=active high)
+//
+// Common values for 480x272 panels:
+// 0x0C = 0b00001100 = 18-bit panel, no FRC, LSHIFT falling, sync active low
+// 0x2C = 0b00101100 = 24-bit panel, no FRC, LSHIFT falling, sync active low
+// 0x0E = 0b00001110 = 18-bit panel, FRC enabled, LSHIFT falling, sync active low
+// 0x08 = 0b00001000 = 18-bit panel, 8-bit MCU bus
+#define LCD_MODE_CONFIG 0x0C  // Change to test: 0x0C, 0x2C, 0x0E, etc.

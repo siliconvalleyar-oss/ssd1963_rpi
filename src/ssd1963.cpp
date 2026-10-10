@@ -105,10 +105,10 @@ void SSD1963::init() {
     write_command(SSD1963_SET_PIXEL_DATA_INTERFACE);
     write_data(SSD1963_PDI_8BIT);
 #else
-    // 16-bit MCU bus, 18-bit panel (typical 480x272)
+    // 16-bit MCU bus, panel config from config_hw.hpp
     write_command(SSD1963_SET_LCD_MODE);
-    write_data(0x0C);    // A: 18-bit panel, no FRC, LSHIFT falling, LLINE/LFRAME active low
-    write_data(0x00);    // B: TFT mode (00/01)
+    write_data(LCD_MODE_CONFIG);  // Panel config (default 0x0C = 18-bit)
+    write_data(0x00);    // TFT type: 00/01 = TFT mode
     write_data((LCD_WIDTH - 1) >> 8);   // HDP high = 0x01
     write_data((LCD_WIDTH - 1) & 0xFF); // HDP low  = 0xDF (479)
     write_data((LCD_HEIGHT - 1) >> 8);  // VDP high = 0x01
