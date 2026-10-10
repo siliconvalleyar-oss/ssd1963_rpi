@@ -30,16 +30,16 @@ static constexpr uint16_t LCD_WIDTH = 480;
 static constexpr uint16_t LCD_HEIGHT = 272;
 
 
-// Sincronización horizontal - Based on stm32plus SSD1963_480x272PanelTraits
-constexpr uint16_t TFT_HSYNC_PULSE        = 2;   // H_SYNC_PULSE_WIDTH
-constexpr uint16_t TFT_HSYNC_BACK_PORCH   = 43;  // H_BACK_PORCH
-constexpr uint16_t TFT_HSYNC_FRONT_PORCH  = 8;   // H_FRONT_PORCH
+// Sincronización horizontal - From reference (tmp/Graphics/Tft.h for TFT480X272)
+constexpr uint16_t TFT_HSYNC_PULSE        = 41;  // DISP_HOR_PULSE_WIDTH
+constexpr uint16_t TFT_HSYNC_BACK_PORCH   = 2;   // DISP_HOR_BACK_PORCH
+constexpr uint16_t TFT_HSYNC_FRONT_PORCH  = 2;   // DISP_HOR_FRONT_PORCH
 constexpr uint16_t TFT_HSYNC_PERIOD = LCD_WIDTH + TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH + TFT_HSYNC_FRONT_PORCH;
 
-// Sincronización vertical - Based on stm32plus SSD1963_480x272PanelTraits
-constexpr uint16_t TFT_VSYNC_PULSE        = 10;  // V_SYNC_PULSE_WIDTH
-constexpr uint16_t TFT_VSYNC_BACK_PORCH   = 12;  // V_BACK_PORCH
-constexpr uint16_t TFT_VSYNC_FRONT_PORCH  = 4;   // V_FRONT_PORCH
+// Sincronización vertical - From reference (tmp/Graphics/Tft.h for TFT480X272)
+constexpr uint16_t TFT_VSYNC_PULSE        = 10;  // DISP_VER_PULSE_WIDTH
+constexpr uint16_t TFT_VSYNC_BACK_PORCH   = 2;   // DISP_VER_BACK_PORCH
+constexpr uint16_t TFT_VSYNC_FRONT_PORCH  = 2;   // DISP_VER_FRONT_PORCH
 constexpr uint16_t TFT_VSYNC_PERIOD = LCD_HEIGHT + TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH + TFT_VSYNC_FRONT_PORCH;
 
 // Frecuencia de píxel: PCLK = SYSCLK × (FPR + 1) / 2^20
@@ -56,9 +56,9 @@ constexpr uint32_t LCD_FPR = 0x13332;
 // A[1]: LLINE polarity (0=active low, 1=active high)
 // A[0]: LFRAME polarity (0=active low, 1=active high)
 //
-// Common values for 480x272 panels:
+// Common values for 480x272 panels (from tmp/Graphics reference):
+// 0x10 = 0b00010000 = 24-bit panel, no FRC, LSHIFT rising, sync active low
 // 0x0C = 0b00001100 = 18-bit panel, no FRC, LSHIFT falling, sync active low
-// 0x2C = 0b00101100 = 24-bit panel, no FRC, LSHIFT falling, sync active low
 // 0x0E = 0b00001110 = 18-bit panel, FRC enabled, LSHIFT falling, sync active low
 // 0x08 = 0b00001000 = 18-bit panel, 8-bit MCU bus
-#define LCD_MODE_CONFIG 0x0C  // Default: 18-bit panel, standard timing
+#define LCD_MODE_CONFIG 0x10  // 24-bit panel, rising edge LSHIFT (matching reference)

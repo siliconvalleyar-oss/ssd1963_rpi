@@ -50,44 +50,56 @@ void SSD1963::setup_gpio() {
 
 void SSD1963::init() {
     // === COMPLETE CLEAN SLATE INITIALIZATION ===
-    // 1. Clear 74HC595 shift registers FIRST
+    
+    // 1. Set control signals to inactive state FIRST
+    printf("[INIT] Setting control signals: RD=HIGH, WR=HIGH, CS=HIGH...\n");
+    RD_HIGH();
+    WR_HIGH();
+    CS_HIGH();
+    
+    // 2. Hardware reset sequence: RST LOW -> wait 500ms -> RST HIGH
+    printf("[INIT] Hardware reset SSD1963 (RST LOW 500ms)...\n");
+    RESET_LOW();
+    delay_ms(500);   // RST held LOW for 500ms
+    RESET_HIGH();
+    delay_ms(200);   // Wait for internal POR after reset release
+    
+    // 3. Clear screen for 2 seconds (black)
+    printf("[INIT] Clearing screen for 2 seconds...\n");
+    clear_screen(BLACK);
+    delay_ms(2000);  // 2 seconds black screen
+    
+    // 4. Clear 74HC595 shift registers
     printf("[INIT] Clearing 74HC595 shift registers...\n");
     shift_out_16bits(0x0000);
     shift_out_16bits(0x0000);
     delay_ms(10);
 
-    // 2. Hardware reset SSD1963
-    printf("[INIT] Hardware reset SSD1963...\n");
-    RESET_LOW();
-    delay_ms(50);
-    RESET_HIGH();
-    delay_ms(120);  // wait for internal POR
-
-    // 3. Soft reset
+    // 5. Soft reset (does not affect PLL registers 0xE0-0xE5)
     write_command(SSD1963_SOFT_RESET);
-    delay_ms(20);
+    delay_ms(20);   // datasheet requires >= 5ms
 
-    // 4. Exit sleep mode
+    // 6. Exit sleep mode (also triggers display on 0x29)
     write_command(SSD1963_EXIT_SLEEP_MODE);
-    delay_ms(20);
+    delay_ms(20);   // datasheet requires >= 5ms
 
-    // 5. Re-clear shift registers after reset
+    // 7. Re-clear shift registers after reset
     shift_out_16bits(0x0000);
     delay_ms(5);
 
     // --- PLL startup sequence (SINGLE, CORRECT) ---
     // Ref clk = 12MHz (typical crystal)
-    // M = 49 → VCO = 12 * 50 = 600MHz (250-800MHz OK)
-    // N = 4  → PLL = 600 / 5 = 120MHz
+    // M = 49 -> VCO = 12 * 50 = 600MHz (250-800MHz OK)
+    // N = 4  -> PLL = 600 / 5 = 120MHz
     printf("[INIT] Configuring PLL (M=49, N=4, PLL=120MHz)...\n");
     write_command(SSD1963_SET_PLL_MN);
     write_data(49);   // M = 49 (0x31)
     write_data(4);    // N = 4  (0x04)
-    write_data(0x04); // Effectuate
+    write_data(0x04); // C[2]=1: effectuate M and N
 
     write_command(SSD1963_SET_PLL);
     write_data(0x01); // Enable PLL
-    delay_ms(5);      // Wait 100us min, use 5ms
+    delay_ms(100);    // Wait for PLL to lock
 
     write_command(SSD1963_SET_PLL);
     write_data(0x03); // Lock PLL (use PLL as sysclk)
