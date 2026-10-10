@@ -27,6 +27,7 @@
 #define RESET_HIGH()    bcm2835_gpio_write(SSD1963_LCD_RESET, HIGH)
 #define BACKLIGHT_ON()  bcm2835_gpio_write(SSD1963_LCD_BACKLIGHT, HIGH)
 #define BACKLIGHT_OFF() bcm2835_gpio_write(SSD1963_LCD_BACKLIGHT, LOW)
+#define TE_READ()       bcm2835_gpio_lev(SSD1963_LCD_TE)
 
 // 74HC595 Shift Register control macros
 #define SR_SER_LOW()    bcm2835_gpio_write(SSD1963_SR_SER, LOW)

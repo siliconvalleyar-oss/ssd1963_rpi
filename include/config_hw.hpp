@@ -14,7 +14,8 @@ constexpr uint8_t SSD1963_LCD_WR    = 3;  // Write strobe
 constexpr uint8_t SSD1963_LCD_RS    = 4;  // Data/Command selection
 constexpr uint8_t SSD1963_LCD_CS    = 5;  // Chip select
 constexpr uint8_t SSD1963_LCD_RESET = 6;  // Reset
-constexpr uint8_t SSD1963_LCD_BACKLIGHT = 12; // Backlight control (era GPIO 0, ahora GPIO 12 libre tras usar 74HC595)
+constexpr uint8_t SSD1963_LCD_TE      = 12; // Tearing Effect (INPUT from SSD1963)
+constexpr uint8_t SSD1963_LCD_BACKLIGHT = 0; // Backlight control (GPIO 0, libre tras usar 74HC595)
 
 
 // Dimensiones del display
