@@ -217,9 +217,13 @@ static inline uint32_t data_to_mask(uint16_t data) {
 }
 
 void SSD1963::write_data_bus(uint16_t data) {
-    uint32_t mask = data_to_mask(data);
-    bcm2835_gpio_clr_multi(DATA_PINS_MASK);
-    bcm2835_gpio_set_multi(mask);
+    static uint32_t g_bus_state = 0;
+    uint32_t new_state = ((uint32_t)data) << 12;
+    uint32_t to_set = new_state & ~g_bus_state;
+    uint32_t to_clr = g_bus_state & ~new_state;
+    if (to_clr) bcm2835_gpio_clr_multi(to_clr);
+    if (to_set) bcm2835_gpio_set_multi(to_set);
+    g_bus_state = new_state;
 }
 
 void SSD1963::write_command(uint8_t cmd) {
@@ -436,12 +440,10 @@ void SSD1963::draw_pixels(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
 }
 
 void SSD1963::draw_buffer(const uint16_t* data) {
-    // Dividir en filas individuales para evitar ráfaga larga que corrompe el display
-    for (uint16_t y = 0; y < LCD_HEIGHT; y++) {
-        set_area(0, y, LCD_WIDTH - 1, y);
-        write_command(SSD1963_WRITE_MEMORY_START);
-        pixels_burst(this, LCD_WIDTH, data + (uint32_t)y * LCD_WIDTH);
-    }
+    // Single batch for full framebuffer - no per-row overhead
+    set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
+    write_command(SSD1963_WRITE_MEMORY_START);
+    pixels_burst(this, (uint32_t)LCD_WIDTH * LCD_HEIGHT, data);
 }
 
 void SSD1963::draw_image_rgb565(const char* filepath) {
