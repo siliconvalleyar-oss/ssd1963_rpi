@@ -72,24 +72,24 @@ void SSD1963::init() {
     write_command(SSD1963_EXIT_SLEEP_MODE);
     delay_ms(20);   // datasheet requires >= 5ms
 
-    // --- PLL startup sequence (matching working reference with 10MHz crystal) ---
+    // --- PLL startup sequence (10MHz crystal, PLL=100MHz) ---
     // Ref clk = 10MHz (physical crystal on SSD1963 modules)
-    // PLL = 10MHz * (N+1) / (M+1)
-    // For 150MHz: N=44, M=2 → 10MHz * 45 / 3 = 150MHz
-    // Reference uses: N=44 (0x2C), M=2 (0x02), effectuate=0x04
-    printf("[INIT] Configuring PLL (M=2, N=44, PLL=150MHz)...\n");
+    // PLL = 10MHz * (M+1) / (N+1)
+    // For 100MHz: M=29, N=2 -> 10MHz * 30 / 3 = 100MHz
+    // Reference uses: N=2 (0x02), M=29 (0x1D), effectuate=0x04
+    printf("[INIT] Configuring PLL (M=29, N=2, PLL=100MHz)...\n");
     write_command(SSD1963_SET_PLL_MN);
-    write_data(44);   // N = 44 (0x2C)
-    write_data(2);    // M = 2  (0x02)
+    write_data(SSD1963_PLL_N);   // N = 2  (0x02)
+    write_data(SSD1963_PLL_M);   // M = 29 (0x1D)
     write_data(0x04); // C[2]=1: effectuate M and N
 
     write_command(SSD1963_SET_PLL);
     write_data(0x01); // Enable PLL
-    delay_ms(10);     // Wait for PLL to stabilize (reference uses 10ms)
+    delay_ms(10);     // Wait for PLL to stabilize
 
     write_command(SSD1963_SET_PLL);
     write_data(0x03); // Lock PLL (use PLL as sysclk)
-    delay_ms(12);     // Wait for PLL lock (reference uses 12ms)
+    delay_ms(12);     // Wait for PLL lock
 
     // --- LCD panel mode (matching working reference) ---
     #if USE_8BIT_MODE

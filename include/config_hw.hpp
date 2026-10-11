@@ -47,9 +47,15 @@ constexpr uint16_t TFT_VSYNC_FRONT_PORCH  = 8;   // SSD_VER_FRONT_PORCH
 constexpr uint16_t TFT_VSYNC_PERIOD = LCD_HEIGHT + TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH + TFT_VSYNC_FRONT_PORCH;
 
 // Frecuencia de píxel: PCLK = PLL * (FPR + 1) / 2^20
-// Reference: 10MHz xtal, PLL=150MHz (M=2, N=44) → FPR = 0x00FFBE for ~9.3MHz
-constexpr uint32_t LCD_FPR = 0x00FFBE;
+// Reference: 10MHz xtal, PLL=100MHz (M=29, N=2) → FPR = 0x0170A2 for ~9.0MHz
+constexpr uint32_t LCD_FPR = 0x0170A2;
+
+// PLL (cristal del módulo = 10 MHz)
+//   VCO = 10MHz * (M+1)   (debe estar entre 250 y 800 MHz)
+//   PLL = VCO / (N+1)      (máximo 110 MHz según tabla 13-6)
+constexpr uint8_t  SSD1963_PLL_M = 29;
+constexpr uint8_t  SSD1963_PLL_N = 2;
 
 // SET_LCD_MODE (0xB0) parameter A - panel configuration (from working reference)
-// 0x20 = 24-bit panel, no FRC, LSHIFT falling, sync active low
+// 0x00 = 18-bit panel, no FRC, LSHIFT falling, sync active low
 #define LCD_MODE_CONFIG 0x00
