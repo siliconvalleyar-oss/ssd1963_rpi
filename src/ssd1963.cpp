@@ -247,6 +247,7 @@ void SSD1963::write_data_bus(uint16_t data) {
 
 void SSD1963::write_command(uint8_t cmd) {
     RS_LOW();
+    printf("[RS] CMD 0x%02X - RS=LOW\n", cmd);
     CS_LOW();
     write_data_bus(cmd);
     WR_LOW();
@@ -254,7 +255,8 @@ void SSD1963::write_command(uint8_t cmd) {
     WR_HIGH();
     BUS_WAIT;
     CS_HIGH();
-    RS_HIGH();   // RS vuelve a reposo en alto, como en el micro que funciona
+    RS_HIGH();
+    printf("[RS] CMD 0x%02X done - RS=HIGH\n", cmd);
 }
 
 void SSD1963::write_data(uint16_t data) {
@@ -270,6 +272,7 @@ void SSD1963::write_data(uint16_t data) {
 
 void SSD1963::write_pixel_burst_start() {
     RS_HIGH();
+    printf("[RS] BURST START - RS=HIGH\n");
     if (!SSD1963_CS_PER_WRITE) CS_LOW();
 }
 
@@ -320,6 +323,7 @@ static void pixels_burst(SSD1963* d, uint32_t count, const uint16_t* data) {
 }
 
 void SSD1963::clear_screen(uint16_t color) {
+    printf("[RS] clear_screen start\n");
     // SSD1963_BURST_ROWS filas por ráfaga (config_hw.hpp). Por defecto 272 = una sola ráfaga.
     for (uint16_t y = 0; y < LCD_HEIGHT; y += SSD1963_BURST_ROWS) {
         uint16_t h = SSD1963_BURST_ROWS;
@@ -328,6 +332,7 @@ void SSD1963::clear_screen(uint16_t color) {
         write_command(SSD1963_WRITE_MEMORY_START);
         fill_burst(this, (uint32_t)LCD_WIDTH * h, color);
     }
+    printf("[RS] clear_screen end\n");
 }
 
 void SSD1963::draw_pixel(uint16_t x, uint16_t y, uint16_t color) {
