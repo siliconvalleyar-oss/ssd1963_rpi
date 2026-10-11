@@ -51,12 +51,11 @@ void SSD1963::init() {
     CS_HIGH();
     
     // 2. Hardware reset sequence: RST LOW initially
-    printf("[INIT] Hardware reset SSD1963 (RST LOW initially)...\n");
+    printf("[INIT] Hardware reset SSD1963 (RST LOW 2000ms)...\n");
     RESET_LOW();
     
-    // 3. Clear screen for 2 seconds (black) while RST is LOW
-    printf("[INIT] Clearing screen for 2 seconds (RST LOW)...\n");
-    clear_screen(BLACK);
+    // 3. Wait 2 seconds with RST LOW (no commands - SSD1963 ignores all during reset)
+    printf("[INIT] Waiting 2 seconds (RST LOW)...\n");
     delay_ms(2000);  // 2 seconds with RST LOW
     
     // 4. Release reset
@@ -205,6 +204,10 @@ void SSD1963::init() {
 
     // Backlight ON via Pi GPIO
     BACKLIGHT_ON();
+
+    // Now clear screen to black (GRAM is accessible after init)
+    printf("[INIT] Clearing screen to black...\n");
+    clear_screen(BLACK);
 
     printf("[INIT] SSD1963 initialization complete\n");
 }
