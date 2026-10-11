@@ -1,6 +1,7 @@
 {
     "name": "ssd1963-rpi",
     "description": "Develop, build, and run SSD1963 display projects on Raspberry Pi with 16-bit parallel 8080 interface via libbcm2835 GPIO bit-bang.",
+    "version": "1.1.0",
     "commands": {
         "build": {
             "description": "Build the SSD1963 project",
@@ -40,11 +41,12 @@
             "controller": "SSD1963",
             "resolution": "480x272",
             "color_format": "RGB565",
-            "interface": "16-bit parallel 8080"
+            "interface": "16-bit parallel 8080",
+            "pixel_clock": "2.0 MHz (SYSCLK = 100 MHz)"
         },
         "gpio": {
             "library": "libbcm2835",
-            "data_pins": "GPIO 12–27 (D0–D15)",
+            "data_pins": "GPIO 12-27 (D0-D15)",
             "control_pins": {
                 "WR": 3,
                 "RS": 4,
@@ -52,7 +54,8 @@
                 "RESET": 6,
                 "BACKLIGHT": 0
             }
-        }
+        },
+        "supported_models": ["Raspberry Pi Zero 2W", "Raspberry Pi 4"]
     },
     "files": {
         "main_source": "src/main.cpp",
@@ -63,6 +66,20 @@
         "color_defs": "include/color.hpp",
         "makefile": "Makefile",
         "assets": "assets/",
-        "conversion_tools": "script_tools_ssd1963_rpi/"
+        "conversion_tools": "script_tools_ssd1963_rpi/",
+        "documentation": {
+            "readme": "README.md",
+            "architecture": "ARCHITECTURE.md",
+            "changelog": "CHANGELOG.md",
+            "hardware_guide": "docs/hardware.md",
+            "api_reference": "docs/api.md",
+            "development_guide": "docs/development.md"
+        }
+    },
+    "build_config": {
+        "compiler": "g++",
+        "cxxflags": "-Iinclude",
+        "ldflags": "-lbcm2835",
+        "output": "bin/ssd1963_app"
     }
 }

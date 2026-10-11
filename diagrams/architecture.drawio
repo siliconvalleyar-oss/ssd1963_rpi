@@ -1,0 +1,143 @@
+<mxfile host="Electron" modified="2026-06-22T10:00:00.000Z" agent="Mozilla/5.0" version="14.6.13" etag="SSD1963_ARCH" type="device">
+  <diagram id="architecture" name="Architecture">
+    <mxGraphModel dx="1420" dy="870" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="t1" value="SSD1963 Game Engine v2.0 — Software Architecture" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="200" y="10" width="600" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Layer 1: Application -->
+        <mxCell id="l1" value="APPLICATION LAYER" style="swimlane;childLayout=stackLayout;horizontalStack=0;startSize=30;fillColor=#E8F5E9;strokeColor=#388E3C;fontSize=12;fontStyle=1;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="60" width="250" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="l1_main" value="main.cpp&#10;Entry point, engine bootstrap" style="text;strokeColor=none;fillColor=#FFFFFF;fontSize=11;align=left;verticalAlign=middle;spacingLeft=8;rounded=1;" vertex="1" parent="l1">
+          <mxGeometry y="30" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="l1_scenes" value="Scenes: Menu, ColorBlocks,&#10;ImageViewer, Paint, Patterns" style="text;strokeColor=none;fillColor=#FFFFFF;fontSize=11;align=left;verticalAlign=middle;spacingLeft=8;rounded=1;" vertex="1" parent="l1">
+          <mxGeometry y="70" width="250" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Layer 2: Engine -->
+        <mxCell id="l2" value="ENGINE LAYER" style="swimlane;childLayout=stackLayout;horizontalStack=0;startSize=30;fillColor=#E3F2FD;strokeColor=#1565C0;fontSize=12;fontStyle=1;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="210" width="250" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="l2_engine" value="GameEngine&#10;Main loop, state machine, input processing" style="text;strokeColor=none;fillColor=#FFFFFF;fontSize=11;align=left;verticalAlign=middle;spacingLeft=8;rounded=1;" vertex="1" parent="l2">
+          <mxGeometry y="30" width="250" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="l2_scene" value="Scene (abstract base)&#10;on_enter/on_exit/update/draw/handle_button" style="text;strokeColor=none;fillColor=#FFFFFF;fontSize=11;align=left;verticalAlign=middle;spacingLeft=8;rounded=1;" vertex="1" parent="l2">
+          <mxGeometry y="80" width="250" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="l2_menu" value="MenuScene&#10;Menu rendering, navigation, scroll" style="text;strokeColor=none;fillColor=#FFFFFF;fontSize=11;align=left;verticalAlign=middle;spacingLeft=8;rounded=1;" vertex="1" parent="l2">
+          <mxGeometry y="130" width="250" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Layer 3: Driver -->
+        <mxCell id="l3" value="DRIVER LAYER (SSD1963)" style="swimlane;childLayout=stackLayout;horizontalStack=0;startSize=30;fillColor=#FCE4EC;strokeColor=#C62828;fontSize=12;fontStyle=1;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="410" width="250" height="230" as="geometry"/>
+        </mxCell>
+        <mxCell id="l3_init" value="init() — PLL, LCD mode, timings" style="text;strokeColor=none;fillColor=#FFFFFF;fontSize=11;align=left;verticalAlign=middle;spacingLeft=8;rounded=1;" vertex="1" parent="l3">
+          <mxGeometry y="30" width="250" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="l3_draw" value="draw_block, draw_pixel, draw_rect&#10;fill_rect, clear_screen" style="text;strokeColor=none;fillColor=#FFFFFF;fontSize=11;align=left;verticalAlign=middle;spacingLeft=8;rounded=1;" vertex="1" parent="l3">
+          <mxGeometry y="65" width="250" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="l3_text" value="draw_char, draw_string&#10;draw_string_centered (font 8x8)" style="text;strokeColor=none;fillColor=#FFFFFF;fontSize=11;align=left;verticalAlign=middle;spacingLeft=8;rounded=1;" vertex="1" parent="l3">
+          <mxGeometry y="115" width="250" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="l3_img" value="draw_image_rgb565 — file → display" style="text;strokeColor=none;fillColor=#FFFFFF;fontSize=11;align=left;verticalAlign=middle;spacingLeft=8;rounded=1;" vertex="1" parent="l3">
+          <mxGeometry y="165" width="250" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="l3_bus" value="write_command / write_data / write_data_bus&#10;8080 parallel protocol (RS, WR, CS)" style="text;strokeColor=none;fillColor=#FFFFFF;fontSize=11;align=left;verticalAlign=middle;spacingLeft=8;rounded=1;" vertex="1" parent="l3">
+          <mxGeometry y="200" width="250" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Layer 4: Hardware Abstraction -->
+        <mxCell id="l4" value="HARDWARE ABSTRACTION (libbcm2835)" style="swimlane;childLayout=stackLayout;horizontalStack=0;startSize=30;fillColor=#FFF3E0;strokeColor=#E65100;fontSize=12;fontStyle=1;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="660" width="250" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="l4_gpio" value="GPIO memory-mapped I/O&#10;bcm2835_gpio_fsel, bcm2835_gpio_write" style="text;strokeColor=none;fillColor=#FFFFFF;fontSize=11;align=left;verticalAlign=middle;spacingLeft=8;rounded=1;" vertex="1" parent="l4">
+          <mxGeometry y="30" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="l4_delay" value="bcm2835_delay, bcm2835_st_read (timing)" style="text;strokeColor=none;fillColor=#FFFFFF;fontSize=11;align=left;verticalAlign=middle;spacingLeft=8;rounded=1;" vertex="1" parent="l4">
+          <mxGeometry y="70" width="250" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- Configuration boxes -->
+        <mxCell id="cfg" value="CONFIGURATION" style="swimlane;childLayout=stackLayout;horizontalStack=0;startSize=30;fillColor=#EDE7F6;strokeColor=#4527A0;fontSize=12;fontStyle=1;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="440" y="60" width="200" height="280" as="geometry"/>
+        </mxCell>
+        <mxCell id="cfg_hw" value="config_hw.hpp&#10;GPIO pins, timings, dims" style="text;strokeColor=none;fillColor=#FFFFFF;fontSize=11;align=left;verticalAlign=middle;spacingLeft=8;rounded=1;" vertex="1" parent="cfg">
+          <mxGeometry y="30" width="200" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="cfg_cmd" value="ssd1963_cmd.hpp&#10;~100 command opcodes" style="text;strokeColor=none;fillColor=#FFFFFF;fontSize=11;align=left;verticalAlign=middle;spacingLeft=8;rounded=1;" vertex="1" parent="cfg">
+          <mxGeometry y="85" width="200" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="cfg_color" value="color.hpp&#10;RGB565 macro, 8 colors" style="text;strokeColor=none;fillColor=#FFFFFF;fontSize=11;align=left;verticalAlign=middle;spacingLeft=8;rounded=1;" vertex="1" parent="cfg">
+          <mxGeometry y="140" width="200" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="cfg_assets" value="assets/*.rgb565&#10;Imágenes pre-convertidas" style="text;strokeColor=none;fillColor=#FFFFFF;fontSize=11;align=left;verticalAlign=middle;spacingLeft=8;rounded=1;" vertex="1" parent="cfg">
+          <mxGeometry y="195" width="200" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="cfg_make" value="Makefile&#10;Build system + remote targets" style="text;strokeColor=none;fillColor=#FFFFFF;fontSize=11;align=left;verticalAlign=middle;spacingLeft=8;rounded=1;" vertex="1" parent="cfg">
+          <mxGeometry y="250" width="200" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- Physical HW -->
+        <mxCell id="phy" value="PHYSICAL HARDWARE" style="swimlane;childLayout=stackLayout;horizontalStack=0;startSize=30;fillColor=#F3E5F5;strokeColor=#7B1FA2;fontSize=12;fontStyle=1;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="440" y="360" width="200" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="phy_rpi" value="Raspberry Pi&#10;(Zero 2W / Pi 4)" style="text;strokeColor=none;fillColor=#FFFFFF;fontSize=11;align=left;verticalAlign=middle;spacingLeft=8;rounded=1;" vertex="1" parent="phy">
+          <mxGeometry y="30" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="phy_tft" value="SSD1963 TFT LCD&#10;480x272, RGB565, 16-bit parallel" style="text;strokeColor=none;fillColor=#FFFFFF;fontSize=11;align=left;verticalAlign=middle;spacingLeft=8;rounded=1;" vertex="1" parent="phy">
+          <mxGeometry y="70" width="200" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrows: Application → Engine -->
+        <mxCell id="a1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#388E3C;strokeWidth=2;" edge="1" parent="1" source="l1" target="l2">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrows: Engine → Driver -->
+        <mxCell id="a2" value="uses" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#1565C0;strokeWidth=2;" edge="1" parent="1" source="l2" target="l3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrows: Driver → libbcm2835 -->
+        <mxCell id="a3" value="GPIO calls" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#C62828;strokeWidth=2;" edge="1" parent="1" source="l3" target="l4">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Config → Engine (dependency) -->
+        <mxCell id="a4" value="includes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0;exitY=0.5;entryX=1;entryY=0.3;strokeColor=#4527A0;strokeWidth=1;dashed=1;" edge="1" parent="1" source="cfg" target="l2">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Config → Driver (dependency) -->
+        <mxCell id="a5" value="includes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0;exitY=0.5;entryX=1;entryY=0.3;strokeColor=#4527A0;strokeWidth=1;dashed=1;" edge="1" parent="1" source="cfg" target="l3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Physical HW → libbcm2835 -->
+        <mxCell id="a6" value="controls" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=0;entryX=0.5;entryY=1;strokeColor=#7B1FA2;strokeWidth=1;dashed=1;" edge="1" parent="1" source="phy" target="l4">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="leg" value="Legend" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="700" y="70" width="120" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg1" value="  Solid = direct call/use" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="700" y="95" width="200" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg2" value="  Dashed = compile-time include" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="700" y="115" width="200" height="20" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

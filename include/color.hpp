@@ -1,24 +1,34 @@
 #pragma once
-
-#define RGB565CONVERT(red, green, blue) (uint16_t) (((red >> 3) << 11) | ((green >> 2) << 5) | (blue >> 3))
-
-
-/*********************************************************************
-* Overview: Some basic colors definitions.
-*********************************************************************/
 #include <cstdint>
 
+struct RGB565 {
+    uint16_t raw;
 
+    constexpr RGB565() : raw(0) {}
+    constexpr RGB565(uint16_t v) : raw(v) {}
+
+    static constexpr RGB565 from_rgb(uint8_t r, uint8_t g, uint8_t b) {
+        return RGB565(((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3));
+    }
+
+    uint8_t r() const { return (raw >> 8) & 0xF8; }
+    uint8_t g() const { return (raw >> 3) & 0xFC; }
+    uint8_t b() const { return (raw << 3) & 0xF8; }
+
+    operator uint16_t() const { return raw; }
+};
+
+#define RGB565CONVERT(red, green, blue) RGB565::from_rgb(red, green, blue).raw
 
 // Colores básicos en formato RGB565
-constexpr uint16_t BLACK = 0x0000;
-constexpr uint16_t BLUE = 0x001F;
-constexpr uint16_t RED = 0xF800;
-constexpr uint16_t GREEN = 0x07E0;
-constexpr uint16_t CYAN = 0x07FF;
-constexpr uint16_t MAGENTA = 0xF81F;
-constexpr uint16_t YELLOW = 0xFFE0;
-constexpr uint16_t WHITE = 0xFFFF;
+constexpr RGB565 BLACK   = RGB565(0x0000);
+constexpr RGB565 BLUE    = RGB565(0x001F);
+constexpr RGB565 RED     = RGB565(0xF800);
+constexpr RGB565 GREEN   = RGB565(0x07E0);
+constexpr RGB565 CYAN    = RGB565(0x07FF);
+constexpr RGB565 MAGENTA = RGB565(0xF81F);
+constexpr RGB565 YELLOW  = RGB565(0xFFE0);
+constexpr RGB565 WHITE   = RGB565(0xFFFF);
 
 
 /*
