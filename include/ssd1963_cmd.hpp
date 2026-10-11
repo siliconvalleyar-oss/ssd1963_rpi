@@ -75,6 +75,7 @@ constexpr uint8_t SSD1963_SET_GPIO_CONF = 0xB8;
 constexpr uint8_t SSD1963_SET_GPIO_VALUE = 0xBA;
 constexpr uint8_t SSD1963_SET_POST_PROC = 0xBC;
 constexpr uint8_t SSD1963_SET_PWM_FC = 0xBE;
+constexpr uint8_t SSD1963_SET_DBC_CONF = 0xD0;
 constexpr uint8_t SSD1963_SET_PIXEL_DATA_INTERFACE = 0xF0;
 constexpr uint8_t  SSD1963_SET_LSHIFT_FREQ = 0xE6;
 // Modos de interfaz de píxeles

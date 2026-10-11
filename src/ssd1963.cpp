@@ -7,14 +7,8 @@
 #include <color.hpp>
 #include <font_8x8.hpp>
 
-// Retardo NOP para timing del bus 8080 (~43ns con 30 NOPs a 700MHz)
-#define BUS_WAIT  do { __asm__ __volatile__( \
-    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
-    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
-    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop" );\
-} while(0)
-
-static void shift_out_16bits(uint16_t data);
+// Retardo para timing del bus 8080 (WR pulse width + data hold)
+#define BUS_WAIT  do { bcm2835_delayMicroseconds(1); } while(0)
 
 SSD1963::SSD1963() {}
 
@@ -70,12 +64,6 @@ void SSD1963::init() {
     RESET_HIGH();
     delay_ms(200);   // Wait for internal POR after reset release
     
-    // 5. Clear 74HC595 shift registers (if using shift registers)
-    printf("[INIT] Clearing shift registers...\n");
-    shift_out_16bits(0x0000);
-    shift_out_16bits(0x0000);
-    delay_ms(10);
-
     // 5. Soft reset (does not affect PLL registers 0xE0-0xE5)
     write_command(SSD1963_SOFT_RESET);
     delay_ms(20);   // datasheet requires >= 5ms
@@ -83,10 +71,6 @@ void SSD1963::init() {
     // 6. Exit sleep mode (also triggers display on 0x29)
     write_command(SSD1963_EXIT_SLEEP_MODE);
     delay_ms(20);   // datasheet requires >= 5ms
-
-    // 7. Re-clear shift registers after reset
-    shift_out_16bits(0x0000);
-    delay_ms(5);
 
     // --- PLL startup sequence (matching working reference with 10MHz crystal) ---
     // Ref clk = 10MHz (physical crystal on SSD1963 modules)
@@ -135,6 +119,11 @@ void SSD1963::init() {
         write_data(SSD1963_PDI_16BIT565);  // 0x03 = 16-bit 565 format
     #endif
 
+    // 6b. Address mode: RGB, top->bottom, left->right, sin flips
+    write_command(SSD1963_SET_ADDR_MODE);   // 0x36
+    write_data(0x00);  // RGB, top->bottom, left->right, sin flips
+    // Si R y B salen intercambiados, cambiar 0x00 por 0x08 (BGR).
+
     // --- Pixel clock (LSHIFT frequency) ---
     // PCLK = PLL * (LCD_FPR + 1) / 2^20
     // Reference: PLL=150MHz, FPR=0x00FFBE -> PCLK ≈ 9.3MHz
@@ -182,6 +171,11 @@ void SSD1963::init() {
     write_data(TFT_VSYNC_PULSE - 1);
     write_data(0x00);   // FPS high
     write_data(0x00);   // FPS low
+
+    // --- SET_ADDR_MODE (0x36) - required for correct color/orientation ---
+    write_command(SSD1963_SET_ADDR_MODE);  // 0x36
+    write_data(0x00);  // RGB, top->bottom, left->right, no flip
+    // Si R y B salen intercambiados, cambiar a 0x08 (BGR)
 
     // --- Turn on display ---
     write_command(SSD1963_ON_DISPLAY);
@@ -276,8 +270,6 @@ void SSD1963::set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
     write_data(y1 & 0xFF);
     write_data(y2 >> 8);
     write_data(y2 & 0xFF);
-
-    delay_ms(1);
 }
 
 // =========================================================================
@@ -299,15 +291,9 @@ static void pixels_burst(SSD1963* d, uint32_t count, const uint16_t* data) {
 }
 
 void SSD1963::clear_screen(uint16_t color) {
-    const uint16_t ROWS_PER_BATCH = 32;
-    for (uint16_t y = 0; y < LCD_HEIGHT; y += ROWS_PER_BATCH) {
-        uint16_t h = ROWS_PER_BATCH;
-        if (y + h > LCD_HEIGHT) h = LCD_HEIGHT - y;
-        set_area(0, y, LCD_WIDTH - 1, y + h - 1);
-        write_command(SSD1963_WRITE_MEMORY_START);
-        fill_burst(this, (uint32_t)LCD_WIDTH * h, color);
-        delay_ms(1);
-    }
+    set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
+    write_command(SSD1963_WRITE_MEMORY_START);
+    fill_burst(this, (uint32_t)LCD_WIDTH * LCD_HEIGHT, color);
 }
 
 void SSD1963::draw_pixel(uint16_t x, uint16_t y, uint16_t color) {

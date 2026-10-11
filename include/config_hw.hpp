@@ -2,6 +2,9 @@
 #include <cstdint>
 
 // Definición de pines - Bus paralelo directo (D0-D15 en GPIO 12-27)
+// Configura USE_8BIT_MODE para probar con 1 solo 74HC595 (8 bits D0-D7)
+#define USE_8BIT_MODE  0   // 0 = 16 bits (bus directo D0-D15), 1 = 8 bits (no implementado)
+
 constexpr uint8_t SSD1963_LCD_D0  = 12;
 constexpr uint8_t SSD1963_LCD_D1  = 13;
 constexpr uint8_t SSD1963_LCD_D2  = 14;
@@ -49,4 +52,4 @@ constexpr uint32_t LCD_FPR = 0x00FFBE;
 
 // SET_LCD_MODE (0xB0) parameter A - panel configuration (from working reference)
 // 0x20 = 24-bit panel, no FRC, LSHIFT falling, sync active low
-#define LCD_MODE_CONFIG 0x20
+#define LCD_MODE_CONFIG 0x00
