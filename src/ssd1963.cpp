@@ -138,6 +138,10 @@ void SSD1963::init() {
     write_command(SSD1963_SET_ADDR_MODE);   // 0x36
     write_data(LCD_ADDR_MODE);  // RGB, top->bottom, left->right, sin flips
 
+    // 6c. Pixel format: 16-bit 565
+    write_command(SSD1963_SET_PIXEL_FORMAT);   // 0x3A
+    write_data(0x55);  // 16bpp (565)
+
     // --- Pixel clock (LSHIFT frequency) ---
     // PCLK = PLL * (LCD_FPR + 1) / 2^20
     // For 480x272@60Hz: ~9MHz pixel clock
@@ -159,9 +163,9 @@ void SSD1963::init() {
     // HT-1
     write_data(((TFT_HSYNC_PERIOD - 1) >> 8) & 0xFF);
     write_data((TFT_HSYNC_PERIOD - 1) & 0xFF);
-    // HPS = pulse + back porch
-    write_data((TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH) >> 8);
-    write_data((TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH) & 0xFF);
+    // HPS = pulse + back porch - 1 (per datasheet)
+    write_data(((TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH - 1) >> 8) & 0xFF);
+    write_data((TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH - 1) & 0xFF);
     // HPW = pulse - 1
     write_data(TFT_HSYNC_PULSE - 1);
     write_data(0x00);   // LPS high
@@ -179,9 +183,9 @@ void SSD1963::init() {
     // VT-1
     write_data(((TFT_VSYNC_PERIOD - 1) >> 8) & 0xFF);
     write_data((TFT_VSYNC_PERIOD - 1) & 0xFF);
-    // VPS = pulse + back porch
-    write_data((TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH) >> 8);
-    write_data((TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH) & 0xFF);
+    // VPS = pulse + back porch - 1
+    write_data(((TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH - 1) >> 8) & 0xFF);
+    write_data((TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH - 1) & 0xFF);
     // VPW = pulse - 1
     write_data(TFT_VSYNC_PULSE - 1);
     write_data(0x00);   // FPS high
@@ -204,13 +208,26 @@ void SSD1963::init() {
     write_command(SSD1963_SET_DBC_CONF);  // 0xD0
     write_data(0x00);     // DBC disabled
 
-    printf("[INIT] SSD1963 initialization complete\n");
+    // Configure GPIO0 for backlight enable
+    write_command(SSD1963_SET_GPIO_CONF);  // 0xB8
+    write_data(0x03);     // GPIO0-1 as output, controlled by host
+    write_data(0x01);     // GPIO0 as normal GPIO
 
-    // Backlight ON (using SSD1963 GPIO0)
-    write_command(SSD1963_SET_GPIO_VALUE);
+    // Set GPIO0 HIGH for panel enable
+    write_command(SSD1963_SET_GPIO_VALUE);  // 0xBA
     write_data(0x01); // GPIO0 = HIGH
 
-    BACKLIGHT_ON(); // Also set Pi GPIO0 (BL_EN)
+    // Hardware reset pulse for panel via SSD1963 GPIO0
+    write_command(SSD1963_SET_GPIO_VALUE);
+    write_data(0x00); // GPIO0 = LOW (reset panel)
+    delay_ms(1);
+    write_command(SSD1963_SET_GPIO_VALUE);
+    write_data(0x01); // GPIO0 = HIGH (release panel reset)
+
+    printf("[INIT] SSD1963 initialization complete\n");
+
+    // Backlight ON via Pi GPIO
+    BACKLIGHT_ON(); // Pi GPIO for BL_EN
 
     // Now clear screen to black (GRAM is accessible after init)
     printf("[INIT] Clearing screen to black...\n");
