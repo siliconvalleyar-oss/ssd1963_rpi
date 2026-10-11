@@ -17,8 +17,6 @@
 // =========================================================================
 // Macros de control GPIO
 // =========================================================================
-// Macros de control GPIO
-// =========================================================================
 #define RS_LOW()        bcm2835_gpio_write(SSD1963_LCD_RS, LOW)
 #define RS_HIGH()       bcm2835_gpio_write(SSD1963_LCD_RS, HIGH)
 #define WR_LOW()        bcm2835_gpio_write(SSD1963_LCD_WR, LOW)
@@ -31,10 +29,6 @@
 #define RESET_HIGH()    bcm2835_gpio_write(SSD1963_LCD_RESET, HIGH)
 #define BACKLIGHT_ON()  bcm2835_gpio_write(SSD1963_LCD_BACKLIGHT, HIGH)
 #define BACKLIGHT_OFF() bcm2835_gpio_write(SSD1963_LCD_BACKLIGHT, LOW)
-
-// Status inputs
-#define TE_READ()       bcm2835_gpio_lev(SSD1963_LCD_TE)
-#define PW1_READ()      bcm2835_gpio_lev(SSD1963_LCD_PW1)
 
 // Máscara para todos los pines de datos D0-D15 (12..27)
 #define DATA_PINS_MASK  (uint32_t)( \
