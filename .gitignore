@@ -18,4 +18,6 @@ assets/*.rgb565
 assets/capibaras.png
 
 helps/
+tmp/
+
 
