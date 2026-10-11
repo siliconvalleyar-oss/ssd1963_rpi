@@ -48,6 +48,16 @@ void SSD1963::setup_gpio() {
     RS_HIGH();
     RESET_LOW();
     BACKLIGHT_OFF();
+
+    // TEST: Verificar que RS (GPIO 4) puede togglear
+    // Si en el analizador no se ve este patrón, hay problema hardware en GPIO 4
+    for (int i = 0; i < 3; i++) {
+        RS_LOW();
+        bcm2835_delayMicroseconds(100000);  // 100ms
+        RS_HIGH();
+        bcm2835_delayMicroseconds(100000);  // 100ms
+    }
+    RS_HIGH();  // dejar en reposo HIGH
 }
 
 void SSD1963::init() {
