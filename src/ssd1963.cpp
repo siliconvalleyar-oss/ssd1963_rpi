@@ -25,11 +25,11 @@ void SSD1963::setup_gpio() {
     bcm2835_gpio_fsel(SSD1963_LCD_CS, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(SSD1963_LCD_RESET, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(SSD1963_LCD_BACKLIGHT, BCM2835_GPIO_FSEL_OUTP);
-    // Estados iniciales
+    // Estados iniciales: RST arranca en BAJO (retardo de RC del modulo)
     CS_HIGH();
     WR_HIGH();
     RS_HIGH();
-    RESET_HIGH();
+    RESET_LOW();
     BACKLIGHT_OFF();
 }
 
@@ -85,9 +85,11 @@ void SSD1963::clear_screen(uint16_t color) {
 
 void SSD1963::init() {
 
-    // 1. Reset físico (mismo estilo que STM32)
+    // 1. Reset físico del SSD1963.
+    // El módulo arranca con RST en BAJO (RD/WR/CS en alto) y ~2 s despues se libera
+    // a alto; mantenerlo bajo ese tiempo antes de inicializar.
     RESET_LOW();
-    delay_ms(10); // equivalente a un pequeño ciclo de espera
+    delay_ms(2000);
     RESET_HIGH();
     delay_ms(10);
     // 2. Soft Reset (ANTES del PLL)
