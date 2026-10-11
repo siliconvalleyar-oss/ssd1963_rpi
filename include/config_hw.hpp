@@ -25,7 +25,7 @@ constexpr uint8_t SSD1963_LCD_CS    = 5;   // Chip select
 constexpr uint8_t SSD1963_LCD_RESET = 6;   // Reset
 
 // PW1: pin PWM del SSD1963 leído como ENTRADA por la Pi (solo para diagnóstico)
-constexpr uint8_t SSD1963_LCD_PW1     = 0;
+constexpr uint8_t SSD1963_LCD_PW1     = 7;
 
 // Backlight enable (SALIDA de la Pi hacia el módulo).
 // IMPORTANTE: NO puede estar entre GPIO 12 y 27, porque ese rango es el bus de
@@ -33,7 +33,7 @@ constexpr uint8_t SSD1963_LCD_PW1     = 0;
 // (Antes estaba en GPIO13 = D1, y por eso el backlight se apagaba al dibujar.)
 // Se eliminó SSD1963_LCD_TE: estaba en GPIO12 = D0 y no se usa.
 // >>> Hay que recablear BL_EN al GPIO 7 (o cambiar este numero a otro GPIO libre: 7-11). <<<
-constexpr uint8_t SSD1963_LCD_BACKLIGHT = 7;
+constexpr uint8_t SSD1963_LCD_BACKLIGHT = 0;
 
 // Tiempo que RST se mantiene en BAJO al arrancar (ms), antes de inicializar el SSD1963
 constexpr uint32_t SSD1963_RESET_HOLD_MS = 2000;
