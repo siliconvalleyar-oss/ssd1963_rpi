@@ -40,7 +40,10 @@ public:
     void draw_image_rgb565(const char* filepath) ;
     
 private:
-    
+
+    // true = espera ~1 us tras cada strobe WR (durante init, como el PMP lento del PIC32)
+    bool slow_bus_ = false;
+
     void write_data_bus(uint16_t data);
     void write_command(uint8_t cmd);
     void write_data(uint16_t data);

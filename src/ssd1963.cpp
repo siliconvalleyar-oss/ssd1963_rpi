@@ -31,28 +31,24 @@ void SSD1963::setup_gpio() {
     RS_HIGH();
     RESET_LOW();
     BACKLIGHT_OFF();
-}
-
-
-
-void  SSD1963::write_command(uint8_t cmd) {
+}void  SSD1963::write_command(uint8_t cmd) {
     RS_LOW();
     CS_LOW();
     write_data_bus(cmd);
     WR_LOW();
-   //  usleep(10); // o eliminarlo
     WR_HIGH();
     CS_HIGH();
+    if (slow_bus_) usleep(1);   // init: timing lento como WAITB/M/E=3/15/3 del PIC32
 }
 void SSD1963::write_data(uint16_t data) {
     RS_HIGH();
     CS_LOW();
     write_data_bus(data);
     WR_LOW();
-     //usleep(10); // o eliminarlo
     WR_HIGH();
     CS_HIGH();
-}
+    if (slow_bus_) usleep(1);   // init: timing lento como WAITB/M/E=3/15/3 del PIC32
+} 
  
 
 void SSD1963::set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
@@ -85,6 +81,10 @@ void SSD1963::clear_screen(uint16_t color) {
 
 void SSD1963::init() {
 
+    // Durante toda la inicializacion el bus va lento (~1 us por strobe),
+    // como el PMP lento (WAITB=3, WAITM=15, WAITE=3) del PIC32 de referencia.
+    slow_bus_ = true;
+
     // 1. Reset físico del SSD1963.
     // El módulo arranca con RST en BAJO (RD/WR/CS en alto) y ~2 s despues se libera
     // a alto; mantenerlo bajo ese tiempo antes de inicializar.
@@ -114,8 +114,8 @@ void SSD1963::init() {
     write_data(LCD_FPR & 0xFF);
     // 7. Configurar modo LCD
     write_command(SSD1963_SET_LCD_MODE);
-    write_data(0x10);    // HDP en flanco descendente de LSHIFT, DE mode
-    write_data(0x00);    // Hsync+Vsync (no TTL DE exclusivo)
+    write_data(0x10);    // LCD_MODE_CONFIG: mismo valor que la referencia PIC32
+    write_data(0x00);    // igual que TechToys (byte 2 = 0x00)
     write_data((LCD_WIDTH - 1) >> 8);
     write_data((LCD_WIDTH - 1) & 0xFF);
     write_data((LCD_HEIGHT - 1) >> 8);
@@ -166,6 +166,9 @@ void SSD1963::init() {
     // Encender display
     write_command(SSD1963_ON_DISPLAY);
     delay_ms(50);
+
+    // Fin de init: el bus vuelve a velocidad normal para dibujar
+    slow_bus_ = false;
     // Encender luz de fondo (GPIO)
     BACKLIGHT_ON();
 }
