@@ -51,13 +51,17 @@ void SSD1963::setup_gpio() {
 
     // TEST: Verificar que RS (GPIO 4) puede togglear
     // Si en el analizador no se ve este patrón, hay problema hardware en GPIO 4
+    printf("[TEST] Verificando GPIO 4 (RS) - debe toggleear 3 veces...\n");
     for (int i = 0; i < 3; i++) {
         RS_LOW();
-        bcm2835_delayMicroseconds(100000);  // 100ms
+        printf("[TEST] RS=LOW\n");
+        bcm2835_delayMicroseconds(100000);
         RS_HIGH();
-        bcm2835_delayMicroseconds(100000);  // 100ms
+        printf("[TEST] RS=HIGH\n");
+        bcm2835_delayMicroseconds(100000);
     }
-    RS_HIGH();  // dejar en reposo HIGH
+    RS_HIGH();
+    printf("[TEST] Test GPIO 4 completado\n");
 }
 
 void SSD1963::init() {
