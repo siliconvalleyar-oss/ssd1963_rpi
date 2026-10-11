@@ -87,6 +87,8 @@ constexpr uint32_t LCD_FPR = 0x0170A2;
 #define LCD_MODE_CONFIG 0x10
 
 // SET_ADDR_MODE (0x36): 0x00 = RGB, sin flips (es el valor POR)
+//   0x08 = BGR (si rojo y azul salen intercambiados)
+//   0x02 = flip horizontal | 0x01 = flip vertical
 #define LCD_ADDR_MODE 0x00
 
 // Filas por ráfaga al volcar la pantalla (clear_screen y draw_buffer).
@@ -108,10 +110,10 @@ constexpr uint32_t LCD_FPR = 0x0170A2;
 // A[2]: polaridad LSHIFT (0 = dato capturado en flanco de bajada, 1 = subida)
 // A[1]: polaridad LLINE  (0 = activo en bajo)
 // A[0]: polaridad LFRAME (0 = activo en bajo)
-// 0x10 = panel 18-bit, con FRC, LSHIFT flanco de bajada, sync activo en bajo
+// 0x20 = panel 24-bit, sin FRC, LSHIFT flanco de bajada, sync activo en bajo
 // 0x00 = panel 18-bit, sin FRC, LSHIFT flanco de bajada, sync activo en bajo
 // 0x0C = variante de 18-bit con LSHIFT flanco de SUBIDA (A[2]=1) y A[3]=1 (FRC, solo actua si A[4]=1)
-#define LCD_MODE_CONFIG 0x10
+#define LCD_MODE_CONFIG 0x20
 
 // SET_ADDR_MODE (0x36): 0x00 = RGB, sin flips (es el valor POR)
 //   0x08 = BGR (si rojo y azul salen intercambiados)

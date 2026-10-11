@@ -7,12 +7,8 @@
 #include <color.hpp>
 #include <font_8x8.hpp>
 
-// Retardo NOP para timing del bus 8080 (~43ns con 30 NOPs a 700MHz)
-#define BUS_WAIT  do { __asm__ __volatile__( \
-    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
-    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
-    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop" );\
-} while(0)
+// Retardo para timing del bus 8080 (WR pulse width + data hold)
+#define BUS_WAIT  do { bcm2835_delayMicroseconds(1); } while(0)
 
 SSD1963::SSD1963() {}
 
@@ -206,13 +202,10 @@ void SSD1963::init() {
     write_command(SSD1963_SET_DBC_CONF);  // 0xD0
     write_data(0x00);     // DBC disabled
 
-    // Configure GPIO0 for backlight enable
-    write_command(SSD1963_SET_GPIO_CONF);  // 0xB8
-    write_data(0x03);     // GPIO0-1 as output, controlled by host
-    write_data(0x01);     // GPIO0 as normal GPIO
+    printf("[INIT] SSD1963 initialization complete\n");
 
-    // Set GPIO0 HIGH for panel enable
-    write_command(SSD1963_SET_GPIO_VALUE);  // 0xBA
+    // Backlight ON (using SSD1963 GPIO0)
+    write_command(SSD1963_SET_GPIO_VALUE);
     write_data(0x01); // GPIO0 = HIGH
 
     // Hardware reset pulse for panel via SSD1963 GPIO0
@@ -222,10 +215,7 @@ void SSD1963::init() {
     write_command(SSD1963_SET_GPIO_VALUE);
     write_data(0x01); // GPIO0 = HIGH (release panel reset)
 
-    printf("[INIT] SSD1963 initialization complete\n");
-
-    // Backlight ON via Pi GPIO
-    BACKLIGHT_ON(); // Pi GPIO for BL_EN
+    BACKLIGHT_ON(); // Also set Pi GPIO0 (BL_EN)
 
     // Now clear screen to black (GRAM is accessible after init)
     printf("[INIT] Clearing screen to black...\n");
