@@ -240,6 +240,7 @@ void SSD1963::write_command(uint8_t cmd) {
     WR_HIGH();
     BUS_WAIT;
     CS_HIGH();
+    RS_HIGH();   // RS vuelve a reposo en alto, como en el micro que funciona
 }
 
 void SSD1963::write_data(uint16_t data) {
@@ -255,15 +256,17 @@ void SSD1963::write_data(uint16_t data) {
 
 void SSD1963::write_pixel_burst_start() {
     RS_HIGH();
-    CS_LOW();
+    if (!SSD1963_CS_PER_WRITE) CS_LOW();
 }
 
 void SSD1963::write_pixel_burst(uint16_t data) {
+    if (SSD1963_CS_PER_WRITE) CS_LOW();
     write_data_bus(data);
     WR_LOW();
     BUS_WAIT;
     WR_HIGH();
     BUS_WAIT;
+    if (SSD1963_CS_PER_WRITE) CS_HIGH();
 }
 
 void SSD1963::write_pixel_burst_end() {

@@ -47,6 +47,11 @@ static constexpr uint16_t LCD_HEIGHT = 272;
 //   Si aparece corrupción, bajar a 32 o a 1 (1 = una fila por ráfaga, comportamiento anterior).
 constexpr uint16_t SSD1963_BURST_ROWS = LCD_HEIGHT;
 
+// CS por escritura en las ráfagas de píxeles (recomendado: true).
+//   true  = CS baja y sube en CADA palabra, igual que el micro que funciona (según osciloscopio).
+//   false = CS se mantiene en bajo durante toda la ráfaga (más rápido, pero puede fallar en algunos módulos).
+constexpr bool SSD1963_CS_PER_WRITE = true;
+
 // Sincronización horizontal (PIC32 reference: H pulse=41, back=2, front=2)
 constexpr uint16_t TFT_HSYNC_PULSE        = 41;  // SSD_HOR_PULSE_WIDTH
 constexpr uint16_t TFT_HSYNC_BACK_PORCH   = 2;   // SSD_HOR_BACK_PORCH
