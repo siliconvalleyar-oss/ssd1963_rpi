@@ -25,6 +25,8 @@ constexpr uint8_t SSD1963_LCD_CS    = 5;  // Chip select
 constexpr uint8_t SSD1963_LCD_RESET = 6;  // Reset
 constexpr uint8_t SSD1963_LCD_BACKLIGHT = 0; // Backlight control ( accomp: PW1/GPIO0 del SSD1963 )
 
+constexpr uint8_t SSD1963_LCD_TE    = 7;
+constexpr uint8_t SSD1963_LCD_RD    = 2;
 
 // Dimensiones del display
 //constexpr unsigned int LCD_WIDTH  = 480;
