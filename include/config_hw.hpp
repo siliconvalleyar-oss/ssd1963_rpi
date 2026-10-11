@@ -23,7 +23,7 @@ constexpr uint8_t SSD1963_LCD_WR    = 3;  // Write strobe
 constexpr uint8_t SSD1963_LCD_RS    = 4;  // Data/Command selection
 constexpr uint8_t SSD1963_LCD_CS    = 5;  // Chip select
 constexpr uint8_t SSD1963_LCD_RESET = 6;  // Reset
-constexpr uint8_t SSD1963_LCD_BACKLIGHT = 0; // Backlight control
+constexpr uint8_t SSD1963_LCD_BACKLIGHT = 0; // Backlight control ( accomp: PW1/GPIO0 del SSD1963 )
 
 
 // Dimensiones del display
@@ -48,7 +48,7 @@ constexpr uint16_t TFT_VSYNC_BACK_PORCH   = 2;
 constexpr uint16_t TFT_VSYNC_FRONT_PORCH  = 2;
 constexpr uint16_t TFT_VSYNC_PERIOD = LCD_HEIGHT + TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH + TFT_VSYNC_FRONT_PORCH;
 
-// Frecuencia de píxel: este valor se puede ajustar
-constexpr uint32_t LCD_FPR = 0x01E848; // 2.0 MHz para SYSCLK = 100MHz
-
-//constexpr uint32_t LCD_FPR = 0x01E848;
+// Frecuencia de píxel: PCLK = SYSCLK * (FPR+1) / 2^20
+// 0x0170A2 con SYSCLK = 100 MHz -> PCLK = 9.00 MHz (igual que la referencia PIC32
+// para el panel TY430TFT480272)
+constexpr uint32_t LCD_FPR = 0x0170A2; // 9.0 MHz para SYSCLK = 100 MHz

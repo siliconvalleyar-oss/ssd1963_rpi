@@ -71,11 +71,13 @@ void SSD1963::set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
 
 
 void SSD1963::clear_screen(uint16_t color) {
+    // Interfaz 16-bit RGB565 (PDI 0x03): CADA escritura al bus es UN píxel completo.
+    // Antes se enviaba color + color>>8 (2 escrituras por píxel): desplazaba/duplicaba
+    // los datos -> rayas y "basura de bits" en pantalla.
     set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
     write_command(SSD1963_WRITE_MEMORY_START);
-    for (uint32_t i = 0; i < LCD_WIDTH * LCD_HEIGHT; i++) {
+    for (uint32_t i = 0; i < (uint32_t)LCD_WIDTH * LCD_HEIGHT; i++) {
         write_data(color);
-        write_data(color>>8);
     }
 }
 
@@ -103,47 +105,66 @@ void SSD1963::init() {
     write_command(SSD1963_SET_PLL);
     write_data(0x03);
     delay_ms(10);
-    // 4. Configurar modo LCD
+    // 6. Frecuencia LSHIFT (SE ENVIA ANTES DEL MODO LCD, como en el PIC32 de referencia)
+    write_command(SSD1963_SET_LSHIFT_FREQ);
+    write_data((LCD_FPR >> 16) & 0xFF);
+    write_data((LCD_FPR >> 8) & 0xFF);
+    write_data(LCD_FPR & 0xFF);
+    // 7. Configurar modo LCD
     write_command(SSD1963_SET_LCD_MODE);
-    write_data(0x0C);    // DE mode
-    write_data(0x00);    // RGB565
+    write_data(0x10);    // HDP en flanco descendente de LSHIFT, DE mode
+    write_data(0x00);    // Hsync+Vsync (no TTL DE exclusivo)
     write_data((LCD_WIDTH - 1) >> 8);
     write_data((LCD_WIDTH - 1) & 0xFF);
     write_data((LCD_HEIGHT - 1) >> 8);
     write_data((LCD_HEIGHT - 1) & 0xFF);
     write_data(0x00);    // RGB
-    // 5. Interfaz de datos (RGB565)
-    write_command(SSD1963_SET_PIXEL_DATA_INTERFACE);
-    write_data(SSD1963_PDI_16BIT565);  // Interfaz 16-bit 565
-    // 6. Frecuencia LSHIFT
-    uint32_t LCD_FPR = 0x01E848; // ejemplo: 2.0MHz para SYSCLK=100MHz
-    write_command(SSD1963_SET_LSHIFT_FREQ);
-    write_data((LCD_FPR >> 16) & 0xFF);
-    write_data((LCD_FPR >> 8) & 0xFF);
-    write_data(LCD_FPR & 0xFF);
-    // 7. Tiempos de sincronización horizontales
+    // Tiempos horizontales (frmulas del PIC32 en la referencia: HT-1, HPS-1, HPW-1)
+    const uint16_t HT  = TFT_HSYNC_PERIOD;
+    const uint16_t HPS = TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH;
     write_command(SSD1963_SET_HOR_PERIOD);
-    write_data((TFT_HSYNC_PERIOD >> 8) & 0xFF);
-    write_data(TFT_HSYNC_PERIOD & 0xFF);
-    write_data((TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH) >> 8);
-    write_data((TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH) & 0xFF);
-    write_data(TFT_HSYNC_PULSE);
+    write_data(((HT - 1) >> 8) & 0xFF);
+    write_data((HT - 1) & 0xFF);
+    write_data(((HPS - 1) >> 8) & 0xFF);
+    write_data((HPS - 1) & 0xFF);
+    write_data(TFT_HSYNC_PULSE - 1);
     write_data(0x00); // LPS = 0
     write_data(0x00); // Opcional
     write_data(0x00); // Opcional
-    // 8. Tiempos de sincronización verticales
+    // Tiempos verticales (VT-1, VSP-1, VPW-1)
+    const uint16_t VT  = TFT_VSYNC_PERIOD;
+    const uint16_t VSP = TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH;
     write_command(SSD1963_SET_VER_PERIOD);
-    write_data((TFT_VSYNC_PERIOD >> 8) & 0xFF);
-    write_data(TFT_VSYNC_PERIOD & 0xFF);
-    write_data((TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH) >> 8);
-    write_data((TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH) & 0xFF);
-    write_data(TFT_VSYNC_PULSE);
+    write_data(((VT - 1) >> 8) & 0xFF);
+    write_data((VT - 1) & 0xFF);
+    write_data(((VSP - 1) >> 8) & 0xFF);
+    write_data((VSP - 1) & 0xFF);
+    write_data(TFT_VSYNC_PULSE - 1);
     write_data(0x00);
     write_data(0x00);
-    // 9. Encender display
+    // Formato de píxel: 16bpp (0x55), igual que la referencia PIC32
+    write_command(SSD1963_SET_PIXEL_FORMAT);
+    write_data(0x55);
+    // Interfaz de datos del panel: 16-bit RGB565
+    write_command(SSD1963_SET_PIXEL_DATA_INTERFACE);
+    write_data(SSD1963_PDI_16BIT565);
+    // Reset del PANEL fisico via GPIO0 (igual que la referencia PIC32):
+    // pulso LOW -> 1ms -> HIGH. Sin esto el panel puede quedar en estado indefinido.
+    write_command(SSD1963_SET_GPIO_CONF);
+    write_data(0x0F);   // GPIO[3:0] como salidas
+    write_data(0x01);   // GPIOs normales, controlados por el host
+    write_command(SSD1963_SET_GPIO_VALUE);
+    write_data(0x01);   // alto
+    write_command(SSD1963_SET_GPIO_VALUE);
+    write_data(0x00);   // bajo (reset assertado)
+    delay_ms(1);
+    write_command(SSD1963_SET_GPIO_VALUE);
+    write_data(0x01);   // alto (libera reset)
+
+    // Encender display
     write_command(SSD1963_ON_DISPLAY);
     delay_ms(50);
-      // 12. Encender luz de fondo (GPIO)
+    // Encender luz de fondo (GPIO)
     BACKLIGHT_ON();
 }
 
