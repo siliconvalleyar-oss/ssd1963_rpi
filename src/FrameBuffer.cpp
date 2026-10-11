@@ -3,7 +3,6 @@
 #include <engine/Sprite.hpp>
 #include <cstring>
 #include <cstdio>
-#include <iostream>
 #include <algorithm>
 
 FrameBuffer::FrameBuffer() {
@@ -182,13 +181,13 @@ void FrameBuffer::draw_string_centered_scaled(uint16_t center_x, uint16_t y, con
 void FrameBuffer::draw_image_rgb565(const char* filepath) {
     FILE* file = fopen(filepath, "rb");
     if (!file) {
-        std::cerr << "[FrameBuffer] Error: no se pudo abrir " << filepath << std::endl;
+        fprintf(stderr, "[FrameBuffer] Error: no se pudo abrir %s\n", filepath);
         return;
     }
 
     uint8_t hdr[4];
     if (fread(hdr, 1, 4, file) != 4) {
-        std::cerr << "[FrameBuffer] Error leyendo header de " << filepath << std::endl;
+        fprintf(stderr, "[FrameBuffer] Error leyendo header de %s\n", filepath);
         fclose(file);
         return;
     }
