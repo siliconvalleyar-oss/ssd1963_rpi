@@ -87,8 +87,6 @@ constexpr uint32_t LCD_FPR = 0x0170A2;
 #define LCD_MODE_CONFIG 0x10
 
 // SET_ADDR_MODE (0x36): 0x00 = RGB, sin flips (es el valor POR)
-//   0x08 = BGR (si rojo y azul salen intercambiados)
-//   0x02 = flip horizontal | 0x01 = flip vertical
 #define LCD_ADDR_MODE 0x00
 
 // Filas por ráfaga al volcar la pantalla (clear_screen y draw_buffer).
