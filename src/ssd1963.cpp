@@ -83,15 +83,12 @@ void SSD1963::init() {
     // 5. Re-clear shift registers after reset
     // (Removed - no shift registers on direct GPIO bus)
 
-    // --- PLL startup sequence (matching tmp/ PIC32 reference) ---
-    // Ref clk = 10MHz (typical crystal)
-    // M = 49 -> PLLclk = 10 * 50 = 500MHz (250-800MHz OK)
-    // N = 4  -> SYSCLK = 500 / 5 = 100MHz
-    printf("[INIT] Configuring PLL (M=49, N=4, PLL=500MHz, SYSCLK=100MHz)...\n");
+    // --- PLL startup sequence (M=29, N=2 -> VCO=300MHz, SYSCLK=100MHz, safer margin) ---
+    printf("[INIT] Configuring PLL (M=%d, N=%d, VCO=300MHz, SYSCLK=100MHz)...\n", SSD1963_PLL_M, SSD1963_PLL_N);
     write_command(SSD1963_SET_PLL_MN);
-    write_data(49);     // PLL multiplier
-    write_data(4);      // System clock divider
-    write_data(0x04);   // Effectuate (dummy per STM32 reference)
+    write_data(SSD1963_PLL_M);
+    write_data(SSD1963_PLL_N);
+    write_data(0x04);   // Effectuate MN
 
     write_command(SSD1963_SET_PLL);
     write_data(0x01);   // Enable PLL
@@ -223,10 +220,15 @@ static inline uint32_t data_to_mask(uint16_t data) {
     return ((uint32_t)data) << 12;   // D0=pin12 … D15=pin27
 }
 
+static uint32_t g_bus_state = 0;
+
 void SSD1963::write_data_bus(uint16_t data) {
-    uint32_t mask = data_to_mask(data);
-    bcm2835_gpio_clr_multi(DATA_PINS_MASK);
-    bcm2835_gpio_set_multi(mask);
+    uint32_t new_state = data_to_mask(data);
+    uint32_t to_set = new_state & ~g_bus_state;
+    uint32_t to_clr = g_bus_state & ~new_state;
+    if (to_clr) bcm2835_gpio_clr_multi(to_clr);
+    if (to_set) bcm2835_gpio_set_multi(to_set);
+    g_bus_state = new_state;
 }
 
 void SSD1963::write_command(uint8_t cmd) {
