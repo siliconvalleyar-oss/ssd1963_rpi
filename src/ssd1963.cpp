@@ -48,61 +48,36 @@ void SSD1963::setup_gpio() {
     RS_HIGH();
     RESET_LOW();
     BACKLIGHT_OFF();
-
-    // TEST: Verificar que RS (GPIO 4) puede togglear
-    // Si en el analizador no se ve este patrón, hay problema hardware en GPIO 4
-    printf("[TEST] Verificando GPIO 4 (RS) - debe toggleear 3 veces...\n");
-    for (int i = 0; i < 3; i++) {
-        RS_LOW();
-        printf("[TEST] RS=LOW\n");
-        bcm2835_delayMicroseconds(100000);
-        RS_HIGH();
-        printf("[TEST] RS=HIGH\n");
-        bcm2835_delayMicroseconds(100000);
-    }
-    RS_HIGH();
-    printf("[TEST] Test GPIO 4 completado\n");
 }
 
 void SSD1963::init() {
-    // === SECUENCIA DE ARRANQUE CORRECTA SEGUN DATASHEET ===
+    // === SECUENCIA EXACTA DE tmp/ (referencia PIC32 que funciona) ===
     
-    // 1. Poner todas las senales de control en estado inactivo PRIMERO
-    printf("[INIT] Setting control signals: RD=HIGH, WR=HIGH, CS=HIGH, RS=HIGH...\n");
-    RD_HIGH();
-    WR_HIGH();
-    CS_HIGH();
-    RS_HIGH();
-    
-    // 2. Reset de hardware: RST en BAJO durante 2 segundos
-    //    Con RST en BAJO el SSD1963 ignora TODOS los comandos.
-    //    Por eso NO hacemos clear_screen() aqui.
+    // Durante toda la inicializacion el bus va lento (~1 us por strobe),
+    // como el PMP lento (WAITB=3, WAITM=15, WAITE=3) del PIC32 de referencia.
+    slow_bus_ = true;
+
+    // 1. Reset físico del SSD1963.
+    // El módulo arranca con RST en BAJO (RD/WR/CS en alto) y ~2 s despues se libera
+    // a alto; mantenerlo bajo ese tiempo antes de inicializar.
     printf("[INIT] Hardware reset SSD1963 (RST LOW %u ms)...\n", (unsigned)SSD1963_RESET_HOLD_MS);
+    CS_HIGH(); WR_HIGH(); RD_HIGH(); RS_HIGH();
     RESET_LOW();
     delay_ms(SSD1963_RESET_HOLD_MS);   // 2 segundos con RST en BAJO
-
-    // 4. Liberar reset
-    printf("[INIT] Releasing reset (RST HIGH)...\n");
     RESET_HIGH();
-    delay_ms(200);   // esperar el POR interno
-    
-    // 5. Soft reset (no afecta a los registros del PLL 0xE0-0xE5)
+    delay_ms(10);   // esperar el POR interno
+
+    // 2. Soft Reset (ANTES del PLL)
     write_command(SSD1963_SOFT_RESET);
-    delay_ms(20);   // datasheet pide >= 5ms
+    delay_ms(10);
 
-    // 4. Salir de sleep mode (dispara tambien set_display_on, 0x29)
-    write_command(SSD1963_EXIT_SLEEP_MODE);
-    delay_ms(20);   // datasheet pide >= 5 ms
-
-    // 5. Re-clear shift registers after reset
-    // (Removed - no shift registers on direct GPIO bus)
-
-    // --- PLL startup sequence (M=29, N=2 -> VCO=300MHz, SYSCLK=100MHz, safer margin) ---
-    printf("[INIT] Configuring PLL (M=%d, N=%d, VCO=300MHz, SYSCLK=100MHz)...\n", SSD1963_PLL_M, SSD1963_PLL_N);
+    // 3. Configurar PLL (para REFclk = 10 MHz -> PLLclk = 500MHz, SYSclk = 100MHz)
+    // M=49, N=4  (igual que tmp/ y referencia PIC32)
+    printf("[INIT] Configuring PLL (M=49, N=4, PLLclk=500MHz, SYSclk=100MHz)...\n");
     write_command(SSD1963_SET_PLL_MN);
-    write_data(SSD1963_PLL_M);
-    write_data(SSD1963_PLL_N);
-    write_data(0x04);   // Effectuate MN
+    write_data(49);     // PLL multiplier
+    write_data(4);      // System clock divider
+    write_data(4);      // Effectuate (dummy per STM32 reference)
 
     write_command(SSD1963_SET_PLL);
     write_data(0x01);   // Enable PLL
@@ -112,17 +87,16 @@ void SSD1963::init() {
     write_data(0x03);   // Lock PLL (use PLL as sysclk)
     delay_ms(10);
 
-    // --- Pixel clock (LSHIFT frequency) - BEFORE LCD MODE per PIC32 reference ---
+    // 4. Frecuencia LSHIFT (SE ENVIA ANTES DEL MODO LCD, como en el PIC32 de referencia)
     printf("[INIT] Setting LSHIFT freq (LCD_FPR=0x%05X)...\n", LCD_FPR);
     write_command(SSD1963_SET_LSHIFT_FREQ);
     write_data((LCD_FPR >> 16) & 0xFF);
     write_data((LCD_FPR >> 8) & 0xFF);
     write_data(LCD_FPR & 0xFF);
 
-    // --- LCD panel mode ---
-#if USE_8BIT_MODE
+    // 5. Configurar modo LCD
     write_command(SSD1963_SET_LCD_MODE);
-    write_data(0x08);    // TFT mode, 18-bit panel (A[5]=0), 8-bit MCU bus
+    write_data(LCD_MODE_CONFIG);  // 0x10 = 18-bit with FRC
     write_data(0x00);    // TFT type: 00/01 = TFT mode
     write_data((LCD_WIDTH - 1) >> 8);
     write_data((LCD_WIDTH - 1) & 0xFF);
@@ -130,102 +104,74 @@ void SSD1963::init() {
     write_data((LCD_HEIGHT - 1) & 0xFF);
     write_data(0x00);    // RGB sequence
 
-    write_command(SSD1963_SET_PIXEL_DATA_INTERFACE);
-    write_data(SSD1963_PDI_8BIT);
-#else
-    // 16-bit MCU bus, panel config from config_hw.hpp
-    write_command(SSD1963_SET_LCD_MODE);
-    write_data(LCD_MODE_CONFIG);  // Panel config: 0x10 = 18-bit with FRC
-    write_data(0x00);    // TFT type: 00/01 = TFT mode
-    write_data((LCD_WIDTH - 1) >> 8);
-    write_data((LCD_WIDTH - 1) & 0xFF);
-    write_data((LCD_HEIGHT - 1) >> 8);
-    write_data((LCD_HEIGHT - 1) & 0xFF);
-    write_data(0x00);    // RGB sequence
+    // 6. Formato de píxel: 16bpp (0x55), igual que la referencia PIC32
+    write_command(SSD1963_SET_PIXEL_FORMAT);
+    write_data(0x55);
 
+    // 7. Interfaz de datos del panel: 16-bit RGB565
     write_command(SSD1963_SET_PIXEL_DATA_INTERFACE);
     write_data(SSD1963_PDI_16BIT565);
-#endif
 
-    // Address mode: RGB, top->bottom, left->right, no flips
-    write_command(SSD1963_SET_ADDR_MODE);   // 0x36
-    write_data(LCD_ADDR_MODE);
+    // 8. Reset del PANEL fisico via GPIO0 (igual que la referencia PIC32):
+    // pulso LOW -> 1ms -> HIGH. Sin esto el panel puede quedar en estado indefinido.
+    write_command(SSD1963_SET_GPIO_CONF);
+    write_data(0x0F);   // GPIO[3:0] como salidas
+    write_data(0x01);   // GPIOs normales, controlados por el host
+    write_command(SSD1963_SET_GPIO_VALUE);
+    write_data(0x01);   // alto
+    write_command(SSD1963_SET_GPIO_VALUE);
+    write_data(0x00);   // bajo (reset assertado)
+    delay_ms(1);
+    write_command(SSD1963_SET_GPIO_VALUE);
+    write_data(0x01);   // alto (libera reset)
 
-    // Pixel format: 16-bit 565
-    write_command(SSD1963_SET_PIXEL_FORMAT);   // 0x3A
-    write_data(0x55);  // 16bpp (565)
-
-    // --- Horizontal timing ---
-    // HT = 480 + 43 + 8 + 1 = 532 (but HT register stores HT-1 = 531 = 0x0213)
-    // HPS = 43 (back porch)
-    // HPW = 1-1 = 0
-    // LPS = 0
-    printf("[INIT] Setting horizontal timing (HT=%d, HPS=%d, HPW=%d)...\n",
-           TFT_HSYNC_PERIOD, TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH, TFT_HSYNC_PULSE);
+    // 9. Tiempos horizontales (formulas del PIC32: HT-1, HPS-1, HPW-1)
+    const uint16_t HT  = TFT_HSYNC_PERIOD;
+    const uint16_t HPS = TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH;
     write_command(SSD1963_SET_HOR_PERIOD);
-    // HT-1
-    write_data(((TFT_HSYNC_PERIOD - 1) >> 8) & 0xFF);
-    write_data((TFT_HSYNC_PERIOD - 1) & 0xFF);
-    // HPS = pulse + back porch - 1 (per datasheet)
-    write_data(((TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH - 1) >> 8) & 0xFF);
-    write_data((TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH - 1) & 0xFF);
-    // HPW = pulse - 1
+    write_data(((HT - 1) >> 8) & 0xFF);
+    write_data((HT - 1) & 0xFF);
+    write_data(((HPS - 1) >> 8) & 0xFF);
+    write_data((HPS - 1) & 0xFF);
     write_data(TFT_HSYNC_PULSE - 1);
-    write_data(0x00);   // LPS high
-    write_data(0x00);   // LPS low
-    write_data(0x00);   // LPSPP
+    write_data(0x00); // LPS = 0
+    write_data(0x00);
+    write_data(0x00);
 
-    // --- Vertical timing ---
-    // VT = 272 + 12 + 8 + 1 = 293 (VT-1 = 292 = 0x0124)
-    // VPS = 12 (back porch)
-    // VPW = 1-1 = 0
-    // FPS = 0
-    printf("[INIT] Setting vertical timing (VT=%d, VPS=%d, VPW=%d)...\n",
-           TFT_VSYNC_PERIOD, TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH, TFT_VSYNC_PULSE);
+    // 10. Tiempos verticales (VT-1, VSP-1, VPW-1)
+    const uint16_t VT  = TFT_VSYNC_PERIOD;
+    const uint16_t VSP = TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH;
     write_command(SSD1963_SET_VER_PERIOD);
-    // VT-1
-    write_data(((TFT_VSYNC_PERIOD - 1) >> 8) & 0xFF);
-    write_data((TFT_VSYNC_PERIOD - 1) & 0xFF);
-    // VPS = pulse + back porch - 1 (per datasheet)
-    write_data(((TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH - 1) >> 8) & 0xFF);
-    write_data((TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH - 1) & 0xFF);
-    // VPW = pulse - 1
+    write_data(((VT - 1) >> 8) & 0xFF);
+    write_data((VT - 1) & 0xFF);
+    write_data(((VSP - 1) >> 8) & 0xFF);
+    write_data((VSP - 1) & 0xFF);
     write_data(TFT_VSYNC_PULSE - 1);
-    write_data(0x00);   // FPS high
-    write_data(0x00);   // FPS low
+    write_data(0x00);
+    write_data(0x00);
 
-    // --- Turn on display ---
+    // 11. Pantalla en BLANCO (0x28) hasta tener el GRAM limpio, luego ON (0x29)
+    write_command(SSD1963_BLANK_DISPLAY);
     write_command(SSD1963_ON_DISPLAY);
     delay_ms(50);
 
-    // Configure PWM for backlight
-    write_command(SSD1963_SET_PWM_FC);  // 0xBE
-    write_data(0x05);     // PWMF = 5
-    write_data(0xFE);     // PWM duty = 254/256 (max)
+    // 12. Configurar PWM para backlight (matching tmp/ reference)
+    write_command(SSD1963_SET_PWM_FC);
+    write_data(0x0E);     // PWMF = 14
+    write_data(0xFE);     // duty cycle
     write_data(0x01);     // PWM enabled, controlled by host
     write_data(0x00);
     write_data(0x00);
     write_data(0x00);
 
-    // Panel reset via SSD1963 GPIO0 (matching tmp/ PIC32 reference)
-    // First configure GPIO[3:0] as outputs, host controlled
-    write_command(SSD1963_SET_GPIO_CONF);
-    write_data(0x0F);   // GPIO[3:0] as outputs
-    write_data(0x01);   // GPIOs normal, controlled by host
-    // Reset pulse: HIGH -> LOW -> delay -> HIGH
-    write_command(SSD1963_SET_GPIO_VALUE);
-    write_data(0x01);   // HIGH
-    write_command(SSD1963_SET_GPIO_VALUE);
-    write_data(0x00);   // LOW (reset asserted)
-    delay_ms(1);
-    write_command(SSD1963_SET_GPIO_VALUE);
-    write_data(0x01);   // HIGH (release reset)
-
-    BACKLIGHT_ON(); // Pi GPIO for backlight enable
-
+    // Fin de init: el bus vuelve a velocidad normal para dibujar
+    slow_bus_ = false;
     printf("[INIT] SSD1963 initialization complete\n");
 
-    // Now clear screen to black (GRAM is accessible after init)
+    // 13. Enable de backlight desde la Pi (BL_EN, GPIO fuera del bus de datos)
+    BACKLIGHT_ON();
+
+    // 14. Limpiar la pantalla a negro DESPUES de encender el backlight
     printf("[INIT] Clearing screen to black...\n");
     clear_screen(BLACK);
 }
@@ -247,7 +193,6 @@ void SSD1963::write_data_bus(uint16_t data) {
 
 void SSD1963::write_command(uint8_t cmd) {
     RS_LOW();
-    printf("[RS] CMD 0x%02X - RS=LOW\n", cmd);
     CS_LOW();
     write_data_bus(cmd);
     WR_LOW();
@@ -255,8 +200,8 @@ void SSD1963::write_command(uint8_t cmd) {
     WR_HIGH();
     BUS_WAIT;
     CS_HIGH();
-    RS_HIGH();
-    printf("[RS] CMD 0x%02X done - RS=HIGH\n", cmd);
+    if (slow_bus_) bcm2835_delayMicroseconds(1);  // init: timing lento como WAITB/M/E=3/15/3 del PIC32
+    // NO RS_HIGH aqui - RS se queda LOW hasta el proximo write_data()
 }
 
 void SSD1963::write_data(uint16_t data) {
@@ -268,11 +213,11 @@ void SSD1963::write_data(uint16_t data) {
     WR_HIGH();
     BUS_WAIT;
     CS_HIGH();
+    if (slow_bus_) bcm2835_delayMicroseconds(1);  // init: timing lento como WAITB/M/E=3/15/3 del PIC32
 }
 
 void SSD1963::write_pixel_burst_start() {
     RS_HIGH();
-    printf("[RS] BURST START - RS=HIGH\n");
     if (!SSD1963_CS_PER_WRITE) CS_LOW();
 }
 
@@ -323,7 +268,6 @@ static void pixels_burst(SSD1963* d, uint32_t count, const uint16_t* data) {
 }
 
 void SSD1963::clear_screen(uint16_t color) {
-    printf("[RS] clear_screen start\n");
     // SSD1963_BURST_ROWS filas por ráfaga (config_hw.hpp). Por defecto 272 = una sola ráfaga.
     for (uint16_t y = 0; y < LCD_HEIGHT; y += SSD1963_BURST_ROWS) {
         uint16_t h = SSD1963_BURST_ROWS;
@@ -332,7 +276,6 @@ void SSD1963::clear_screen(uint16_t color) {
         write_command(SSD1963_WRITE_MEMORY_START);
         fill_burst(this, (uint32_t)LCD_WIDTH * h, color);
     }
-    printf("[RS] clear_screen end\n");
 }
 
 void SSD1963::draw_pixel(uint16_t x, uint16_t y, uint16_t color) {

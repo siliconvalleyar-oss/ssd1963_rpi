@@ -242,4 +242,7 @@ private:
     // Fuente bitmap 8x8 (ASCII 0x20-0x7F)
     // ---------------------------------------------------------------
 
+private:
+    bool slow_bus_ = false;  // timing lento durante init (como PIC32 WAITB/M/E)
+
 };

@@ -69,10 +69,10 @@ constexpr uint16_t TFT_VSYNC_PERIOD = LCD_HEIGHT + TFT_VSYNC_PULSE + TFT_VSYNC_B
 //   VCO = 10MHz * (M+1)   (debe estar entre 250 y 800 MHz)
 //   PLL = VCO / (N+1)     (N tiene solo 4 bits: 0..15)
 //   SYSCLK = PLL (cuando PLL está bloqueado y seleccionado como sysclk)
-// M=29, N=2  ->  VCO = 300 MHz, PLL = 100 MHz  (ejemplo datasheet sec 9.68, margen seguro)
+// M=49, N=4  ->  VCO = 500 MHz, PLL = 100 MHz  (coincide con tmp/ y referencia PIC32)
 // ---------------------------------------------------------------------------
-constexpr uint8_t SSD1963_PLL_M = 29;
-constexpr uint8_t SSD1963_PLL_N = 2;
+constexpr uint8_t SSD1963_PLL_M = 49;
+constexpr uint8_t SSD1963_PLL_N = 4;
 
 // Frecuencia de píxel: PCLK = PLL * (FPR + 1) / 2^20
 // Con PLL = 100 MHz: FPR = 0x0170A2 (94370) -> 9.00 MHz (~57.7 Hz para 532x293 totales)
