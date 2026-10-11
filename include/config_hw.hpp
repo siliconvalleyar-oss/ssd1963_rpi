@@ -17,7 +17,6 @@ constexpr uint8_t SSD1963_LCD_D11 = 23;
 constexpr uint8_t SSD1963_LCD_D12 = 24;
 constexpr uint8_t SSD1963_LCD_D13 = 25;
 constexpr uint8_t SSD1963_LCD_D14 = 26;
-constexpr uint8_t SSD1963_LCD_D14 = 26;
 constexpr uint8_t SSD1963_LCD_D15 = 27;
 constexpr uint8_t SSD1963_LCD_WR    = 3;   // Write strobe
 constexpr uint8_t SSD1963_LCD_RD    = 2;   // Read strobe (GPIO2): se mantiene en alto
@@ -48,13 +47,13 @@ static constexpr uint16_t LCD_HEIGHT = 272;
 //   Si aparece corrupción, bajar a 32 o a 1 (1 = una fila por ráfaga, comportamiento anterior).
 constexpr uint16_t SSD1963_BURST_ROWS = LCD_HEIGHT;
 
-// Sincronización horizontal - matching PIC32 reference for 480x272
+// Sincronización horizontal (PIC32 reference: H pulse=41, back=2, front=2)
 constexpr uint16_t TFT_HSYNC_PULSE        = 41;  // SSD_HOR_PULSE_WIDTH
 constexpr uint16_t TFT_HSYNC_BACK_PORCH   = 2;   // SSD_HOR_BACK_PORCH
 constexpr uint16_t TFT_HSYNC_FRONT_PORCH  = 2;   // SSD_HOR_FRONT_PORCH
 constexpr uint16_t TFT_HSYNC_PERIOD = LCD_WIDTH + TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH + TFT_HSYNC_FRONT_PORCH;
 
-// Sincronización vertical - From working reference (tmp/4.3inch SSD1963 STM32)
+// Sincronización vertical (PIC32 reference: V pulse=10, back=2, front=2)
 constexpr uint16_t TFT_VSYNC_PULSE        = 10;  // SSD_VER_PULSE_WIDTH
 constexpr uint16_t TFT_VSYNC_BACK_PORCH   = 2;   // SSD_VER_BACK_PORCH
 constexpr uint16_t TFT_VSYNC_FRONT_PORCH  = 2;   // SSD_VER_FRONT_PORCH
@@ -81,40 +80,10 @@ constexpr uint32_t LCD_FPR = 0x0170A2;
 // A[2]: polaridad LSHIFT (0 = dato capturado en flanco de bajada, 1 = subida)
 // A[1]: polaridad LLINE  (0 = activo en bajo)
 // A[0]: polaridad LFRAME (0 = activo en bajo)
-// 0x10 = panel 18-bit, con FRC, LSHIFT flanco de bajada, sync activo en bajo
-// 0x00 = panel 18-bit, sin FRC, LSHIFT flanco de bajada, sync activo en bajo
-// 0x0C = variante de 18-bit con LSHIFT flanco de SUBIDA (A[2]=1) y A[3]=1 (FRC, solo actua si A[4]=1)
+// 0x10 = panel 18-bit con FRC (A[4]=1, A[5]=0)
 #define LCD_MODE_CONFIG 0x10
-
-// SET_ADDR_MODE (0x36): 0x00 = RGB, sin flips (es el valor POR)
-#define LCD_ADDR_MODE 0x00
-
-// Filas por ráfaga al volcar la pantalla (clear_screen y draw_buffer).
-//   272 = una sola ráfaga por cuadro (más rápido).
-//   Si aparece corrupción, bajar a 32 o a 1 (1 = una fila por ráfaga, comportamiento anterior).
-constexpr uint16_t SSD1963_BURST_ROWS = LCD_HEIGHT;
-
-// SET_ADDR_MODE (0x36): 0x00 = RGB, sin flips (es el valor POR)
-#define LCD_ADDR_MODE 0x00
-
-// Frecuencia de píxel: PCLK = PLL * (FPR + 1) / 2^20
-// Con PLL = 100 MHz: FPR = 0x0170A2 (94370) -> 9.00 MHz (~57.7 Hz para 532x293 totales)
-constexpr uint32_t LCD_FPR = 0x0170A2;
-
-// SET_LCD_MODE (0xB0) parametro A - configuración del panel
-// A[5]: ancho de datos del panel (0=18-bit, 1=24-bit)
-// A[4]: mejora de color (FRC/dithering)
-// A[3]: FRC (ignorado si A[4]=0)
-// A[2]: polaridad LSHIFT (0 = dato capturado en flanco de bajada, 1 = subida)
-// A[1]: polaridad LLINE  (0 = activo en bajo)
-// A[0]: polaridad LFRAME (0 = activo en bajo)
-// 0x20 = panel 24-bit, sin FRC, LSHIFT flanco de bajada, sync activo en bajo
-// 0x00 = panel 18-bit, sin FRC, LSHIFT flanco de bajada, sync activo en bajo
-// 0x0C = variante de 18-bit con LSHIFT flanco de SUBIDA (A[2]=1) y A[3]=1 (FRC, solo actua si A[4]=1)
-#define LCD_MODE_CONFIG 0x20
 
 // SET_ADDR_MODE (0x36): 0x00 = RGB, sin flips (es el valor POR)
 //   0x08 = BGR (si rojo y azul salen intercambiados)
 //   0x02 = flip horizontal | 0x01 = flip vertical
 #define LCD_ADDR_MODE 0x00
-EOF

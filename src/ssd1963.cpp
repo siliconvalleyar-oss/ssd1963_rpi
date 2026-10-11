@@ -81,13 +81,12 @@ void SSD1963::init() {
     delay_ms(20);   // datasheet pide >= 5 ms
 
     // 5. Re-clear shift registers after reset
-    shift_out_16bits(0x0000);
-    delay_ms(5);
+    // (Removed - no shift registers on direct GPIO bus)
 
     // --- PLL startup sequence (SINGLE, CORRECT) ---
     // Ref clk = 10MHz (typical crystal)
-    // M = 29 -> VCO = 12 * 30 = 300MHz (250-800MHz OK)
-    // N = 4  -> PLL = 600 / 5 = 100MHz
+    // M = 29 -> VCO = 10 * 30 = 300MHz (250-800MHz OK)
+    // N = 2  -> PLL = 300 / 3 = 100MHz (max 110MHz per datasheet)
     printf("[INIT] Configuring PLL (M=29, N=2, PLL=100MHz)...\n");
     write_command(SSD1963_SET_PLL_MN);
     write_data(SSD1963_PLL_M);
@@ -179,7 +178,7 @@ void SSD1963::init() {
     // VT-1
     write_data(((TFT_VSYNC_PERIOD - 1) >> 8) & 0xFF);
     write_data((TFT_VSYNC_PERIOD - 1) & 0xFF);
-    // VPS = pulse + back porch - 1
+    // VPS = pulse + back porch - 1 (per datasheet)
     write_data(((TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH - 1) >> 8) & 0xFF);
     write_data((TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH - 1) & 0xFF);
     // VPW = pulse - 1
@@ -222,10 +221,6 @@ void SSD1963::init() {
     // Now clear screen to black (GRAM is accessible after init)
     printf("[INIT] Clearing screen to black...\n");
     clear_screen(BLACK);
-}
-        printf("[DEBUG] PWM (PW1) en alto: %d/%d muestras\n", highs, samples);
-    }
-#endif
 }
 
 static inline uint32_t data_to_mask(uint16_t data) {
