@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
-/*
 
+/*
 // Definición de pines
 constexpr uint8_t SSD1963_LCD_D0  = 12;
 constexpr uint8_t SSD1963_LCD_D1  = 13;
@@ -20,11 +20,13 @@ constexpr uint8_t SSD1963_LCD_D13 = 25;
 constexpr uint8_t SSD1963_LCD_D14 = 26;
 constexpr uint8_t SSD1963_LCD_D15 = 27;
 constexpr uint8_t SSD1963_LCD_WR    = 3;  // Write strobe
+constexpr uint8_t SSD1963_LCD_RD    = 2;  // Read strobe
 constexpr uint8_t SSD1963_LCD_RS    = 4;  // Data/Command selection
 constexpr uint8_t SSD1963_LCD_CS    = 5;  // Chip select
 constexpr uint8_t SSD1963_LCD_RESET = 6;  // Reset
 constexpr uint8_t SSD1963_LCD_BACKLIGHT = 0; // Backlight control
 */
+
 // Dimensiones del display
 
 // Comandos SSD1963
@@ -77,6 +79,7 @@ constexpr uint8_t SSD1963_SET_PWM_FC = 0xBE;
 constexpr uint8_t SSD1963_SET_DBC_CONF = 0xD0;
 constexpr uint8_t SSD1963_SET_PIXEL_DATA_INTERFACE = 0xF0;
 constexpr uint8_t  SSD1963_SET_LSHIFT_FREQ = 0xE6;
+
 // Modos de interfaz de píxeles
 constexpr uint8_t SSD1963_PDI_8BIT = 0x00;
 constexpr uint8_t SSD1963_PDI_16BIT565 = 0x03;
@@ -84,6 +87,7 @@ constexpr uint8_t SSD1963_PDI_16BIT555 = 0x01;
 constexpr uint8_t SSD1963_PDI_18BIT666 = 0x04;
 constexpr uint8_t SSD1963_PDI_18BIT565 = 0x05;
 constexpr uint8_t SSD1963_PDI_24BIT888 = 0x06;
+
 /*
 // Macros para control de pines
 #define RS_LOW()    bcm2835_gpio_write(SSD1963_LCD_RS, LOW)
@@ -96,6 +100,7 @@ constexpr uint8_t SSD1963_PDI_24BIT888 = 0x06;
 #define RESET_HIGH() bcm2835_gpio_write(SSD1963_LCD_RESET, HIGH)
 #define BACKLIGHT_ON() bcm2835_gpio_write(SSD1963_LCD_BACKLIGHT, HIGH)
 #define BACKLIGHT_OFF() bcm2835_gpio_write(SSD1963_LCD_BACKLIGHT, LOW)
+*/
 
 
 // Comandos SSD1963
@@ -145,6 +150,7 @@ constexpr uint8_t SSD1963_SET_GPIO_CONF = 0xB8;
 constexpr uint8_t SSD1963_SET_GPIO_VALUE = 0xBA;
 constexpr uint8_t SSD1963_SET_POST_PROC = 0xBC;
 constexpr uint8_t SSD1963_SET_PWM_FC = 0xBE;
+constexpr uint8_t SSD1963_SET_DBC_CONF = 0xD0;
 constexpr uint8_t SSD1963_SET_PIXEL_DATA_INTERFACE = 0xF0;
 constexpr uint8_t  SSD1963_SET_LSHIFT_FREQ = 0xE6;
 
@@ -155,6 +161,20 @@ constexpr uint8_t SSD1963_PDI_16BIT555 = 0x01;
 constexpr uint8_t SSD1963_PDI_18BIT666 = 0x04;
 constexpr uint8_t SSD1963_PDI_18BIT565 = 0x05;
 constexpr uint8_t SSD1963_PDI_24BIT888 = 0x06;
+
+/*
+// Macros para control de pines
+#define RS_LOW()    bcm2835_gpio_write(SSD1963_LCD_RS, LOW)
+#define RS_HIGH()   bcm2835_gpio_write(SSD1963_LCD_RS, HIGH)
+#define WR_LOW()    bcm2835_gpio_write(SSD1963_LCD_WR, LOW)
+#define WR_HIGH()   bcm2835_gpio_write(SSD1963_LCD_WR, HIGH)
+#define CS_LOW()    bcm2835_gpio_write(SSD1963_LCD_CS, LOW)
+#define CS_HIGH()   bcm2835_gpio_write(SSD1963_LCD_CS, HIGH)
+#define RESET_LOW() bcm2835_gpio_write(SSD1963_LCD_RESET, LOW)
+#define RESET_HIGH() bcm2835_gpio_write(SSD1963_LCD_RESET, HIGH)
+#define BACKLIGHT_ON() bcm2835_gpio_write(SSD1963_LCD_BACKLIGHT, HIGH)
+#define BACKLIGHT_OFF() bcm2835_gpio_write(SSD1963_LCD_BACKLIGHT, LOW)
+*/
 
 
 // SSD1963 command table
@@ -223,7 +243,6 @@ constexpr uint8_t SSD1963_PDI_24BIT888 = 0x06;
 #define CMD_SET_GPIO2_ROP		0xCC
 #define CMD_GET_GPIO2_ROP		0xCD
 #define CMD_SET_GPIO3_ROP		0xCE
-#define CMD_GET_GPIO3_ROP		0xCF
 #define CMD_SET_ABC_DBC_CONF	0xD0
 #define CMD_GET_ABC_DBC_CONF	0xD1
 #define CMD_SET_DBC_HISTO_PTR	0xD2
@@ -250,4 +269,3 @@ constexpr uint8_t SSD1963_PDI_24BIT888 = 0x06;
 #define CMD_GET_PCLK			0xE7	//get pixel clock (LSHIFT signal) freq. settings
 #define CMD_SET_DATA_INTERFACE	0xF0
 #define CMD_GET_DATA_INTERFACE	0xF1
-*/
