@@ -84,9 +84,7 @@ void SSD1963::init() {
     write_command(SSD1963_EXIT_SLEEP_MODE);
     delay_ms(20);   // datasheet pide >= 5 ms
 
-    // 5. Re-clear shift registers after reset
-    shift_out_16bits(0x0000);
-    delay_ms(5);
+    
 
     // --- PLL startup sequence (SINGLE, CORRECT) ---
     // Ref clk = 10MHz (typical crystal)

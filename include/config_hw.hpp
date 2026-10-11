@@ -54,7 +54,7 @@ constexpr uint16_t TFT_HSYNC_BACK_PORCH   = 2;   // SSD_HOR_BACK_PORCH
 constexpr uint16_t TFT_HSYNC_FRONT_PORCH  = 2;   // SSD_HOR_FRONT_PORCH
 constexpr uint16_t TFT_HSYNC_PERIOD = LCD_WIDTH + TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH + TFT_HSYNC_FRONT_PORCH;
 
-// Sincronización vertical
+// Sincronización vertical - From working reference (tmp/4.3inch SSD1963 STM32)
 constexpr uint16_t TFT_VSYNC_PULSE        = 10;  // SSD_VER_PULSE_WIDTH
 constexpr uint16_t TFT_VSYNC_BACK_PORCH   = 2;   // SSD_VER_BACK_PORCH
 constexpr uint16_t TFT_VSYNC_FRONT_PORCH  = 2;   // SSD_VER_FRONT_PORCH
@@ -81,14 +81,12 @@ constexpr uint32_t LCD_FPR = 0x0170A2;
 // A[2]: polaridad LSHIFT (0 = dato capturado en flanco de bajada, 1 = subida)
 // A[1]: polaridad LLINE  (0 = activo en bajo)
 // A[0]: polaridad LFRAME (0 = activo en bajo)
-// 0x20 = panel 24-bit, sin FRC, LSHIFT flanco de bajada, sync activo en bajo
-// 0x00 = valor base para panel de 18-bit (LSHIFT flanco de bajada, sync activo en bajo)
+// 0x10 = panel 18-bit, con FRC, LSHIFT flanco de bajada, sync activo en bajo
+// 0x00 = panel 18-bit, sin FRC, LSHIFT flanco de bajada, sync activo en bajo
 // 0x0C = variante de 18-bit con LSHIFT flanco de SUBIDA (A[2]=1) y A[3]=1 (FRC, solo actua si A[4]=1)
-#define LCD_MODE_CONFIG 0x20
+#define LCD_MODE_CONFIG 0x10
 
 // SET_ADDR_MODE (0x36): 0x00 = RGB, sin flips (es el valor POR)
-//   0x08 = BGR (si rojo y azul salen intercambiados)
-//   0x02 = flip horizontal | 0x01 = flip vertical
 #define LCD_ADDR_MODE 0x00
 
 // Filas por ráfaga al volcar la pantalla (clear_screen y draw_buffer).
