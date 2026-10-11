@@ -25,11 +25,15 @@ void SSD1963::setup_gpio() {
     bcm2835_gpio_fsel(SSD1963_LCD_CS, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(SSD1963_LCD_RESET, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(SSD1963_LCD_BACKLIGHT, BCM2835_GPIO_FSEL_OUTP);
-    // Estados iniciales: RST arranca en BAJO (retardo de RC del modulo)
+    bcm2835_gpio_fsel(SSD1963_LCD_RD, BCM2835_GPIO_FSEL_OUTP);
+    // Estados iniciales: RST arranca en BAJO, RD/WR/CS1 en ALTO
+    // (el modulo hace su power-up mientras RST esta bajo; ~2 s despues
+    //  se libera y recien ahi comienza nuestra 2a inicializacion)
     CS_HIGH();
     WR_HIGH();
     RS_HIGH();
     RESET_LOW();
+    bcm2835_gpio_write(SSD1963_LCD_RD, HIGH);
     BACKLIGHT_OFF();
 }void  SSD1963::write_command(uint8_t cmd) {
     RS_LOW();
@@ -163,7 +167,8 @@ void SSD1963::init() {
     write_command(SSD1963_SET_GPIO_VALUE);
     write_data(0x01);   // alto (libera reset)
 
-    // Encender display
+    // Pantalla en BLANCO (0x28) hasta tener el GRAM limpio, luego ON (0x29)
+    write_command(SSD1963_BLANK_DISPLAY);
     write_command(SSD1963_ON_DISPLAY);
     delay_ms(50);
 

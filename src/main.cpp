@@ -23,8 +23,8 @@ int main() {
     }
     ssd1963.setup_gpio();
     ssd1963.init();
-    // Limpiar toda la pantalla a negro primero
-    ssd1963.clear_screen(BLACK);
+    // Pantalla en BLANCO primero (tras la 2a inicializacion del SSD1963)
+    ssd1963.clear_screen(WHITE);
     delay_ms(500);
     struct ColorBlock {
         uint16_t x;
