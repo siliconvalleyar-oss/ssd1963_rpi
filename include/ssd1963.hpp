@@ -242,4 +242,8 @@ private:
     // true = espera ~1 us tras cada strobe WR (durante init, como el PMP lento del PIC32)
     bool slow_bus_ = false;
 
+    // Para replicar forma de onda RS exacta del micro que funciona (SSD1963_MCU_WAVEFORM)
+    // 0 = comando, 1 = dato, 2 = primer dato tras comando
+    uint8_t last_op_type_ = 0;
+
 };

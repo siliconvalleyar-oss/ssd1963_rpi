@@ -2,14 +2,21 @@
 
 #include <unistd.h>
 #include <iostream>
+#include <time.h>
 #include <config_hw.hpp>
 #include <ssd1963_cmd.hpp>
 #include <ssd1963.hpp>
 #include <color.hpp>
 #include <font_8x8.hpp>
 
+// Helper para delays en nanosegundos (para SSD1963_MCU_WAVEFORM)
+static inline void ns_delay(long ns) {
+    struct timespec ts = {0, ns};
+    clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, nullptr);
+}
 
-SSD1963::SSD1963() {}
+
+SSD1963::SSD1963() : last_op_type_(0) {}
 
 void SSD1963::delay_ms(uint32_t ms) {
     usleep(ms * 1000);
@@ -39,22 +46,97 @@ void SSD1963::setup_gpio() {
 }
 
 void  SSD1963::write_command(uint8_t cmd) {
+#if SSD1963_MCU_WAVEFORM
+    // === MCU WAVEFORM: COMANDO ===
+    // 1. RS baja 40 ns ANTES de CS (pre-pulso)
+    RS_LOW();
+    ns_delay(40);
+
+    // 2. CS baja
+    CS_LOW();
+    ns_delay(30);
+
+    // 3. RS sube 30ns y baja junto con CS (pulso extra)
+    RS_HIGH();
+    ns_delay(30);
+    RS_LOW();
+
+    // 4. Datos en bus + WR pulso
+    write_data_bus(cmd);
+    WR_LOW();
+    ns_delay(65);  // WR en bajo ~65 ns
+
+    // 5. WR sube 10 ns ANTES de CS
+    WR_HIGH();
+    ns_delay(10);
+
+    // 6. CS sube
+    CS_HIGH();
+
+    // 7. RS se queda LOW 95 ns DESPUES de CS↑, luego sube
+    ns_delay(95);
+    RS_HIGH();
+
+    if (slow_bus_) usleep(1);
+#else
     RS_LOW();
     CS_LOW();
     write_data_bus(cmd);
     WR_LOW();
     WR_HIGH();
     CS_HIGH();
-    if (slow_bus_) usleep(1);   // init: timing lento como WAITB/M/E=3/15/3 del PIC32
+    if (slow_bus_) usleep(1);
+#endif
 }
+
 void SSD1963::write_data(uint16_t data) {
+#if SSD1963_MCU_WAVEFORM
+    // Determinar si es primer dato tras comando
+    bool is_first_data = (last_op_type_ == 0);
+    last_op_type_ = 1;
+
+    if (is_first_data) {
+        // === PRIMER DATO TRAS COMANDO ===
+        // RS pulsa: HIGH 40ns -> LOW 30ns -> HIGH (con CS↓)
+        RS_HIGH();
+        ns_delay(40);
+        RS_LOW();
+        ns_delay(30);
+    } else {
+        // === RESTO DE DATOS ===
+        // RS se queda HIGH
+        RS_HIGH();
+    }
+
+    CS_LOW();
+
+    if (is_first_data) {
+        // RS sube con CS↓
+        ns_delay(30);
+        RS_HIGH();
+    }
+
+    write_data_bus(data);
+    WR_LOW();
+    ns_delay(65);
+    WR_HIGH();
+    ns_delay(10);
+    CS_HIGH();
+
+    if (is_first_data) {
+        // RS se queda HIGH
+    }
+
+    if (slow_bus_) usleep(1);
+#else
     RS_HIGH();
     CS_LOW();
     write_data_bus(data);
     WR_LOW();
     WR_HIGH();
     CS_HIGH();
-    if (slow_bus_) usleep(1);   // init: timing lento como WAITB/M/E=3/15/3 del PIC32
+    if (slow_bus_) usleep(1);
+#endif
 }
 
 

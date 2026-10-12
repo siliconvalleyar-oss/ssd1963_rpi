@@ -54,3 +54,19 @@ constexpr uint16_t TFT_VSYNC_PERIOD = LCD_HEIGHT + TFT_VSYNC_PULSE + TFT_VSYNC_B
 // 0x0170A2 con SYSCLK = 100 MHz -> PCLK = 9.00 MHz (igual que la referencia PIC32
 // para el panel TY430TFT480272)
 constexpr uint32_t LCD_FPR = 0x0170A2; // 9.0 MHz para SYSCLK = 100 MHz
+
+// =========================================================================
+// OPCION: Replicar forma de onda RS exacta del micro que funciona
+// =========================================================================
+// El analizador logico mostro que el micro que funciona genera:
+// COMANDO:
+//   1. RS baja 40 ns ANTES de CS (pre-pulso)
+//   2. WR pulsa ~65 ns
+//   3. WR sube 10 ns ANTES de CS
+//   4. RS se queda LOW 95 ns DESPUES de CS↑, luego sube a HIGH
+// PRIMER DATO tras comando:
+//   RS pulsa: HIGH 40 ns -> LOW 30 ns -> HIGH (con CS↓)
+// RESTO DE DATOS:
+//   RS se queda HIGH fijo
+// Activar para replicar exactamente esta forma de onda (requiere clock_gettime para ns).
+constexpr bool SSD1963_MCU_WAVEFORM = false;
