@@ -299,7 +299,7 @@ void SSD1963::draw_image_rgb565(const char* filepath) {
 }
 
 // static uint32_t g_bus_state = 0;  // cache del estado del bus (D0=bit12...D15=bit27)
-static uint32_t g_bus_state = 0;
+uint32_t SSD1963::g_bus_state = 0;
 
 void SSD1963::write_data_bus(uint16_t data) {
     // Conversión: D0=bit12 ... D15=bit27
