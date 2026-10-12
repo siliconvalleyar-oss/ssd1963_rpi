@@ -22,6 +22,10 @@ void SSD1963::delay_ms(uint32_t ms) {
     usleep(ms * 1000);
 }
 
+void SSD1963::delay_us(uint32_t us) {
+    bcm2835_delayMicroseconds(us);
+}
+
 void SSD1963::setup_gpio() {
     // Configurar pines de datos como salida
     for (uint8_t pin = SSD1963_LCD_D0; pin <= SSD1963_LCD_D15; pin++) {
