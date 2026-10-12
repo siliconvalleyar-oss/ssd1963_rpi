@@ -298,17 +298,17 @@ void SSD1963::draw_image_rgb565(const char* filepath) {
     fclose(file);
 }
 
+// static uint32_t g_bus_state = 0;  // cache del estado del bus (D0=bit12...D15=bit27)
+static uint32_t g_bus_state = 0;
+
 void SSD1963::write_data_bus(uint16_t data) {
-    // Limpia todos los pines de datos
-    for (uint8_t pin = SSD1963_LCD_D0; pin <= SSD1963_LCD_D15; pin++) {
-        bcm2835_gpio_write(pin, LOW);
-    }
-    // Escribe los bits correspondientes a HIGH
-    for (uint8_t i = 0; i < 16; i++) {
-        if (data & (1 << i)) {
-            bcm2835_gpio_write(SSD1963_LCD_D0 + i, HIGH);
-        }
-    }
+    // Conversión: D0=bit12 ... D15=bit27
+    uint32_t new_state = ((uint32_t)data) << 12;
+    uint32_t to_set = new_state & ~g_bus_state;
+    uint32_t to_clr = g_bus_state & ~new_state;
+    if (to_clr) bcm2835_gpio_clr_multi(to_clr);
+    if (to_set) bcm2835_gpio_set_multi(to_set);
+    g_bus_state = new_state;
 }
 
 void SSD1963::write_pixel_burst_start() {

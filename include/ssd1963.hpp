@@ -246,4 +246,7 @@ private:
     // 0 = comando, 1 = dato, 2 = primer dato tras comando
     uint8_t last_op_type_ = 0;
 
+    // Cache del estado del bus de datos (D0=bit12 ... D15=bit27) para write_data_bus optimizado
+    static uint32_t g_bus_state;
+
 };
