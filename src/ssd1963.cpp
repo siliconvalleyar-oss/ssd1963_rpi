@@ -181,19 +181,23 @@ void SSD1963::init() {
     delay_ms(10);
     // 2. Soft Reset (ANTES del PLL)
     write_command(SSD1963_SOFT_RESET);
-    delay_ms(10);
-    // 3. Configurar PLL (para REFclk = 10 MHz → PLLclk = 500MHz, SYSclk = 100MHz)
+    delay_ms(20);
+    // 2b. Exit Sleep Mode (0x11) - OBLIGATORIO segun datasheet Rev 1.1
+    // Tras soft reset el chip queda en estado sleep. Sin esto el panel queda apagado.
+    write_command(SSD1963_EXIT_SLEEP_MODE);
+    delay_ms(20);
+    // 3. Configurar PLL (para REFclk = 10 MHz -> PLLclk = 500MHz, SYSclk = 100MHz)
     write_command(SSD1963_SET_PLL_MN);
-    write_data(49);     // PLLclk = REFclk * 50
-    write_data(4);      // SYSclk = PLLclk / 5
-    write_data(4);      // Dummy (según código STM32)
+    write_data(49);     // PLL multiplier M = 49
+    write_data(4);      // System clock divider N = 4
+    write_data(0x04);   // Effectuate MN (bit C[2]=1: apply M and N)
     // Activar PLL
     write_command(SSD1963_SET_PLL);
-    write_data(0x01);
-    delay_ms(10);  // largo retardo
+    write_data(0x01);   // Enable PLL
+    delay_ms(100);      // Datasheet: 100ms minimo para PLL lock
     write_command(SSD1963_SET_PLL);
-    write_data(0x03);
-    delay_ms(10);
+    write_data(0x03);   // Lock PLL (use PLL as sysclk)
+    delay_ms(50);       // Estabilizar cambio de clock
     // 6. Frecuencia LSHIFT (SE ENVIA ANTES DEL MODO LCD, como en el PIC32 de referencia)
     write_command(SSD1963_SET_LSHIFT_FREQ);
     write_data((LCD_FPR >> 16) & 0xFF);
@@ -201,8 +205,8 @@ void SSD1963::init() {
     write_data(LCD_FPR & 0xFF);
     // 7. Configurar modo LCD
     write_command(SSD1963_SET_LCD_MODE);
-    write_data(0x10);    // LCD_MODE_CONFIG: mismo valor que la referencia PIC32
-    write_data(0x00);    // igual que TechToys (byte 2 = 0x00)
+    write_data(0x10);    // LCD_MODE_CONFIG: 18-bit con FRC (igual PIC32)
+    write_data(0x00);    // TFT type: 00/01 = TFT mode
     write_data((LCD_WIDTH - 1) >> 8);
     write_data((LCD_WIDTH - 1) & 0xFF);
     write_data((LCD_HEIGHT - 1) >> 8);
@@ -231,10 +235,7 @@ void SSD1963::init() {
     write_data(TFT_VSYNC_PULSE - 1);
     write_data(0x00);
     write_data(0x00);
-    // Formato de píxel: 16bpp (0x55), igual que la referencia PIC32
-    write_command(SSD1963_SET_PIXEL_FORMAT);
-    write_data(0x55);
-    // Interfaz de datos del panel: 16-bit RGB565
+    // Interfaz de datos del panel: 16-bit RGB565 (formato 0x55 via 0xF0)
     write_command(SSD1963_SET_PIXEL_DATA_INTERFACE);
     write_data(SSD1963_PDI_16BIT565);
     // Reset del PANEL fisico via GPIO0 (igual que la referencia PIC32):
@@ -250,8 +251,7 @@ void SSD1963::init() {
     write_command(SSD1963_SET_GPIO_VALUE);
     write_data(0x01);   // alto (libera reset)
 
-    // Pantalla en BLANCO (0x28) hasta tener el GRAM limpio, luego ON (0x29)
-    write_command(SSD1963_BLANK_DISPLAY);
+    // Encender display (0x29) - sin BLANK_DISPLAY innecesario
     write_command(SSD1963_ON_DISPLAY);
     delay_ms(50);
 
