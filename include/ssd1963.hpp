@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <cstdio>
 
+
 // =========================================================================
 // Macros de control GPIO
 // =========================================================================
@@ -30,18 +31,6 @@
 #define BACKLIGHT_ON()  bcm2835_gpio_write(SSD1963_LCD_BACKLIGHT, HIGH)
 #define BACKLIGHT_OFF() bcm2835_gpio_write(SSD1963_LCD_BACKLIGHT, LOW)
 
-// TE (Tearing Effect) - entrada para sincronización vertical
-#define TE_READ()       bcm2835_gpio_lev(SSD1963_LCD_TE)
-
-// PW1 (PWM output del SSD1963) - entrada para diagnóstico
-#define PW1_READ()      bcm2835_gpio_lev(SSD1963_LCD_PW1)
-
-// Máscara para todos los pines de datos D0-D15 (12..27)
-#define DATA_PINS_MASK  (uint32_t)( \
-    (1 << 12) | (1 << 13) | (1 << 14) | (1 << 15) | \
-    (1 << 16) | (1 << 17) | (1 << 18) | (1 << 19) | \
-    (1 << 20) | (1 << 21) | (1 << 22) | (1 << 23) | \
-    (1 << 24) | (1 << 25) | (1 << 26) | (1 << 27) )
 
 /*! \def FONT_CHAR_WIDTH
  *  \brief Ancho en píxeles de cada carácter bitmap. */
@@ -49,6 +38,7 @@
  *  \brief Alto en píxeles de cada carácter bitmap. */
 #define FONT_CHAR_WIDTH     8
 #define FONT_CHAR_HEIGHT    8
+
 
 /**
  * @class   SSD1963
@@ -232,7 +222,7 @@ private:
     // Primitivas del bus 8080
     // ---------------------------------------------------------------
 
-    /** @brief Escribe 16 bits en el bus de datos GPIO (multi-write rápido). */
+    /** @brief Escribe 16 bits en el bus de datos GPIO. */
     void write_data_bus(uint16_t data);
 
     /** @brief Ciclo de escritura de comando (RS=LOW). */
@@ -249,6 +239,7 @@ private:
     // ---------------------------------------------------------------
 
 private:
-    bool slow_bus_ = false;  // timing lento durante init (como PIC32 WAITB/M/E)
+    // true = espera ~1 us tras cada strobe WR (durante init, como el PMP lento del PIC32)
+    bool slow_bus_ = false;
 
 };
