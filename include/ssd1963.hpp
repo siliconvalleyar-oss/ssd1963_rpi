@@ -79,6 +79,10 @@ public:
      *  @param ms Tiempo de espera. */
     void delay_ms(uint32_t ms);
 
+    /** @brief Delay de bloqueo en microsegundos.
+     *  @param us Tiempo de espera. */
+    void delay_us(uint32_t us);
+
     // ---------------------------------------------------------------
     // Operaciones de dibujo
     // ---------------------------------------------------------------
