@@ -228,3 +228,44 @@ void SSD1963::write_data_bus(uint16_t data) {
         }
     }
 }
+
+void SSD1963::write_pixel_burst_start() {
+    RS_HIGH();
+    CS_LOW();
+}
+
+void SSD1963::write_pixel_burst(uint16_t data) {
+    write_data_bus(data);
+    WR_LOW();
+    WR_HIGH();
+    if (slow_bus_) usleep(1);
+}
+
+void SSD1963::write_pixel_burst_end() {
+    CS_HIGH();
+}
+
+void SSD1963::fill_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
+    draw_block(x, y, width, height, color);
+}
+
+void SSD1963::draw_pixels(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
+                          const uint16_t* data) {
+    set_area(x, y, x + w - 1, y + h - 1);
+    write_command(SSD1963_WRITE_MEMORY_START);
+    write_pixel_burst_start();
+    for (uint32_t i = 0; i < (uint32_t)w * h; i++) {
+        write_pixel_burst(data[i]);
+    }
+    write_pixel_burst_end();
+}
+
+void SSD1963::draw_buffer(const uint16_t* data) {
+    set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
+    write_command(SSD1963_WRITE_MEMORY_START);
+    write_pixel_burst_start();
+    for (uint32_t i = 0; i < (uint32_t)LCD_WIDTH * LCD_HEIGHT; i++) {
+        write_pixel_burst(data[i]);
+    }
+    write_pixel_burst_end();
+}
