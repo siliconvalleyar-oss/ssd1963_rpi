@@ -69,4 +69,4 @@ constexpr uint32_t LCD_FPR = 0x0170A2; // 9.0 MHz para SYSCLK = 100 MHz
 // RESTO DE DATOS:
 //   RS se queda HIGH fijo
 // Activar para replicar exactamente esta forma de onda (requiere clock_gettime para ns).
-constexpr bool SSD1963_MCU_WAVEFORM = true;
+constexpr bool SSD1963_MCU_WAVEFORM = false;
