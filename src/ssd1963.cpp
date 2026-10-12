@@ -43,7 +43,7 @@ void SSD1963::setup_gpio() {
     //  se libera y recien ahi comienza nuestra 2a inicializacion)
     CS_HIGH();
     WR_HIGH();
-    RS_HIGH();
+    RS_LOW();
     RESET_LOW();
     bcm2835_gpio_write(SSD1963_LCD_RD, HIGH);
     BACKLIGHT_OFF();
