@@ -191,6 +191,7 @@ void SSD1963::init() {
     write_data(49);     // PLL multiplier M = 49
     write_data(4);      // System clock divider N = 4
     write_data(0x04);   // Effectuate MN (bit C[2]=1: apply M and N)
+    delay_us(100);      // Datasheet: 100us minimo tras SET_PLL_MN
     // Activar PLL
     write_command(SSD1963_SET_PLL);
     write_data(0x01);   // Enable PLL
@@ -238,6 +239,9 @@ void SSD1963::init() {
     // Interfaz de datos del panel: 16-bit RGB565 (formato 0x55 via 0xF0)
     write_command(SSD1963_SET_PIXEL_DATA_INTERFACE);
     write_data(SSD1963_PDI_16BIT565);
+    // SET_ADDR_MODE (0x36): RGB, top->bottom, left->right, sin flips
+    write_command(SSD1963_SET_ADDR_MODE);
+    write_data(0x00);
     // Reset del PANEL fisico via GPIO0 (igual que la referencia PIC32):
     // pulso LOW -> 1ms -> HIGH. Sin esto el panel puede quedar en estado indefinido.
     write_command(SSD1963_SET_GPIO_CONF);
