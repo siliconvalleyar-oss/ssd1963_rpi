@@ -30,6 +30,12 @@
 #define BACKLIGHT_ON()  bcm2835_gpio_write(SSD1963_LCD_BACKLIGHT, HIGH)
 #define BACKLIGHT_OFF() bcm2835_gpio_write(SSD1963_LCD_BACKLIGHT, LOW)
 
+// TE (Tearing Effect) - entrada para sincronización vertical
+#define TE_READ()       bcm2835_gpio_lev(SSD1963_LCD_TE)
+
+// PW1 (PWM output del SSD1963) - entrada para diagnóstico
+#define PW1_READ()      bcm2835_gpio_lev(SSD1963_LCD_PW1)
+
 // Máscara para todos los pines de datos D0-D15 (12..27)
 #define DATA_PINS_MASK  (uint32_t)( \
     (1 << 12) | (1 << 13) | (1 << 14) | (1 << 15) | \
