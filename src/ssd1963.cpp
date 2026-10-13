@@ -169,9 +169,14 @@ void SSD1963::clear_screen(uint16_t color) {
     // los datos -> rayas y "basura de bits" en pantalla.
     set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
     write_command(SSD1963_WRITE_MEMORY_START);
+    // Burst: CS bajo durante todo el llenado (RS=HIGH), solo toggle WR por
+    // pixel. Mucho mas rapido que write_data() por pixel (CS se activaria
+    // 130560 veces).
+    write_pixel_burst_start();
     for (uint32_t i = 0; i < (uint32_t)LCD_WIDTH * LCD_HEIGHT; i++) {
-        write_data(color);
+        write_pixel_burst(color);
     }
+    write_pixel_burst_end();
 }
 
 
@@ -277,9 +282,11 @@ void SSD1963::init() {
 void SSD1963::draw_block(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
     set_area(x, y, x + width - 1, y + height - 1);
     write_command(SSD1963_WRITE_MEMORY_START);
-    for (uint32_t i = 0; i < width * height; i++) {
-        write_data(color);
+    write_pixel_burst_start();
+    for (uint32_t i = 0; i < (uint32_t)width * height; i++) {
+        write_pixel_burst(color);
     }
+    write_pixel_burst_end();
 }
 
 void SSD1963::draw_pixel(uint16_t x, uint16_t y, uint16_t color) {
@@ -313,11 +320,13 @@ void SSD1963::draw_image_rgb565(const char* filepath) {
     set_area(0, 0, w - 1, h - 1);
     write_command(SSD1963_WRITE_MEMORY_START);
 
+    write_pixel_burst_start();
     for (uint32_t i = 0; i < (uint32_t)w * h; i++) {
         uint8_t bytes[2];
         if (fread(bytes, 1, 2, file) != 2) break;
-        write_data((bytes[0] << 8) | bytes[1]);
+        write_pixel_burst((bytes[0] << 8) | bytes[1]);
     }
+    write_pixel_burst_end();
 
     fclose(file);
 }
