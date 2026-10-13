@@ -92,6 +92,13 @@ void SSD1963::clear_screen(uint16_t color) {
     }
 }
 
+void SSD1963::draw_buffer(const uint16_t* buffer) {
+    set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
+    write_command(SSD1963_WRITE_MEMORY_START);
+    for (uint32_t i = 0; i < (uint32_t)LCD_WIDTH * LCD_HEIGHT; i++) {
+        write_data(buffer[i]);
+    }
+}
 
 
 void SSD1963::init() {
