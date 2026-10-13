@@ -18,8 +18,8 @@ SpaceShooterScene::SpaceShooterScene(SSD1963& display)
     for (auto& b : m_bullets) b.active = false;
     for (auto& e : m_enemies) e.active = false;
     for (auto& s : m_stars) {
-        s.x = rand() % 480;
-        s.y = float(rand() % 272);
+        s.x = rand() % LCD_WIDTH;
+        s.y = float(rand() % LCD_HEIGHT);
         s.speed = 1 + (rand() % 3);
         s.brightness = 80 + (rand() % 120);
     }
@@ -66,7 +66,7 @@ void SpaceShooterScene::update(uint32_t dt) {
         m_move_timer = 0;
         m_player_x += PLAYER_SPEED * m_player_dir;
         if (m_player_x <= 10)  m_player_dir = 1;
-        if (m_player_x >= 438) m_player_dir = -1;
+        if (m_player_x >= (float)(LCD_WIDTH - PLAYER_W - 10)) m_player_dir = -1;
     }
 
     m_shoot_timer += dt;
@@ -136,12 +136,12 @@ void SpaceShooterScene::draw(FrameBuffer& fb) {
 void SpaceShooterScene::erase(FrameBuffer& fb, float x, float y, uint16_t w, uint16_t h) {
     int16_t ix = (int16_t)x;
     int16_t iy = (int16_t)y;
-    if (ix >= 480 || iy >= 272 || ix + (int16_t)w <= 0 || iy + (int16_t)h <= 0)
+    if (ix >= (int16_t)LCD_WIDTH || iy >= (int16_t)LCD_HEIGHT || ix + (int16_t)w <= 0 || iy + (int16_t)h <= 0)
         return;
     if (ix < 0) { w += ix; ix = 0; }
     if (iy < 0) { h += iy; iy = 0; }
-    if (ix + w > 480) w = 480 - ix;
-    if (iy + h > 272) h = 272 - iy;
+    if (ix + w > (int16_t)LCD_WIDTH)  w = LCD_WIDTH - ix;
+    if (iy + h > (int16_t)LCD_HEIGHT) h = LCD_HEIGHT - iy;
     if (w == 0 || h == 0) return;
     fb.fill_rect(ix, iy, w, h, BG);
 }
@@ -164,7 +164,7 @@ void SpaceShooterScene::shoot() {
 void SpaceShooterScene::spawn_enemy() {
     for (auto& e : m_enemies) {
         if (!e.active) {
-            e.x = 10 + (rand() % (460 - ENEMY_W));
+            e.x = 10 + (rand() % (LCD_WIDTH - 20 - ENEMY_W));
             e.y = -ENEMY_H;
             e.px = e.x;
             e.py = e.y;
@@ -191,7 +191,7 @@ void SpaceShooterScene::update_enemies(uint32_t dt) {
         e.y += ENEMY_SPEED;
         e.x += 0.3f * (e.timer % 2000 < 1000 ? 1 : -1);
         if (e.x < 5) e.x = 5;
-        if (e.x > 480 - ENEMY_W - 5) e.x = 480 - ENEMY_W - 5;
+        if (e.x > LCD_WIDTH - ENEMY_W - 5) e.x = LCD_WIDTH - ENEMY_W - 5;
         if (e.y > LCD_HEIGHT) e.active = false;
     }
 }
@@ -253,7 +253,7 @@ void SpaceShooterScene::draw_stars(FrameBuffer& fb) {
         s.y += s.speed * 0.5f;
         if (s.y > LCD_HEIGHT) {
             s.y = 0;
-            s.x = rand() % 480;
+            s.x = rand() % LCD_WIDTH;
         }
         uint8_t br = s.brightness;
         fb.set_pixel(s.x, (uint16_t)s.y, rgb(br/3, br/3, br));

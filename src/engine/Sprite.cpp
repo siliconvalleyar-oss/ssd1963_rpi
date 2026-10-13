@@ -1,4 +1,5 @@
 #include <engine/Sprite.hpp>
+#include <config_hw.hpp>
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
@@ -59,7 +60,7 @@ void Sprite::draw(SSD1963& display, int16_t x, int16_t y) const {
 
     for (uint16_t row = 0; row < m_h; row++) {
         int16_t py = y + row;
-        if (py < 0 || py >= 272) continue;
+        if (py < 0 || py >= (int16_t)LCD_HEIGHT) continue;
 
         uint16_t seg_start = 0;
         bool in_seg = false;
@@ -73,11 +74,11 @@ void Sprite::draw(SSD1963& display, int16_t x, int16_t y) const {
             } else if (in_seg) {
                 int16_t px = x + seg_start;
                 uint16_t seg_w = col - seg_start;
-                if (px + seg_w > 0 && px < 480) {
+                if (px + seg_w > 0 && px < (int16_t)LCD_WIDTH) {
                     uint16_t clip_off = (px < 0) ? -px : 0;
                     uint16_t clip_x  = (px < 0) ? 0 : px;
                     uint16_t clip_w  = seg_w - clip_off;
-                    if (clip_x + clip_w > 480) clip_w = 480 - clip_x;
+                    if (clip_x + clip_w > LCD_WIDTH) clip_w = LCD_WIDTH - clip_x;
                     if (clip_w > 0) {
                         display.draw_pixels(clip_x, py, clip_w, 1,
                             m_data + row * m_w + seg_start + clip_off);
@@ -90,11 +91,11 @@ void Sprite::draw(SSD1963& display, int16_t x, int16_t y) const {
         if (in_seg) {
             int16_t px = x + seg_start;
             uint16_t seg_w = m_w - seg_start;
-            if (px + seg_w > 0 && px < 480) {
+            if (px + seg_w > 0 && px < (int16_t)LCD_WIDTH) {
                 uint16_t clip_off = (px < 0) ? -px : 0;
                 uint16_t clip_x  = (px < 0) ? 0 : px;
                 uint16_t clip_w  = seg_w - clip_off;
-                if (clip_x + clip_w > 480) clip_w = 480 - clip_x;
+                if (clip_x + clip_w > LCD_WIDTH) clip_w = LCD_WIDTH - clip_x;
                 if (clip_w > 0) {
                     display.draw_pixels(clip_x, py, clip_w, 1,
                         m_data + row * m_w + seg_start + clip_off);
@@ -114,8 +115,8 @@ void Sprite::draw_bg(SSD1963& display, int16_t x, int16_t y, uint16_t bg) const 
     if (py < 0) { py = 0; }
     uint16_t clip_w = m_w;
     uint16_t clip_h = m_h;
-    if (px + clip_w > 480) clip_w = 480 - px;
-    if (py + clip_h > 272) clip_h = 272 - py;
+    if (px + clip_w > (int16_t)LCD_WIDTH)  clip_w = LCD_WIDTH - px;
+    if (py + clip_h > (int16_t)LCD_HEIGHT) clip_h = LCD_HEIGHT - py;
     if (clip_w > 0 && clip_h > 0) {
         display.fill_rect(px, py, clip_w, clip_h, bg);
     }
