@@ -89,7 +89,7 @@ void SSD1963::init_lcd_mode() {
 
 void SSD1963::init_pixel_interface() {
     write_command(SSD1963_SET_DATA_INTERFACE_CMD);
-    write_data(SSD1963_PDI_16BIT565);
+    write_data(SSD1963_PDI_16BIT565_CMD);
 }
 
 void SSD1963::init_pixel_clock() {
@@ -176,19 +176,19 @@ void SSD1963::write_data(uint16_t data) {
 }
 
 void SSD1963::set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
-    write_command(SSD1963_SET_COLUMN_ADDRESS);
+    write_command(SSD1963_SET_COLUMN_ADDRESS_CMD);
     write_data(x1 >> 8);
     write_data(x1 & 0xFF);
     write_data(x2 >> 8);
     write_data(x2 & 0xFF);
 
-    write_command(SSD1963_SET_PAGE_ADDRESS);
+    write_command(SSD1963_SET_PAGE_ADDRESS_CMD);
     write_data(y1 >> 8);
     write_data(y1 & 0xFF);
     write_data(y2 >> 8);
     write_data(y2 & 0xFF);
 
-    write_command(SSD1963_WRITE_MEMORY_START);
+    write_command(SSD1963_WRITE_MEMORY_START_CMD);
 }
 
 void SSD1963::clear_screen(uint16_t color) {
@@ -237,4 +237,28 @@ void SSD1963::draw_image_rgb565(const char* filepath) {
 
 void SSD1963::delay_ms(uint32_t ms) {
     usleep(ms * 1000);
+}
+
+void SSD1963::draw_buffer(const uint16_t* buffer) {
+    set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
+    uint32_t total_pixels = LCD_WIDTH * LCD_HEIGHT;
+    for (uint32_t i = 0; i < total_pixels; i++) {
+        write_data(buffer[i]);
+    }
+}
+
+void SSD1963::fill_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
+    draw_block(x, y, width, height, color);
+}
+
+void SSD1963::draw_pixels(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint16_t* pixels) {
+    if (x >= LCD_WIDTH || y >= LCD_HEIGHT) return;
+    if (x + width > LCD_WIDTH) width = LCD_WIDTH - x;
+    if (y + height > LCD_HEIGHT) height = LCD_HEIGHT - y;
+
+    set_area(x, y, x + width - 1, y + height - 1);
+    uint32_t total = width * height;
+    for (uint32_t i = 0; i < total; i++) {
+        write_data(pixels[i]);
+    }
 }
