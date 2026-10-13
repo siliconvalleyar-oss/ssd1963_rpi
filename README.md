@@ -116,11 +116,11 @@ ssd1963_photo_png_2026_sucess_rgb/
 
 ## Documentation
 
-- [**Architecture**](ARCHITECTURE.md) — Software architecture, layers, data flow, timing configuration
-- [**Changelog**](CHANGELOG.md) — Version history and release notes
-- [**Hardware Guide**](docs/hardware.md) — Detailed pinout, wiring diagram, connection checklist
-- [**API Reference**](docs/api.md) — Full SSD1963 class API, GPIO macros, commands, color constants
-- [**Development Guide**](docs/development.md) — Setup, build, remote workflow, image pipeline, troubleshooting
+- [**Architecture**](docs/ARCHITECTURE.md) — Software architecture, layers, data flow, timing configuration
+- [**Changelog**](docs/CHANGELOG.md) — Version history and release notes
+- [**Hardware Guide**](docs/HARDWARE.md) — Detailed pinout, wiring diagram, connection checklist
+- [**API Reference**](docs/API.md) — Full SSD1963 class API, GPIO macros, commands, color constants
+- [**Development Guide**](docs/DEVELOPMENT.md) — Setup, build, remote workflow, image pipeline, troubleshooting
 
 ## Troubleshooting
 
