@@ -11,9 +11,6 @@ int main() {
     const uint16_t colors[] = {
         RED, GREEN, BLUE, YELLOW, CYAN, MAGENTA, WHITE, BLACK
     };
-    const char* color_names[] = {
-        "RED", "GREEN", "BLUE", "YELLOW", "CYAN", "MAGENTA", "WHITE", "BLACK"
-    };
     const int num_colors = sizeof(colors) / sizeof(colors[0]);
 
     while (true) {
