@@ -58,26 +58,26 @@ void SSD1963::hardware_reset() {
 }
 
 void SSD1963::soft_reset() {
-    write_command(SSD1963_SOFT_RESET_CMD);
+    write_command(SSD1963_SOFT_RESET);
     delay_ms(5);
 }
 
 void SSD1963::init_pll() {
-    write_command(SSD1963_SET_PLL_MN_CMD);
+    write_command(SSD1963_SET_PLL_MN);
     write_data(0x31);
     write_data(0x02);
     write_data(0x04);
 
-    write_command(SSD1963_PLL_START_CMD);
+    write_command(SSD1963_PLL_START);
     write_data(0x01);
     delay_ms(1);
-    write_command(SSD1963_PLL_START_CMD);
+    write_command(SSD1963_PLL_START);
     write_data(0x03);
     delay_ms(5);
 }
 
 void SSD1963::init_lcd_mode() {
-    write_command(SSD1963_SET_PANEL_MODE_CMD);
+    write_command(SSD1963_SET_PANEL_MODE);
     write_data(0x20);
     write_data(0x00);
     write_data((LCD_WIDTH - 1) >> 8);
@@ -88,12 +88,12 @@ void SSD1963::init_lcd_mode() {
 }
 
 void SSD1963::init_pixel_interface() {
-    write_command(SSD1963_SET_DATA_INTERFACE_CMD);
-    write_data(SSD1963_PDI_16BIT565_CMD);
+    write_command(SSD1963_SET_DATA_INTERFACE);
+    write_data(SSD1963_PDI_16BIT565);
 }
 
 void SSD1963::init_pixel_clock() {
-    write_command(SSD1963_SET_PCLK_CMD);
+    write_command(SSD1963_SET_PCLK);
     write_data((LCD_FPR >> 16) & 0xFF);
     write_data((LCD_FPR >> 8) & 0xFF);
     write_data(LCD_FPR & 0xFF);
@@ -105,7 +105,7 @@ void SSD1963::init_timing() {
     uint16_t h_back = TFT_HSYNC_BACK_PORCH;
     uint16_t h_front = TFT_HSYNC_FRONT_PORCH;
 
-    write_command(SSD1963_SET_HOR_PERIOD_CMD);
+    write_command(SSD1963_SET_HOR_PERIOD);
     write_data((h_period - 1) >> 8);
     write_data((h_period - 1) & 0xFF);
     write_data((h_pulse - 1) >> 8);
@@ -123,7 +123,7 @@ void SSD1963::init_timing() {
     uint16_t v_back = TFT_VSYNC_BACK_PORCH;
     uint16_t v_front = TFT_VSYNC_FRONT_PORCH;
 
-    write_command(SSD1963_SET_VER_PERIOD_CMD);
+    write_command(SSD1963_SET_VER_PERIOD);
     write_data((v_period - 1) >> 8);
     write_data((v_period - 1) & 0xFF);
     write_data((v_pulse - 1) >> 8);
@@ -137,7 +137,7 @@ void SSD1963::init_timing() {
 }
 
 void SSD1963::display_on() {
-    write_command(SSD1963_ON_DISPLAY_CMD);
+    write_command(SSD1963_ON_DISPLAY);
 }
 
 void SSD1963::backlight_on() {
@@ -176,19 +176,19 @@ void SSD1963::write_data(uint16_t data) {
 }
 
 void SSD1963::set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
-    write_command(SSD1963_SET_COLUMN_ADDRESS_CMD);
+    write_command(SSD1963_SET_COLUMN_ADDRESS);
     write_data(x1 >> 8);
     write_data(x1 & 0xFF);
     write_data(x2 >> 8);
     write_data(x2 & 0xFF);
 
-    write_command(SSD1963_SET_PAGE_ADDRESS_CMD);
+    write_command(SSD1963_SET_PAGE_ADDRESS);
     write_data(y1 >> 8);
     write_data(y1 & 0xFF);
     write_data(y2 >> 8);
     write_data(y2 & 0xFF);
 
-    write_command(SSD1963_WRITE_MEMORY_START_CMD);
+    write_command(SSD1963_WRITE_MEMORY_START);
 }
 
 void SSD1963::clear_screen(uint16_t color) {
