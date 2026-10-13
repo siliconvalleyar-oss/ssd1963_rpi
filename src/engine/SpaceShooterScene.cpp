@@ -12,14 +12,14 @@ SpaceShooterScene::SpaceShooterScene(SSD1963& display)
     : Scene(display)
     , m_player_x(0), m_player_y(0), m_prev_px(0), m_prev_py(0)
     , m_player_dir(1), m_lives(3), m_score(0)
-    , m_timer(0), m_shoot_timer(0), m_spawn_timer(0), m_move_timer(0)
+    , m_timer(0), m_shoot_timer(0), m_spawn_timer(0)
     , m_sprites_loaded(false), m_drawn_once(false)
 {
     for (auto& b : m_bullets) b.active = false;
     for (auto& e : m_enemies) e.active = false;
     for (auto& s : m_stars) {
-        s.x = rand() % LCD_WIDTH;
-        s.y = float(rand() % LCD_HEIGHT);
+        s.x = s.px = rand() % LCD_WIDTH;
+        s.y = s.py = float(rand() % LCD_HEIGHT);
         s.speed = 1 + (rand() % 3);
         s.brightness = 80 + (rand() % 120);
     }
@@ -33,7 +33,7 @@ bool SpaceShooterScene::on_enter() {
     m_player_dir = 1;
     m_lives = 3;
     m_score = 0;
-    m_timer = m_shoot_timer = m_spawn_timer = m_move_timer = 0;
+    m_timer = m_shoot_timer = m_spawn_timer = 0;
     m_drawn_once = false;
 
     for (auto& b : m_bullets) b.active = false;
@@ -61,13 +61,13 @@ void SpaceShooterScene::update(uint32_t dt) {
         return;
     }
 
-    m_move_timer += dt;
-    if (m_move_timer > 30) {
-        m_move_timer = 0;
-        m_player_x += PLAYER_SPEED * m_player_dir;
-        if (m_player_x <= 10)  m_player_dir = 1;
-        if (m_player_x >= (float)(LCD_WIDTH - PLAYER_W - 10)) m_player_dir = -1;
-    }
+    // Movimiento interpolado con dt (px/s), sin timers de paso fijo
+    const float dt_s = dt * 0.001f;
+    m_player_x += PLAYER_SPEED * m_player_dir * dt_s;
+    const float min_x = 10.0f;
+    const float max_x = (float)(LCD_WIDTH - PLAYER_W - 10);
+    if (m_player_x <= min_x)  { m_player_x = min_x;  m_player_dir = 1; }
+    if (m_player_x >= max_x)  { m_player_x = max_x;  m_player_dir = -1; }
 
     m_shoot_timer += dt;
     if (m_shoot_timer > SHOOT_INTERVAL) {
@@ -83,6 +83,7 @@ void SpaceShooterScene::update(uint32_t dt) {
 
     update_bullets(dt);
     update_enemies(dt);
+    update_stars(dt);
     check_collisions();
 }
 
@@ -176,20 +177,22 @@ void SpaceShooterScene::spawn_enemy() {
     }
 }
 
-void SpaceShooterScene::update_bullets(uint32_t) {
+void SpaceShooterScene::update_bullets(uint32_t dt) {
+    const float dt_s = dt * 0.001f;
     for (auto& b : m_bullets) {
         if (!b.active) continue;
-        b.y -= BULLET_SPEED;
+        b.y -= BULLET_SPEED * dt_s;
         if (b.y + BULLET_H < 0) b.active = false;
     }
 }
 
 void SpaceShooterScene::update_enemies(uint32_t dt) {
+    const float dt_s = dt * 0.001f;
     for (auto& e : m_enemies) {
         if (!e.active) continue;
         e.timer += dt;
-        e.y += ENEMY_SPEED;
-        e.x += 0.3f * (e.timer % 2000 < 1000 ? 1 : -1);
+        e.y += ENEMY_SPEED * dt_s;
+        e.x += ENEMY_WOBBLE_SPEED * dt_s * (e.timer % 2000 < 1000 ? 1 : -1);
         if (e.x < 5) e.x = 5;
         if (e.x > LCD_WIDTH - ENEMY_W - 5) e.x = LCD_WIDTH - ENEMY_W - 5;
         if (e.y > LCD_HEIGHT) e.active = false;
@@ -247,14 +250,22 @@ void SpaceShooterScene::draw_hud(FrameBuffer& fb) {
     }
 }
 
-void SpaceShooterScene::draw_stars(FrameBuffer& fb) {
+void SpaceShooterScene::update_stars(uint32_t dt) {
+    const float dt_s = dt * 0.001f;
     for (auto& s : m_stars) {
-        fb.set_pixel(s.x, (uint16_t)s.y, BG);
-        s.y += s.speed * 0.5f;
+        s.px = s.x;
+        s.py = s.y;
+        s.y += s.speed * STAR_SPEED_FACTOR * dt_s;
         if (s.y > LCD_HEIGHT) {
             s.y = 0;
             s.x = rand() % LCD_WIDTH;
         }
+    }
+}
+
+void SpaceShooterScene::draw_stars(FrameBuffer& fb) {
+    for (auto& s : m_stars) {
+        fb.set_pixel(s.px, (uint16_t)s.py, BG);
         uint8_t br = s.brightness;
         fb.set_pixel(s.x, (uint16_t)s.y, rgb(br/3, br/3, br));
     }

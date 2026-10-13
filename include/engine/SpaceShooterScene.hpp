@@ -19,7 +19,7 @@ public:
 private:
     struct Bullet { float x, y, px, py; bool active; };
     struct Enemy  { float x, y, px, py; bool active; uint8_t hp; uint32_t timer; };
-    struct Star   { uint16_t x; float y; uint8_t speed; uint8_t brightness; };
+    struct Star   { uint16_t x; float y; uint16_t px; float py; uint8_t speed; uint8_t brightness; };
 
     float   m_player_x, m_player_y;
     float   m_prev_px, m_prev_py;
@@ -34,7 +34,6 @@ private:
     uint32_t m_timer;
     uint32_t m_shoot_timer;
     uint32_t m_spawn_timer;
-    uint32_t m_move_timer;
 
     Sprite   m_spr_player;
     Sprite   m_spr_enemy;
@@ -52,9 +51,12 @@ private:
     static constexpr uint16_t ENEMY_W  = 32;
     static constexpr uint16_t ENEMY_H  = 32;
 
-    static constexpr float PLAYER_SPEED   = 1.5f;
-    static constexpr float BULLET_SPEED   = 4.0f;
-    static constexpr float ENEMY_SPEED    = 1.0f;
+    // Velocidades en px/s (interpoladas con dt, antes por frame @~30 FPS)
+    static constexpr float PLAYER_SPEED       = 50.0f;   // era 1.5 px / 30 ms
+    static constexpr float BULLET_SPEED       = 120.0f;  // era 4 px/frame
+    static constexpr float ENEMY_SPEED        = 30.0f;   // era 1 px/frame
+    static constexpr float ENEMY_WOBBLE_SPEED = 9.0f;    // era 0.3 px/frame
+    static constexpr float STAR_SPEED_FACTOR  = 15.0f;   // era 0.5*speed px/frame
     static constexpr uint32_t SHOOT_INTERVAL = 500;
     static constexpr uint32_t SPAWN_INTERVAL = 2000;
     static constexpr uint32_t AUTO_RETURN_MS  = 60000;
@@ -64,8 +66,8 @@ private:
     void erase(FrameBuffer& fb, float x, float y, uint16_t w, uint16_t h);
     void update_bullets(uint32_t dt);
     void update_enemies(uint32_t dt);
+    void update_stars(uint32_t dt);
     void check_collisions();
     void draw_hud(FrameBuffer& fb);
     void draw_stars(FrameBuffer& fb);
-    void draw_planets();
 };
