@@ -50,7 +50,7 @@ run: $(TARGET)
 	sudo ./$(TARGET)
 
 install-deps:
-	bash script_tools_ssd1963_rpi/install_deps.sh
+	bash script_tools/install_deps.sh
 
 remote-build:
 	ssh $(PI_HOST) "cd $(PI_DIR) && make -j4"
