@@ -35,23 +35,34 @@ void SSD1963::setup_gpio() {
     RESET_LOW();
     bcm2835_gpio_write(SSD1963_LCD_RD, HIGH);
     BACKLIGHT_OFF();
-}void  SSD1963::write_command(uint8_t cmd) {
+void SSD1963::write_command(uint8_t cmd) {
     RS_LOW();
-    CS_LOW();
+    if (slow_bus_) usleep(1);
     write_data_bus(cmd);
+    if (slow_bus_) usleep(1);
+    CS_LOW();
+    if (slow_bus_) usleep(1);
     WR_LOW();
+    if (slow_bus_) usleep(1);
     WR_HIGH();
+    if (slow_bus_) usleep(1);
     CS_HIGH();
-    if (slow_bus_) usleep(1);   // init: timing lento como WAITB/M/E=3/15/3 del PIC32
+    if (slow_bus_) usleep(1);
 }
+
 void SSD1963::write_data(uint16_t data) {
     RS_HIGH();
-    CS_LOW();
+    if (slow_bus_) usleep(1);
     write_data_bus(data);
+    if (slow_bus_) usleep(1);
+    CS_LOW();
+    if (slow_bus_) usleep(1);
     WR_LOW();
+    if (slow_bus_) usleep(1);
     WR_HIGH();
+    if (slow_bus_) usleep(1);
     CS_HIGH();
-    if (slow_bus_) usleep(1);   // init: timing lento como WAITB/M/E=3/15/3 del PIC32
+    if (slow_bus_) usleep(1);
 } 
  
 
