@@ -26,15 +26,15 @@ void SSD1963::setup_gpio() {
     bcm2835_gpio_fsel(SSD1963_LCD_RESET, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(SSD1963_LCD_BACKLIGHT, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(SSD1963_LCD_RD, BCM2835_GPIO_FSEL_OUTP);
-    // Estados iniciales: RST arranca en BAJO, RD/WR/CS1 en ALTO
-    // (el modulo hace su power-up mientras RST esta bajo; ~2 s despues
-    //  se libera y recien ahi comienza nuestra 2a inicializacion)
+    // Estados iniciales: RST en BAJO, RD/WR/CS en ALTO, RS en BAJO (command mode por defecto)
     CS_HIGH();
     WR_HIGH();
-    RS_HIGH();
+    RS_LOW();       // RS en BAJO al inicio (modo comando)
     RESET_LOW();
     bcm2835_gpio_write(SSD1963_LCD_RD, HIGH);
     BACKLIGHT_OFF();
+}
+
 void SSD1963::write_command(uint8_t cmd) {
     RS_LOW();
     if (slow_bus_) usleep(1);
@@ -101,9 +101,8 @@ void SSD1963::init() {
     slow_bus_ = true;
 
     // 1. Reset físico del SSD1963.
-    // El módulo arranca con RST en BAJO (RD/WR/CS en alto) y ~2 s despues se libera
-    // a alto; mantenerlo bajo ese tiempo antes de inicializar.
-    RESET_LOW();
+    // setup_gpio() ya deja RST=LOW, RS=LOW, RD/WR/CS=HIGH.
+    // El módulo hace power-up mientras RST está bajo; esperar 2 s.
     delay_ms(2000);
     RESET_HIGH();
     delay_ms(10);
