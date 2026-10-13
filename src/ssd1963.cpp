@@ -291,16 +291,27 @@ void SSD1963::draw_image_rgb565(const char* filepath) {
         return;
     }
 
-    set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
+    // Formato .rgb565: header [width BE][height BE] + pixels RGB565 BE
+    // (mismo formato que produce script_tools/convert_png_to_rgb.py)
+    uint8_t hdr[4];
+    if (fread(hdr, 1, 4, file) != 4) {
+        std::cerr << "Error leyendo header de: " << filepath << std::endl;
+        fclose(file);
+        return;
+    }
+    uint16_t img_w = (hdr[0] << 8) | hdr[1];
+    uint16_t img_h = (hdr[2] << 8) | hdr[3];
+
+    uint16_t w = (img_w > LCD_WIDTH) ? LCD_WIDTH : img_w;
+    uint16_t h = (img_h > LCD_HEIGHT) ? LCD_HEIGHT : img_h;
+
+    set_area(0, 0, w - 1, h - 1);
     write_command(SSD1963_WRITE_MEMORY_START);
 
-    for (uint32_t i = 0; i < LCD_WIDTH * LCD_HEIGHT; i++) {
-        uint8_t high, low;
-        if (fread(&high, 1, 1, file) != 1) break;
-        if (fread(&low, 1, 1, file) != 1) break;
-
-        uint16_t color = (high << 8) | low;
-        write_data(color);
+    for (uint32_t i = 0; i < (uint32_t)w * h; i++) {
+        uint8_t bytes[2];
+        if (fread(bytes, 1, 2, file) != 2) break;
+        write_data((bytes[0] << 8) | bytes[1]);
     }
 
     fclose(file);
