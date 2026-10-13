@@ -1,256 +1,152 @@
-/**
- * @file    ssd1963.hpp
- * @brief   Driver para el controlador SSD1963 TFT LCD en Raspberry Pi.
- * @details Proporciona una interfaz completa para inicializar y dibujar
- *          en displays SSD1963 usando GPIO bit-banging (bus paralelo 8080)
- *          a través de la librería libbcm2835.
- *
- * @note    Soporta resolución 480x272 en formato RGB565 a 16-bit.
- * @note    Requiere libbcm2835 instalada (http://www.airspayce.com/mikem/bcm2835/)
- */
 #pragma once
 
-#include <bcm2835.h>
 #include <cstdint>
-#include <cstdio>
+#include <bcm2835.h>
+#include "config_hw.hpp"
+#include "ssd1963_commands.hpp"
 
+#define SSD1963_NOP_CMD                      0x00
+#define SSD1963_SOFT_RESET_CMD               0x01
+#define SSD1963_GET_PWR_MODE_CMD             0x0A
+#define SSD1963_GET_ADDR_MODE_CMD            0x0B
+#define SSD1963_GET_PIXEL_FORMAT_CMD         0x0C
+#define SSD1963_GET_DISPLAY_MODE_CMD         0x0D
+#define SSD1963_GET_SIGNAL_MODE_CMD          0x0E
+#define SSD1963_ENTER_SLEEP_MODE_CMD         0x10
+#define SSD1963_EXIT_SLEEP_MODE_CMD          0x11
+#define SSD1963_ENTER_PARTIAL_MODE_CMD       0x12
+#define SSD1963_ENTER_NORMAL_MODE_CMD        0x13
+#define SSD1963_EXIT_INVERT_MODE_CMD         0x20
+#define SSD1963_ENTER_INVERT_MODE_CMD        0x21
+#define SSD1963_SET_GAMMA_CMD                0x26
+#define SSD1963_BLANK_DISPLAY_CMD            0x28
+#define SSD1963_ON_DISPLAY_CMD               0x29
+#define SSD1963_SET_COLUMN_ADDRESS_CMD       0x2A
+#define SSD1963_SET_PAGE_ADDRESS_CMD         0x2B
+#define SSD1963_WRITE_MEMORY_START_CMD       0x2C
+#define SSD1963_READ_MEMORY_START_CMD        0x2E
+#define SSD1963_SET_PARTIAL_AREA_CMD         0x30
+#define SSD1963_SET_SCROLL_AREA_CMD          0x33
+#define SSD1963_SET_TEAR_OFF_CMD             0x34
+#define SSD1963_SET_TEAR_ON_CMD              0x35
+#define SSD1963_SET_ADDR_MODE_CMD            0x36
+#define SSD1963_SET_SCROLL_START_CMD         0x37
+#define SSD1963_EXIT_IDLE_MODE_CMD           0x38
+#define SSD1963_ENTER_IDLE_MODE_CMD          0x39
+#define SSD1963_SET_PIXEL_FORMAT_CMD         0x3A
+#define SSD1963_WRITE_MEMORY_CONTINUE_CMD    0x3C
+#define SSD1963_READ_MEMORY_CONTINUE_CMD     0x3E
+#define SSD1963_SET_TEAR_SCANLINE_CMD        0x44
+#define SSD1963_GET_SCANLINE_CMD             0x45
+#define SSD1963_RD_DDB_START_CMD             0xA1
+#define SSD1963_RD_DDB_AUTO_CMD              0xA8
+#define SSD1963_SET_PANEL_MODE_CMD           0xB0
+#define SSD1963_GET_PANEL_MODE_CMD           0xB1
+#define SSD1963_SET_HOR_PERIOD_CMD           0xB4
+#define SSD1963_GET_HOR_PERIOD_CMD           0xB5
+#define SSD1963_SET_VER_PERIOD_CMD           0xB6
+#define SSD1963_GET_VER_PERIOD_CMD           0xB7
+#define SSD1963_SET_GPIO_CONF_CMD            0xB8
+#define SSD1963_GET_GPIO_CONF_CMD            0xB9
+#define SSD1963_SET_GPIO_VAL_CMD             0xBA
+#define SSD1963_GET_GPIO_STATUS_CMD          0xBB
+#define SSD1963_SET_POST_PROC_CMD            0xBC
+#define SSD1963_GET_POST_PROC_CMD            0xBD
+#define SSD1963_SET_PWM_CONF_CMD             0xBE
+#define SSD1963_GET_PWM_CONF_CMD             0xBF
+#define SSD1963_GET_LCD_GEN0_CMD             0xC0
+#define SSD1963_SET_LCD_GEN0_CMD             0xC1
+#define SSD1963_GET_LCD_GEN1_CMD             0xC2
+#define SSD1963_SET_LCD_GEN1_CMD             0xC3
+#define SSD1963_GET_LCD_GEN2_CMD             0xC4
+#define SSD1963_SET_LCD_GEN2_CMD             0xC5
+#define SSD1963_GET_LCD_GEN3_CMD             0xC6
+#define SSD1963_SET_LCD_GEN3_CMD             0xC7
+#define SSD1963_SET_GPIO0_ROP_CMD            0xC8
+#define SSD1963_GET_GPIO0_ROP_CMD            0xC9
+#define SSD1963_SET_GPIO1_ROP_CMD            0xCA
+#define SSD1963_GET_GPIO1_ROP_CMD            0xCB
+#define SSD1963_SET_GPIO2_ROP_CMD            0xCC
+#define SSD1963_GET_GPIO2_ROP_CMD            0xCD
+#define SSD1963_SET_GPIO3_ROP_CMD            0xCE
+#define SSD1963_GET_GPIO3_ROP_CMD            0xCF
+#define SSD1963_SET_ABC_DBC_CONF_CMD         0xD0
+#define SSD1963_GET_ABC_DBC_CONF_CMD         0xD1
+#define SSD1963_SET_DBC_HISTO_PTR_CMD        0xD2
+#define SSD1963_GET_DBC_HISTO_PTR_CMD        0xD3
+#define SSD1963_SET_DBC_THRES_CMD            0xD4
+#define SSD1963_GET_DBC_THRES_CMD            0xD5
+#define SSD1963_SET_ABM_TMR_CMD              0xD6
+#define SSD1963_GET_ABM_TMR_CMD              0xD7
+#define SSD1963_SET_AMB_LVL0_CMD             0xD8
+#define SSD1963_GET_AMB_LVL0_CMD             0xD9
+#define SSD1963_SET_AMB_LVL1_CMD             0xDA
+#define SSD1963_GET_AMB_LVL1_CMD             0xDB
+#define SSD1963_SET_AMB_LVL2_CMD             0xDC
+#define SSD1963_GET_AMB_LVL2_CMD             0xDD
+#define SSD1963_SET_AMB_LVL3_CMD             0xDE
+#define SSD1963_GET_AMB_LVL3_CMD             0xDF
+#define SSD1963_PLL_START_CMD                0xE0
+#define SSD1963_PLL_STOP_CMD                 0xE1
+#define SSD1963_SET_PLL_MN_CMD               0xE2
+#define SSD1963_GET_PLL_MN_CMD               0xE3
+#define SSD1963_GET_PLL_STATUS_CMD           0xE4
+#define SSD1963_ENT_DEEP_SLEEP_CMD           0xE5
+#define SSD1963_SET_PCLK_CMD                 0xE6
+#define SSD1963_GET_PCLK_CMD                 0xE7
+#define SSD1963_SET_DATA_INTERFACE_CMD       0xF0
+#define SSD1963_GET_DATA_INTERFACE_CMD       0xF1
+#include "color.hpp"
 
-// =========================================================================
-// Macros de control GPIO
-// =========================================================================
-#define RS_LOW()        bcm2835_gpio_write(SSD1963_LCD_RS, LOW)
-#define RS_HIGH()       bcm2835_gpio_write(SSD1963_LCD_RS, HIGH)
-#define WR_LOW()        bcm2835_gpio_write(SSD1963_LCD_WR, LOW)
-#define WR_HIGH()       bcm2835_gpio_write(SSD1963_LCD_WR, HIGH)
-#define RD_LOW()        bcm2835_gpio_write(SSD1963_LCD_RD, LOW)
-#define RD_HIGH()       bcm2835_gpio_write(SSD1963_LCD_RD, HIGH)
-#define CS_LOW()        bcm2835_gpio_write(SSD1963_LCD_CS, LOW)
-#define CS_HIGH()       bcm2835_gpio_write(SSD1963_LCD_CS, HIGH)
-#define RESET_LOW()     bcm2835_gpio_write(SSD1963_LCD_RESET, LOW)
-#define RESET_HIGH()    bcm2835_gpio_write(SSD1963_LCD_RESET, HIGH)
-#define BACKLIGHT_ON()  bcm2835_gpio_write(SSD1963_LCD_BACKLIGHT, HIGH)
-#define BACKLIGHT_OFF() bcm2835_gpio_write(SSD1963_LCD_BACKLIGHT, LOW)
-
-
-/*! \def FONT_CHAR_WIDTH
- *  \brief Ancho en píxeles de cada carácter bitmap. */
-/*! \def FONT_CHAR_HEIGHT
- *  \brief Alto en píxeles de cada carácter bitmap. */
-#define FONT_CHAR_WIDTH     8
-#define FONT_CHAR_HEIGHT    8
-
-
-/**
- * @class   SSD1963
- * @brief   Controlador de alto nivel para el display SSD1963.
- *
- * Proporciona métodos para inicializar el display, dibujar formas
- * geométricas, renderizar texto con fuente bitmap y mostrar imágenes
- * desde archivos RGB565 raw.
- *
- * ## Uso básico
- * @code
- *     SSD1963 display;
- *     bcm2835_init();
- *     display.setup_gpio();
- *     display.init();
- *     display.clear_screen(BLACK);
- *     display.draw_string(10, 10, "Hola Mundo", WHITE, BLACK);
- * @endcode
- */
 class SSD1963 {
 public:
     SSD1963();
+    ~SSD1963();
 
-    // ---------------------------------------------------------------
-    // Inicialización y configuración
-    // ---------------------------------------------------------------
-
-    /** @brief Configura todos los pines GPIO como salida. */
     void setup_gpio();
-
-    /** @brief Secuencia completa de inicialización del SSD1963.
-     *
-     *  Incluye: reset físico, soft reset, configuración PLL,
-     *  modo LCD, temporización horizontal/vertical, y encendido. */
     void init();
 
-    /** @brief Delay de bloqueo en milisegundos.
-     *  @param ms Tiempo de espera. */
-    void delay_ms(uint32_t ms);
-
-    /** @brief Delay de bloqueo en microsegundos.
-     *  @param us Tiempo de espera. */
-    void delay_us(uint32_t us);
-
-    // ---------------------------------------------------------------
-    // Operaciones de dibujo
-    // ---------------------------------------------------------------
-
-    /** @brief Limpia toda la pantalla con un color sólido.
-     *  @param color Color RGB565. */
     void clear_screen(uint16_t color);
-
-    /** @brief Dibuja un píxel individual.
-     *  @param x Coordenada X.
-     *  @param y Coordenada Y.
-     *  @param color Color RGB565. */
-    void draw_pixel(uint16_t x, uint16_t y, uint16_t color);
-
-    /** @brief Rellena un área rectangular con un color sólido.
-     *  @param x      X inicial.
-     *  @param y      Y inicial.
-     *  @param width  Ancho del rectángulo.
-     *  @param height Alto del rectángulo.
-     *  @param color  Color RGB565. */
     void draw_block(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color);
-
-    /** @brief Dibuja el contorno de un rectángulo (1px de grosor).
-     *  @param x      X inicial.
-     *  @param y      Y inicial.
-     *  @param width  Ancho.
-     *  @param height Alto.
-     *  @param color  Color del borde. */
-    void draw_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color);
-
-    /** @brief Rellena un rectángulo (alias de draw_block, semántica más clara).
-     *  @param x      X inicial.
-     *  @param y      Y inicial.
-     *  @param width  Ancho.
-     *  @param height Alto.
-     *  @param color  Color de relleno. */
-    void fill_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color);
-
-    // ---------------------------------------------------------------
-    // Renderizado de texto
-    // ---------------------------------------------------------------
-
-    /** @brief Dibuja un carácter ASCII (fuente bitmap 8x8).
-     *  @param x     Posición X.
-     *  @param y     Posición Y.
-     *  @param chr   Carácter a dibujar.
-     *  @param color Color del texto.
-     *  @param bg    Color de fondo (0xFFFF para transparente). */
-    void draw_char(uint16_t x, uint16_t y, char chr, uint16_t color, uint16_t bg);
-
-    /** @brief Dibuja una cadena de texto.
-     *  @param x     Posición X inicial.
-     *  @param y     Posición Y.
-     *  @param str   Cadena a dibujar.
-     *  @param color Color del texto.
-     *  @param bg    Color de fondo. */
-    void draw_string(uint16_t x, uint16_t y, const char* str, uint16_t color, uint16_t bg);
-
-    /** @brief Dibuja texto centrado horizontalmente.
-     *  @param center_x Centro X de la pantalla.
-     *  @param y         Posición Y.
-     *  @param str       Cadena a dibujar.
-     *  @param color     Color del texto.
-     *  @param bg        Color de fondo. */
-    void draw_string_centered(uint16_t center_x, uint16_t y, const char* str,
-                              uint16_t color, uint16_t bg);
-
-    /** @brief Dibuja un carácter ASCII con escala (usando fill_rect).
-     *  @param x      Posición X.
-     *  @param y      Posición Y.
-     *  @param chr    Carácter a dibujar.
-     *  @param color  Color del texto.
-     *  @param bg     Color de fondo (0xFFFF = transparente).
-     *  @param scale  Factor de escala (1 = 8x8, 2 = 16x16, 3 = 24x24...). */
-    void draw_char_scaled(uint16_t x, uint16_t y, char chr,
-                          uint16_t color, uint16_t bg, uint8_t scale);
-
-    /** @brief Dibuja cadena con factor de escala.
-     *  @param x      Posición X.
-     *  @param y      Posición Y.
-     *  @param str    Cadena a dibujar.
-     *  @param color  Color del texto.
-     *  @param bg     Color de fondo.
-     *  @param scale  Factor de escala. */
-    void draw_string_scaled(uint16_t x, uint16_t y, const char* str,
-                            uint16_t color, uint16_t bg, uint8_t scale);
-
-    /** @brief Dibuja cadena escalada centrada horizontalmente.
-     *  @param center_x Centro X.
-     *  @param y         Posición Y.
-     *  @param str       Cadena.
-     *  @param color     Color.
-     *  @param bg        Fondo.
-     *  @param scale     Escala. */
-    void draw_string_centered_scaled(uint16_t center_x, uint16_t y, const char* str,
-                                     uint16_t color, uint16_t bg, uint8_t scale);
-
-    // ---------------------------------------------------------------
-    // Visualización de imágenes
-    // ---------------------------------------------------------------
-
-    /** @brief Escribe un bloque de píxeles RGB565 en el display.
-     *
-     *  Usa set_area + escritura masiva. Mucho más rápido que draw_pixel por píxel.
-     *
-     *  @param x    X inicial.
-     *  @param y    Y inicial.
-     *  @param w    Ancho en píxeles.
-     *  @param h    Alto en píxeles.
-     *  @param data Arreglo de colores RGB565 (w × h píxeles, row-major). */
-    void draw_pixels(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
-                     const uint16_t* data);
-
-    /** @brief Carga y muestra una imagen RGB565 raw desde archivo.
-     *
-     *  El archivo debe tener exactamente LCD_WIDTH * LCD_HEIGHT * 2 bytes
-     *  en formato big-endian RGB565.
-     *
-     *  @param filepath Ruta al archivo .rgb565. */
+    void draw_pixel(uint16_t x, uint16_t y, uint16_t color);
     void draw_image_rgb565(const char* filepath);
 
-    /** @brief Envía un framebuffer completo (480x272) al display en un solo burst.
-     *  @param data Arreglo de LCD_WIDTH * LCD_HEIGHT colores RGB565. */
-    void draw_buffer(const uint16_t* data);
-
-    // ---------------------------------------------------------------
-    // Primitivas de ráfaga (burst) para escritura masiva de píxeles
-    // ---------------------------------------------------------------
-
-    /** @brief Inicia ráfaga de escritura de píxeles (RS=HIGH, CS=LOW, mantiene CS). */
-    void write_pixel_burst_start();
-
-    /** @brief Escribe 1 píxel en ráfaga (solo toggle WR, CS se mantiene LOW). */
-    void write_pixel_burst(uint16_t data);
-
-    /** @brief Termina ráfaga de escritura (CS=HIGH). */
-    void write_pixel_burst_end();
+    void delay_ms(uint32_t ms);
 
 private:
-    // ---------------------------------------------------------------
-    // Primitivas del bus 8080
-    // ---------------------------------------------------------------
-
-    /** @brief Escribe 16 bits en el bus de datos GPIO. */
     void write_data_bus(uint16_t data);
-
-    /** @brief Ciclo de escritura de comando (RS=LOW). */
     void write_command(uint8_t cmd);
-
-    /** @brief Ciclo de escritura de datos (RS=HIGH, CS toggles). */
     void write_data(uint16_t data);
-
-    /** @brief Define el área activa de escritura en GRAM. */
     void set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
 
-    // ---------------------------------------------------------------
-    // Fuente bitmap 8x8 (ASCII 0x20-0x7F)
-    // ---------------------------------------------------------------
+    void hardware_reset();
+    void soft_reset();
+    void init_pll();
+    void init_lcd_mode();
+    void init_pixel_interface();
+    void init_pixel_clock();
+    void init_timing();
+    void display_on();
+    void backlight_on();
 
-private:
-    // true = espera ~1 us tras cada strobe WR (durante init, como el PMP lento del PIC32)
-    bool slow_bus_ = false;
-
-    // Para replicar forma de onda RS exacta del micro que funciona (SSD1963_MCU_WAVEFORM)
-    // 0 = comando, 1 = dato, 2 = primer dato tras comando
-    uint8_t last_op_type_ = 0;
-
-    // Cache del estado del bus de datos (D0=bit12 ... D15=bit27) para write_data_bus optimizado
-    static uint32_t g_bus_state;
-
+    void wr_strobe();
+    void cs_low();
+    void cs_high();
+    void rs_low();
+    void rs_high();
+    void reset_low();
+    void reset_high();
+    void backlight_on_gpio();
+    void backlight_off_gpio();
 };
+
+#define RS_LOW()    bcm2835_gpio_write(SSD1963_LCD_RS, LOW)
+#define RS_HIGH()   bcm2835_gpio_write(SSD1963_LCD_RS, HIGH)
+#define WR_LOW()    bcm2835_gpio_write(SSD1963_LCD_WR, LOW)
+#define WR_HIGH()   bcm2835_gpio_write(SSD1963_LCD_WR, HIGH)
+#define CS_LOW()    bcm2835_gpio_write(SSD1963_LCD_CS, LOW)
+#define CS_HIGH()   bcm2835_gpio_write(SSD1963_LCD_CS, HIGH)
+#define RESET_LOW() bcm2835_gpio_write(SSD1963_LCD_RESET, LOW)
+#define RESET_HIGH() bcm2835_gpio_write(SSD1963_LCD_RESET, HIGH)
+#define BACKLIGHT_ON() bcm2835_gpio_write(SSD1963_LCD_BACKLIGHT, HIGH)
+#define BACKLIGHT_OFF() bcm2835_gpio_write(SSD1963_LCD_BACKLIGHT, LOW)
