@@ -25,11 +25,11 @@
         },
         "install-deps": {
             "description": "Install libbcm2835 and build tools",
-            "command": "bash script_tools_ssd1963_rpi/install_deps.sh"
+            "command": "bash script_tools/install_deps.sh"
         },
         "convert-image": {
             "description": "Convert a PNG image to RGB565 format for the display",
-            "command": "python3 script_tools_ssd1963_rpi/convert_png_to_rgb.py <input.png> <output.rgb565>"
+            "command": "python3 script_tools/convert_png_to_rgb.py <input.png> <output.rgb565>"
         },
         "help": {
             "description": "Show Makefile help",
@@ -42,7 +42,7 @@
             "resolution": "480x272",
             "color_format": "RGB565",
             "interface": "16-bit parallel 8080",
-            "pixel_clock": "2.0 MHz (SYSCLK = 100 MHz)"
+            "pixel_clock": "9.0 MHz (SYSCLK = 100 MHz, FPR = 0x0170A2)", "refresh_rate": "~59.9 Hz"
         },
         "gpio": {
             "library": "libbcm2835",
@@ -66,7 +66,10 @@
         "color_defs": "include/color.hpp",
         "makefile": "Makefile",
         "assets": "assets/",
-        "conversion_tools": "script_tools_ssd1963_rpi/",
+        "conversion_tools": "script_tools/",
+        "engine_dir": "src/engine/",
+        "framebuffer": "src/FrameBuffer.cpp",
+        "datasheet": "docs/SSD1963.pdf",
         "documentation": {
             "readme": "README.md",
             "architecture": "ARCHITECTURE.md",
