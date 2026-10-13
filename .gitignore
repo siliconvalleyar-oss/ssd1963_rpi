@@ -15,9 +15,5 @@ assets/*.rgb565
 # Editor temp files
 *~
 
-assets/capibaras.png
-
-helps/
 tmp/
-
 

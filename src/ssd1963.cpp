@@ -1,214 +1,59 @@
-#include "ssd1963.hpp"
-#include <cstdio>
+// ssd1963.cpp
+
 #include <unistd.h>
+#include <iostream>
+#include <config_hw.hpp>
+#include <ssd1963_cmd.hpp>
+#include <ssd1963.hpp>
+#include <color.hpp>
+
 
 SSD1963::SSD1963() {}
 
-SSD1963::~SSD1963() {
-    bcm2835_close();
+void SSD1963::delay_ms(uint32_t ms) {
+    usleep(ms * 1000);
 }
 
 void SSD1963::setup_gpio() {
-    if (!bcm2835_init()) {
-        return;
+    // Configurar pines de datos como salida
+    for (uint8_t pin = SSD1963_LCD_D0; pin <= SSD1963_LCD_D15; pin++) {
+        bcm2835_gpio_fsel(pin, BCM2835_GPIO_FSEL_OUTP);
     }
-
-    const uint8_t data_pins[16] = {
-        SSD1963_LCD_D0, SSD1963_LCD_D1, SSD1963_LCD_D2, SSD1963_LCD_D3,
-        SSD1963_LCD_D4, SSD1963_LCD_D5, SSD1963_LCD_D6, SSD1963_LCD_D7,
-        SSD1963_LCD_D8, SSD1963_LCD_D9, SSD1963_LCD_D10, SSD1963_LCD_D11,
-        SSD1963_LCD_D12, SSD1963_LCD_D13, SSD1963_LCD_D14, SSD1963_LCD_D15
-    };
-
-    for (int i = 0; i < 16; i++) {
-        bcm2835_gpio_fsel(data_pins[i], BCM2835_GPIO_FSEL_OUTP);
-        bcm2835_gpio_write(data_pins[i], LOW);
-    }
-
-    bcm2835_gpio_fsel(SSD1963_LCD_WR, BCM2835_GPIO_FSEL_OUTP);
+    // Configurar pines de control como salida
     bcm2835_gpio_fsel(SSD1963_LCD_RS, BCM2835_GPIO_FSEL_OUTP);
+    bcm2835_gpio_fsel(SSD1963_LCD_WR, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(SSD1963_LCD_CS, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(SSD1963_LCD_RESET, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(SSD1963_LCD_BACKLIGHT, BCM2835_GPIO_FSEL_OUTP);
-
+    bcm2835_gpio_fsel(SSD1963_LCD_RD, BCM2835_GPIO_FSEL_OUTP);
+    // Estados iniciales: RST arranca en BAJO, RD/WR/CS1 en ALTO
+    // (el modulo hace su power-up mientras RST esta bajo; ~2 s despues
+    //  se libera y recien ahi comienza nuestra 2a inicializacion)
+    CS_HIGH();
     WR_HIGH();
     RS_HIGH();
-    CS_HIGH();
-    RESET_HIGH();
-    BACKLIGHT_OFF();
-}
-
-void SSD1963::init() {
-    hardware_reset();
-    soft_reset();
-    init_pll();
-    init_lcd_mode();
-    init_pixel_interface();
-    init_pixel_clock();
-    init_timing();
-    display_on();
-    backlight_on();
-}
-
-void SSD1963::hardware_reset() {
     RESET_LOW();
-    delay_ms(10);
-    RESET_HIGH();
-    delay_ms(120);
-}
-
-void SSD1963::soft_reset() {
-    write_command(SSD1963_SOFT_RESET);
-    delay_ms(5);
-}
-
-void SSD1963::init_pll() {
-    write_command(SSD1963_SET_PLL_MN);
-    write_data(0x31);
-    write_data(0x00);
-    write_data(0x04);
-
-    write_command(SSD1963_PLL_START);
-    write_data(0x01);
-    delay_ms(1);
-
-    write_command(SSD1963_PLL_START);
-    write_data(0x0D);
-    delay_ms(5);
-
-    // Wait for PLL lock
-    write_command(SSD1963_GET_PLL_STATUS);
-    uint32_t timeout = 1000;
-    while (timeout-- > 0) {
-        CS_LOW();
-        RS_HIGH();
-        write_data_bus(0);
-        usleep(1);
-        WR_LOW();
-        usleep(1);
-        WR_HIGH();
-        usleep(1);
-        uint8_t status = 0;
-        for (int i = 0; i < 8; i++) {
-            if (bcm2835_gpio_lev(SSD1963_LCD_D0 + i)) status |= (1 << i);
-        }
-        CS_HIGH();
-        if (status & 0x04) break;
-        delay_ms(1);
-    }
-}
-
-void SSD1963::init_lcd_mode() {
-    write_command(SSD1963_SET_PANEL_MODE);
-    write_data(0x20);
-    write_data(TFT_HSYNC_PULSE - 1);
-    write_data((LCD_WIDTH - 1) >> 8);
-    write_data((LCD_WIDTH - 1) & 0xFF);
-    write_data(TFT_VSYNC_PULSE - 1);
-    write_data((LCD_HEIGHT - 1) >> 8);
-    write_data((LCD_HEIGHT - 1) & 0xFF);
-    write_data(0x00);
-}
-
-void SSD1963::init_pixel_interface() {
-    write_command(SSD1963_SET_DATA_INTERFACE);
-    write_data(SSD1963_PDI_16BIT565);
-}
-
-void SSD1963::init_pixel_clock() {
-    write_command(SSD1963_SET_PCLK);
-    write_data((LCD_FPR >> 16) & 0xFF);
-    write_data((LCD_FPR >> 8) & 0xFF);
-    write_data(LCD_FPR & 0xFF);
-}
-
-void SSD1963::init_timing() {
-    uint16_t h_period = TFT_HSYNC_PERIOD;
-    uint16_t h_pulse = TFT_HSYNC_PULSE;
-    uint16_t h_back = TFT_HSYNC_BACK_PORCH;
-    uint16_t h_front = TFT_HSYNC_FRONT_PORCH;
-
-    write_command(SSD1963_SET_HOR_PERIOD);
-    write_data((h_period - 1) >> 8);
-    write_data((h_period - 1) & 0xFF);
-    write_data((h_pulse - 1) >> 8);
-    write_data((h_pulse - 1) & 0xFF);
-    write_data((h_back - 1) >> 8);
-    write_data((h_back - 1) & 0xFF);
-    write_data((h_front - 1) >> 8);
-    write_data((h_front - 1) & 0xFF);
-    write_data(0x00);
-    write_data(0x00);
-    write_data(0x00);
-
-    uint16_t v_period = TFT_VSYNC_PERIOD;
-    uint16_t v_pulse = TFT_VSYNC_PULSE;
-    uint16_t v_back = TFT_VSYNC_BACK_PORCH;
-    uint16_t v_front = TFT_VSYNC_FRONT_PORCH;
-
-    write_command(SSD1963_SET_VER_PERIOD);
-    write_data((v_period - 1) >> 8);
-    write_data((v_period - 1) & 0xFF);
-    write_data((v_pulse - 1) >> 8);
-    write_data((v_pulse - 1) & 0xFF);
-    write_data((v_back - 1) >> 8);
-    write_data((v_back - 1) & 0xFF);
-    write_data((v_front - 1) >> 8);
-    write_data((v_front - 1) & 0xFF);
-    write_data(0x00);
-    write_data(0x00);
-}
-
-void SSD1963::display_on() {
-    write_command(SSD1963_ON_DISPLAY);
-}
-
-void SSD1963::backlight_on() {
-    BACKLIGHT_ON();
-}
-
-void SSD1963::write_data_bus(uint16_t data) {
-    const uint8_t pins[16] = {
-        SSD1963_LCD_D0, SSD1963_LCD_D1, SSD1963_LCD_D2, SSD1963_LCD_D3,
-        SSD1963_LCD_D4, SSD1963_LCD_D5, SSD1963_LCD_D6, SSD1963_LCD_D7,
-        SSD1963_LCD_D8, SSD1963_LCD_D9, SSD1963_LCD_D10, SSD1963_LCD_D11,
-        SSD1963_LCD_D12, SSD1963_LCD_D13, SSD1963_LCD_D14, SSD1963_LCD_D15
-    };
-
-    for (int i = 0; i < 16; i++) {
-        bcm2835_gpio_write(pins[i], (data >> i) & 0x01);
-    }
-}
-
-void SSD1963::write_command(uint8_t cmd) {
+    bcm2835_gpio_write(SSD1963_LCD_RD, HIGH);
+    BACKLIGHT_OFF();
+}void  SSD1963::write_command(uint8_t cmd) {
     RS_LOW();
-    usleep(1);
-    write_data_bus(cmd);
-    usleep(1);
     CS_LOW();
-    usleep(1);
+    write_data_bus(cmd);
     WR_LOW();
-    usleep(1);
     WR_HIGH();
-    usleep(1);
     CS_HIGH();
-    usleep(1);
+    if (slow_bus_) usleep(1);   // init: timing lento como WAITB/M/E=3/15/3 del PIC32
 }
-
 void SSD1963::write_data(uint16_t data) {
     RS_HIGH();
-    usleep(1);
-    write_data_bus(data);
-    usleep(1);
     CS_LOW();
-    usleep(1);
+    write_data_bus(data);
     WR_LOW();
-    usleep(1);
     WR_HIGH();
-    usleep(1);
     CS_HIGH();
-    usleep(1);
-}
+    if (slow_bus_) usleep(1);   // init: timing lento como WAITB/M/E=3/15/3 del PIC32
+} 
+ 
 
 void SSD1963::set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
     write_command(SSD1963_SET_COLUMN_ADDRESS);
@@ -216,84 +61,172 @@ void SSD1963::set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
     write_data(x1 & 0xFF);
     write_data(x2 >> 8);
     write_data(x2 & 0xFF);
-
     write_command(SSD1963_SET_PAGE_ADDRESS);
     write_data(y1 >> 8);
     write_data(y1 & 0xFF);
     write_data(y2 >> 8);
     write_data(y2 & 0xFF);
-
-    write_command(SSD1963_WRITE_MEMORY_START);
 }
 
+
+
 void SSD1963::clear_screen(uint16_t color) {
+    // Interfaz 16-bit RGB565 (PDI 0x03): CADA escritura al bus es UN píxel completo.
+    // Antes se enviaba color + color>>8 (2 escrituras por píxel): desplazaba/duplicaba
+    // los datos -> rayas y "basura de bits" en pantalla.
     set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
-    uint32_t total_pixels = LCD_WIDTH * LCD_HEIGHT;
-    for (uint32_t i = 0; i < total_pixels; i++) {
+    write_command(SSD1963_WRITE_MEMORY_START);
+    for (uint32_t i = 0; i < (uint32_t)LCD_WIDTH * LCD_HEIGHT; i++) {
         write_data(color);
     }
 }
 
-void SSD1963::draw_block(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
-    if (x >= LCD_WIDTH || y >= LCD_HEIGHT) return;
-    if (x + width > LCD_WIDTH) width = LCD_WIDTH - x;
-    if (y + height > LCD_HEIGHT) height = LCD_HEIGHT - y;
 
+
+void SSD1963::init() {
+
+    // Durante toda la inicializacion el bus va lento (~1 us por strobe),
+    // como el PMP lento (WAITB=3, WAITM=15, WAITE=3) del PIC32 de referencia.
+    slow_bus_ = true;
+
+    // 1. Reset físico del SSD1963.
+    // El módulo arranca con RST en BAJO (RD/WR/CS en alto) y ~2 s despues se libera
+    // a alto; mantenerlo bajo ese tiempo antes de inicializar.
+    RESET_LOW();
+    delay_ms(2000);
+    RESET_HIGH();
+    delay_ms(10);
+    // 2. Soft Reset (ANTES del PLL)
+    write_command(SSD1963_SOFT_RESET);
+    delay_ms(5);
+    // 3. EXIT SLEEP MODE (0x11) - CRITICO: activa el panel y dispara SET_DISPLAY_ON automaticamente
+    write_command(SSD1963_EXIT_SLEEP_MODE);
+    delay_ms(5);
+    // 4. Configurar PLL (para REFclk = 10 MHz → PLLclk = 500MHz, SYSclk = 100MHz)
+    write_command(SSD1963_SET_PLL_MN);
+    write_data(49);     // PLLclk = REFclk * 50
+    write_data(4);      // SYSclk = PLLclk / 5
+    write_data(4);      // Dummy (según código STM32)
+    // Activar PLL - DATASHEET: esperar 100ms para PLL lock
+    write_command(SSD1963_SET_PLL);
+    write_data(0x01);
+    delay_ms(100);  // DATASHEET: 100ms para PLL lock
+    write_command(SSD1963_SET_PLL);
+    write_data(0x03);
+    delay_ms(100);  // DATASHEET: 100ms
+    // 5. Frecuencia LSHIFT (SE ENVIA ANTES DEL MODO LCD, como en el PIC32 de referencia)
+    write_command(SSD1963_SET_LSHIFT_FREQ);
+    write_data((LCD_FPR >> 16) & 0xFF);
+    write_data((LCD_FPR >> 8) & 0xFF);
+    write_data(LCD_FPR & 0xFF);
+    // 6. Configurar modo LCD - 0x20 para panel 24-bit (bit A5=1)
+    write_command(SSD1963_SET_LCD_MODE);
+    write_data(0x20);    // A5=1 -> 24-bit panel (mayoria paneles 480x272)
+    write_data(0x00);    // igual que TechToys (byte 2 = 0x00)
+    write_data((LCD_WIDTH - 1) >> 8);
+    write_data((LCD_WIDTH - 1) & 0xFF);
+    write_data((LCD_HEIGHT - 1) >> 8);
+    write_data((LCD_HEIGHT - 1) & 0xFF);
+    write_data(0x00);    // RGB
+    // Tiempos horizontales (frmulas del PIC32 en la referencia: HT-1, HPS-1, HPW-1)
+    const uint16_t HT  = TFT_HSYNC_PERIOD;
+    const uint16_t HPS = TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH;
+    write_command(SSD1963_SET_HOR_PERIOD);
+    write_data(((HT - 1) >> 8) & 0xFF);
+    write_data((HT - 1) & 0xFF);
+    write_data(((HPS - 1) >> 8) & 0xFF);
+    write_data((HPS - 1) & 0xFF);
+    write_data(TFT_HSYNC_PULSE - 1);
+    write_data(0x00); // LPS = 0
+    write_data(0x00); // Opcional
+    write_data(0x00); // Opcional
+    // Tiempos verticales (VT-1, VSP-1, VPW-1)
+    const uint16_t VT  = TFT_VSYNC_PERIOD;
+    const uint16_t VSP = TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH;
+    write_command(SSD1963_SET_VER_PERIOD);
+    write_data(((VT - 1) >> 8) & 0xFF);
+    write_data((VT - 1) & 0xFF);
+    write_data(((VSP - 1) >> 8) & 0xFF);
+    write_data((VSP - 1) & 0xFF);
+    write_data(TFT_VSYNC_PULSE - 1);
+    write_data(0x00);
+    write_data(0x00);
+    // NO ENVIAR SET_PIXEL_FORMAT (0x3A es RESERVADO en SSD1963)
+    // El formato se configura con SET_PIXEL_DATA_INTERFACE (0xF0)
+    // Interfaz de datos del panel: 16-bit RGB565
+    write_command(SSD1963_SET_PIXEL_DATA_INTERFACE);
+    write_data(SSD1963_PDI_16BIT565);
+    // Address mode: RGB, top-to-bottom, left-to-right
+    write_command(SSD1963_SET_ADDR_MODE);
+    write_data(0x00);
+    // Reset del PANEL fisico via GPIO0 (igual que la referencia PIC32):
+    // pulso LOW -> 1ms -> HIGH. Sin esto el panel puede quedar en estado indefinido.
+    write_command(SSD1963_SET_GPIO_CONF);
+    write_data(0x0F);   // GPIO[3:0] como salidas
+    write_data(0x01);   // GPIOs normales, controlados por el host
+    write_command(SSD1963_SET_GPIO_VALUE);
+    write_data(0x01);   // alto
+    write_command(SSD1963_SET_GPIO_VALUE);
+    write_data(0x00);   // bajo (reset assertado)
+    delay_ms(1);
+    write_command(SSD1963_SET_GPIO_VALUE);
+    write_data(0x01);   // alto (libera reset)
+
+    // Pantalla en BLANCO (0x28) hasta tener el GRAM limpio, luego ON (0x29)
+    write_command(SSD1963_BLANK_DISPLAY);
+    write_command(SSD1963_ON_DISPLAY);
+    delay_ms(50);
+
+    // Fin de init: el bus vuelve a velocidad normal para dibujar
+    slow_bus_ = false;
+    // Encender luz de fondo (GPIO)
+    BACKLIGHT_ON();
+}
+
+ 
+
+void SSD1963::draw_block(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
     set_area(x, y, x + width - 1, y + height - 1);
-    uint32_t total = width * height;
-    for (uint32_t i = 0; i < total; i++) {
+    write_command(SSD1963_WRITE_MEMORY_START);
+    for (uint32_t i = 0; i < width * height; i++) {
         write_data(color);
     }
 }
 
 void SSD1963::draw_pixel(uint16_t x, uint16_t y, uint16_t color) {
-    if (x >= LCD_WIDTH || y >= LCD_HEIGHT) return;
-    set_area(x, y, x, y);
-    write_data(color);
+    set_area(x, y, x, y);  // Define el área como 1x1 píxel
+    write_command(SSD1963_WRITE_MEMORY_START);
+    write_data(color);     // Envía el color (pixel)
 }
+
 
 void SSD1963::draw_image_rgb565(const char* filepath) {
-    FILE* fp = fopen(filepath, "rb");
-    if (!fp) return;
+    FILE* file = fopen(filepath, "rb");
+    if (!file) {
+        std::cerr << "No se pudo abrir la imagen: " << filepath << std::endl;
+        return;
+    }
 
     set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
+    write_command(SSD1963_WRITE_MEMORY_START);
 
-    uint16_t pixel;
-    size_t pixels_read = 0;
-    const size_t total_pixels = LCD_WIDTH * LCD_HEIGHT;
+    for (uint32_t i = 0; i < LCD_WIDTH * LCD_HEIGHT; i++) {
+        uint8_t high, low;
+        if (fread(&high, 1, 1, file) != 1) break;
+        if (fread(&low, 1, 1, file) != 1) break;
 
-    while (pixels_read < total_pixels && fread(&pixel, 2, 1, fp) == 1) {
-        write_data(__builtin_bswap16(pixel));
-        pixels_read++;
+        uint16_t color = (high << 8) | low;
+        write_data(color);
     }
 
-    fclose(fp);
+    fclose(file);
 }
 
-void SSD1963::delay_ms(uint32_t ms) {
-    usleep(ms * 1000);
-}
-
-void SSD1963::draw_buffer(const uint16_t* buffer) {
-    set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
-    uint32_t total_pixels = LCD_WIDTH * LCD_HEIGHT;
-    for (uint32_t i = 0; i < total_pixels; i++) {
-        write_data(buffer[i]);
+void SSD1963::write_data_bus(uint16_t data) {
+    // Escribe todos los 16 bits directamente (sin glitches intermedios)
+    // D0 = bit 0, D1 = bit 1, ..., D15 = bit 15
+    for (uint8_t i = 0; i < 16; i++) {
+        bcm2835_gpio_write(SSD1963_LCD_D0 + i, (data >> i) & 1);
     }
 }
 
-void SSD1963::fill_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
-    draw_block(x, y, width, height, color);
-}
-
-void SSD1963::draw_pixels(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint16_t* pixels) {
-    if (x >= LCD_WIDTH || y >= LCD_HEIGHT) return;
-    if (x + width > LCD_WIDTH) width = LCD_WIDTH - x;
-    if (y + height > LCD_HEIGHT) height = LCD_HEIGHT - y;
-
-    set_area(x, y, x + width - 1, y + height - 1);
-    uint32_t total = width * height;
-    for (uint32_t i = 0; i < total; i++) {
-        write_data(pixels[i]);
-    }
-}
