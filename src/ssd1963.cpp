@@ -71,17 +71,40 @@ void SSD1963::init_pll() {
     write_command(SSD1963_PLL_START);
     write_data(0x01);
     delay_ms(1);
+
     write_command(SSD1963_PLL_START);
-    write_data(0x03);
+    write_data(0x0D);
     delay_ms(5);
+
+    write_command(SSD1963_GET_PLL_STATUS);
+    uint32_t timeout = 1000;
+    while (timeout-- > 0) {
+        CS_LOW();
+        RS_LOW();
+        write_data_bus(SSD1963_GET_PLL_STATUS);
+        WR_LOW();
+        WR_HIGH();
+        RS_HIGH();
+        write_data_bus(0);
+        WR_LOW();
+        WR_HIGH();
+        uint8_t status = 0;
+        for (int i = 0; i < 8; i++) {
+            if (bcm2835_gpio_lev(SSD1963_LCD_D0 + i)) status |= (1 << i);
+        }
+        CS_HIGH();
+        if (status & 0x04) break;
+        delay_ms(1);
+    }
 }
 
 void SSD1963::init_lcd_mode() {
     write_command(SSD1963_SET_PANEL_MODE);
     write_data(0x20);
-    write_data(0x00);
+    write_data(TFT_HSYNC_PULSE - 1);
     write_data((LCD_WIDTH - 1) >> 8);
     write_data((LCD_WIDTH - 1) & 0xFF);
+    write_data(TFT_VSYNC_PULSE - 1);
     write_data((LCD_HEIGHT - 1) >> 8);
     write_data((LCD_HEIGHT - 1) & 0xFF);
     write_data(0x00);
