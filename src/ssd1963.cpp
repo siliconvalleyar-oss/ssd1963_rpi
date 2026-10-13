@@ -83,12 +83,16 @@ void  SSD1963::write_command(uint8_t cmd) {
 
     if (slow_bus_) usleep(1);
 #else
+    // Secuencia de la referencia: RS primero, luego datos en bus,
+    // despues CS y el strobe WR (datos estables antes y durante WR).
+    // tAS/tAH/tDSW min del datasheet (1-4 ns) se cumplen con creces:
+    // cada llamada bcm2835 toma ~50-100 ns.
     RS_LOW();
-    CS_LOW();
     write_data_bus(cmd);
+    CS_LOW();
     WR_LOW();
     WR_HIGH();
-    CS_HIGH();
+    CS_HIGH();       // RS permanece LOW tras CS_HIGH (hold)
     if (slow_bus_) usleep(1);
 #endif
 }
@@ -133,12 +137,13 @@ void SSD1963::write_data(uint16_t data) {
 
     if (slow_bus_) usleep(1);
 #else
+    // Misma secuencia que write_command pero con RS=HIGH (dato).
     RS_HIGH();
-    CS_LOW();
     write_data_bus(data);
+    CS_LOW();
     WR_LOW();
     WR_HIGH();
-    CS_HIGH();
+    CS_HIGH();       // RS permanece HIGH tras CS_HIGH (hold)
     if (slow_bus_) usleep(1);
 #endif
 }
