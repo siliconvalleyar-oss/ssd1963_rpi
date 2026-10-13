@@ -65,7 +65,7 @@ void SSD1963::soft_reset() {
 void SSD1963::init_pll() {
     write_command(SSD1963_SET_PLL_MN);
     write_data(0x31);
-    write_data(0x02);
+    write_data(0x00);
     write_data(0x04);
 
     write_command(SSD1963_PLL_START);
