@@ -100,6 +100,28 @@ void SSD1963::draw_buffer(const uint16_t* buffer) {
     }
 }
 
+void SSD1963::fill_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
+    if (x >= LCD_WIDTH || y >= LCD_HEIGHT) return;
+    if (x + width > LCD_WIDTH) width = LCD_WIDTH - x;
+    if (y + height > LCD_HEIGHT) height = LCD_HEIGHT - y;
+    set_area(x, y, x + width - 1, y + height - 1);
+    write_command(SSD1963_WRITE_MEMORY_START);
+    for (uint32_t i = 0; i < (uint32_t)width * height; i++) {
+        write_data(color);
+    }
+}
+
+void SSD1963::draw_pixels(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint16_t* pixels) {
+    if (x >= LCD_WIDTH || y >= LCD_HEIGHT) return;
+    if (x + width > LCD_WIDTH) width = LCD_WIDTH - x;
+    if (y + height > LCD_HEIGHT) height = LCD_HEIGHT - y;
+    set_area(x, y, x + width - 1, y + height - 1);
+    write_command(SSD1963_WRITE_MEMORY_START);
+    for (uint32_t i = 0; i < (uint32_t)width * height; i++) {
+        write_data(pixels[i]);
+    }
+}
+
 
 void SSD1963::init() {
 

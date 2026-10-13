@@ -39,6 +39,8 @@ public:
 	void draw_pixel(uint16_t x, uint16_t y, uint16_t color);
     void draw_image_rgb565(const char* filepath) ;
     void draw_buffer(const uint16_t* buffer);
+    void fill_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color);
+    void draw_pixels(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint16_t* pixels);
     
 private:
 
