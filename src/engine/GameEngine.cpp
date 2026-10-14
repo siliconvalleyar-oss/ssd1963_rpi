@@ -1,6 +1,8 @@
 #include <engine/GameEngine.hpp>
-#include <bcm2835.h>
+#include <unistd.h>
 #include <iostream>
+#include <cstdint>
+#include <ctime>
 
 GameEngine::GameEngine()
     : m_fb()
@@ -12,17 +14,19 @@ GameEngine::GameEngine()
 
 GameEngine::~GameEngine() {}
 
+static uint64_t get_time_us() {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec * 1000000ULL + ts.tv_nsec / 1000;
+}
+
 bool GameEngine::init() {
-    if (!bcm2835_init()) {
-        std::cerr << "[ENGINE] Error: bcm2835_init() failed\n";
-        return false;
-    }
     m_display.setup_gpio();
     m_display.init();
     m_fb.clear(BLACK);
     m_fb.flush(m_display);
 
-    m_start_time = bcm2835_st_read();
+    m_start_time = get_time_us();
     m_state = EngineState::RUNNING;
 
     std::cout << "[ENGINE] Arcade " << ENGINE_VERSION
@@ -32,27 +36,26 @@ bool GameEngine::init() {
 
 void GameEngine::run() {
     if (m_state != EngineState::RUNNING) return;
-    uint32_t last_time = bcm2835_st_read();
-    const uint32_t FRAME_TIME = 33;
+    uint64_t last_time = get_time_us();
+    const uint32_t FRAME_TIME = 33333;  // microseconds
 
     while (m_state == EngineState::RUNNING) {
-        uint32_t now = bcm2835_st_read();
-        uint32_t dt = (now - last_time) / 1000;
-        if (dt < FRAME_TIME) {
-            engine_delay(FRAME_TIME - dt);
-            now = bcm2835_st_read();
-            dt = (now - last_time) / 1000;
+        uint64_t now = get_time_us();
+        uint64_t dt_us = now - last_time;
+        if (dt_us < FRAME_TIME) {
+            usleep(FRAME_TIME - dt_us);
+            now = get_time_us();
+            dt_us = now - last_time;
         }
         last_time = now;
 
         if (m_active_scene) {
-            m_active_scene->update(dt);
+            m_active_scene->update(dt_us / 1000);
             m_active_scene->draw(m_fb);
             m_fb.flush(m_display);
         }
     }
     std::cout << "[ENGINE] Shutdown.\n";
-    bcm2835_close();
 }
 
 void GameEngine::quit() { m_state = EngineState::EXIT; }
@@ -76,6 +79,6 @@ Scene* GameEngine::menu_scene() const { return m_menu_scene; }
 SSD1963& GameEngine::display() { return m_display; }
 EngineState GameEngine::state() const { return m_state; }
 uint32_t GameEngine::elapsed_ms() const {
-    return (bcm2835_st_read() - m_start_time) / 1000;
+    return (get_time_us() - m_start_time) / 1000;
 }
-void GameEngine::engine_delay(uint32_t ms) { bcm2835_delay(ms); }
+void GameEngine::engine_delay(uint32_t ms) { usleep(ms * 1000); }
