@@ -2,167 +2,86 @@
 
 #include <unistd.h>
 #include <iostream>
-#include <time.h>
+#include <vector>
 #include <config_hw.hpp>
 #include <ssd1963_cmd.hpp>
 #include <ssd1963.hpp>
 #include <color.hpp>
-#include <font_8x8.hpp>
-
-// Helper para delays en nanosegundos (para SSD1963_MCU_WAVEFORM)
-static inline void ns_delay(long ns) {
-    struct timespec ts = {0, ns};
-    clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, nullptr);
-}
+#include <gpio_mmap.hpp>
 
 
-SSD1963::SSD1963() : last_op_type_(0) {}
+SSD1963::SSD1963() {}
 
 void SSD1963::delay_ms(uint32_t ms) {
     usleep(ms * 1000);
 }
 
-void SSD1963::delay_us(uint32_t us) {
-    bcm2835_delayMicroseconds(us);
-}
-
 void SSD1963::setup_gpio() {
     // Configurar pines de datos como salida
     for (uint8_t pin = SSD1963_LCD_D0; pin <= SSD1963_LCD_D15; pin++) {
-        bcm2835_gpio_fsel(pin, BCM2835_GPIO_FSEL_OUTP);
+        GPIO_FSEL(pin, GPIO_FSEL_OUT);
     }
     // Configurar pines de control como salida
-    bcm2835_gpio_fsel(SSD1963_LCD_RS, BCM2835_GPIO_FSEL_OUTP);
-    bcm2835_gpio_fsel(SSD1963_LCD_WR, BCM2835_GPIO_FSEL_OUTP);
-    bcm2835_gpio_fsel(SSD1963_LCD_CS, BCM2835_GPIO_FSEL_OUTP);
-    bcm2835_gpio_fsel(SSD1963_LCD_RESET, BCM2835_GPIO_FSEL_OUTP);
-    bcm2835_gpio_fsel(SSD1963_LCD_BACKLIGHT, BCM2835_GPIO_FSEL_OUTP);
-    bcm2835_gpio_fsel(SSD1963_LCD_RD, BCM2835_GPIO_FSEL_OUTP);
-    // Estados iniciales: RST arranca en BAJO, RD/WR/CS1 en ALTO
-    // (el modulo hace su power-up mientras RST esta bajo; ~2 s despues
-    //  se libera y recien ahi comienza nuestra 2a inicializacion)
+    GPIO_FSEL(SSD1963_LCD_RS, GPIO_FSEL_OUT);
+    GPIO_FSEL(SSD1963_LCD_WR, GPIO_FSEL_OUT);
+    GPIO_FSEL(SSD1963_LCD_CS, GPIO_FSEL_OUT);
+    GPIO_FSEL(SSD1963_LCD_RESET, GPIO_FSEL_OUT);
+    GPIO_FSEL(SSD1963_LCD_BACKLIGHT, GPIO_FSEL_OUT);
+    GPIO_FSEL(SSD1963_LCD_RD, GPIO_FSEL_OUT);
+    // Estados iniciales: RST en BAJO, RD/WR/CS en ALTO, RS en BAJO (command mode por defecto)
     CS_HIGH();
     WR_HIGH();
-    RS_LOW();
+    RS_LOW();       // RS en BAJO al inicio (modo comando)
     RESET_LOW();
-    bcm2835_gpio_write(SSD1963_LCD_RD, HIGH);
+    GPIO_SET(SSD1963_LCD_RD);
     BACKLIGHT_OFF();
 }
 
-void  SSD1963::write_command(uint8_t cmd) {
-#if SSD1963_MCU_WAVEFORM
-    // === MCU WAVEFORM: COMANDO ===
-    // 1. RS baja 40 ns ANTES de CS (pre-pulso)
+void SSD1963::write_command(uint8_t cmd) {
     RS_LOW();
-    ns_delay(40);
-
-    // 2. CS baja
-    CS_LOW();
-    ns_delay(30);
-
-    // 3. RS sube 30ns y baja junto con CS (pulso extra)
-    RS_HIGH();
-    ns_delay(30);
-    RS_LOW();
-
-    // 4. Datos en bus + WR pulso
+    DELAY_US(1);
     write_data_bus(cmd);
-    WR_LOW();
-    ns_delay(65);  // WR en bajo ~65 ns
-
-    // 5. WR sube 10 ns ANTES de CS
-    WR_HIGH();
-    ns_delay(10);
-
-    // 6. CS sube
-    CS_HIGH();
-
-    // 7. RS se queda LOW 95 ns DESPUES de CS↑, luego sube
-    ns_delay(95);
-    RS_HIGH();
-
-    if (slow_bus_) usleep(1);
-#else
-    // Secuencia de la referencia: RS primero, luego datos en bus,
-    // despues CS y el strobe WR (datos estables antes y durante WR).
-    // tAS/tAH/tDSW min del datasheet (1-4 ns) se cumplen con creces:
-    // cada llamada bcm2835 toma ~50-100 ns.
-    RS_LOW();
-    write_data_bus(cmd);
-    usleep(1);  // setup
+    DELAY_US(1);
     CS_LOW();
-    usleep(1);  // CS setup
+    DELAY_US(1);
     WR_LOW();
-    usleep(1);  // WR pulse
+    DELAY_US(1);
     WR_HIGH();
-    usleep(1);  // WR hold
+    DELAY_US(1);
     CS_HIGH();
-    usleep(1);  // CS hold
-    RS_HIGH();  // Force RS HIGH after command (STM32: ~95ns hold after CS↑)
-    usleep(1);
-    if (slow_bus_) usleep(1);
-#endif
+    DELAY_US(1);
+    RS_HIGH();  // Force RS HIGH after command (STM32: RS hold ~95ns after CS↑)
+    DELAY_US(1);
 }
 
 void SSD1963::write_data(uint16_t data) {
-#if SSD1963_MCU_WAVEFORM
-    // Determinar si es primer dato tras comando
-    bool is_first_data = (last_op_type_ == 0);
-    last_op_type_ = 1;
-
-    if (is_first_data) {
-        // === PRIMER DATO TRAS COMANDO ===
-        // RS pulsa: HIGH 40ns -> LOW 30ns -> HIGH (con CS↓)
-        RS_HIGH();
-        ns_delay(40);
-        RS_LOW();
-        ns_delay(30);
-    } else {
-        // === RESTO DE DATOS ===
-        // RS se queda HIGH
-        RS_HIGH();
-    }
-
-    CS_LOW();
-
-    if (is_first_data) {
-        // RS sube con CS↓
-        ns_delay(30);
-        RS_HIGH();
-    }
-
-    write_data_bus(data);
-    WR_LOW();
-    ns_delay(65);
-    WR_HIGH();
-    ns_delay(10);
-    CS_HIGH();
-
-    if (is_first_data) {
-        // RS se queda HIGH
-    }
-
-    if (slow_bus_) usleep(1);
-#else
-    // Misma secuencia que write_command pero con RS=HIGH (dato).
-    // Datos estables antes de CS, WR pulse durante CS LOW
     RS_HIGH();
-    usleep(1);  // RS setup
+    DELAY_US(1);
     write_data_bus(data);
-    usleep(1);  // data setup
+    DELAY_US(1);
     CS_LOW();
-    usleep(1);  // CS setup
+    DELAY_US(1);
     WR_LOW();
-    usleep(1);  // WR pulse
+    DELAY_US(1);
     WR_HIGH();
-    usleep(1);  // WR hold
+    DELAY_US(1);
     CS_HIGH();
-    usleep(1);  // CS hold
-    // RS permanece HIGH para ráfagas de datos
-    if (slow_bus_) usleep(1);
-#endif
+    DELAY_US(1);
+    // RS stays HIGH for data bursts
 }
 
+void SSD1963::write_data_burst(const uint16_t* data, uint32_t count) {
+    // Fast bulk write: CS stays LOW, RS stays HIGH, only WR pulses
+    RS_HIGH();
+    CS_LOW();
+    for (uint32_t i = 0; i < count; i++) {
+        write_data_bus(data[i]);
+        WR_LOW();
+        WR_HIGH();
+    }
+    CS_HIGH();
+} 
+ 
 
 void SSD1963::set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
     write_command(SSD1963_SET_COLUMN_ADDRESS);
@@ -178,20 +97,51 @@ void SSD1963::set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
 }
 
 
+
 void SSD1963::clear_screen(uint16_t color) {
-    // Interfaz 16-bit RGB565 (PDI 0x03): CADA escritura al bus es UN píxel completo.
-    // Antes se enviaba color + color>>8 (2 escrituras por píxel): desplazaba/duplicaba
-    // los datos -> rayas y "basura de bits" en pantalla.
     set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
     write_command(SSD1963_WRITE_MEMORY_START);
-    // Burst: CS bajo durante todo el llenado (RS=HIGH), solo toggle WR por
-    // pixel. Mucho mas rapido que write_data() por pixel (CS se activaria
-    // 130560 veces).
-    write_pixel_burst_start();
+    // Fast fill: reuse single pixel value
+    RS_HIGH();
+    CS_LOW();
+    write_data_bus(color);
     for (uint32_t i = 0; i < (uint32_t)LCD_WIDTH * LCD_HEIGHT; i++) {
-        write_pixel_burst(color);
+        WR_LOW();
+        WR_HIGH();
     }
-    write_pixel_burst_end();
+    CS_HIGH();
+}
+
+void SSD1963::draw_buffer(const uint16_t* buffer) {
+    set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
+    write_command(SSD1963_WRITE_MEMORY_START);
+    write_data_burst(buffer, (uint32_t)LCD_WIDTH * LCD_HEIGHT);
+}
+
+void SSD1963::fill_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
+    if (x >= LCD_WIDTH || y >= LCD_HEIGHT) return;
+    if (x + width > LCD_WIDTH) width = LCD_WIDTH - x;
+    if (y + height > LCD_HEIGHT) height = LCD_HEIGHT - y;
+    set_area(x, y, x + width - 1, y + height - 1);
+    write_command(SSD1963_WRITE_MEMORY_START);
+    // Fast fill
+    RS_HIGH();
+    CS_LOW();
+    write_data_bus(color);
+    for (uint32_t i = 0; i < (uint32_t)width * height; i++) {
+        WR_LOW();
+        WR_HIGH();
+    }
+    CS_HIGH();
+}
+
+void SSD1963::draw_pixels(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint16_t* pixels) {
+    if (x >= LCD_WIDTH || y >= LCD_HEIGHT) return;
+    if (x + width > LCD_WIDTH) width = LCD_WIDTH - x;
+    if (y + height > LCD_HEIGHT) height = LCD_HEIGHT - y;
+    set_area(x, y, x + width - 1, y + height - 1);
+    write_command(SSD1963_WRITE_MEMORY_START);
+    write_data_burst(pixels, (uint32_t)width * height);
 }
 
 
@@ -202,53 +152,66 @@ void SSD1963::init() {
     slow_bus_ = true;
 
     // 1. Reset físico del SSD1963.
-    // El módulo arranca con RST en BAJO (RD/WR/CS en alto) y ~2 s despues se libera
-    // a alto; mantenerlo bajo ese tiempo antes de inicializar.
-    RESET_LOW();
+    // setup_gpio() ya deja RST=LOW, RS=LOW, RD/WR/CS=HIGH.
+    // El módulo hace power-up mientras RST está bajo; esperar 2 s.
     delay_ms(SSD1963_RESET_LOW_MS);
     RESET_HIGH();
-
+    
     // CRITICAL: STM32 waits ~1.0s after RST release before any bus activity
     delay_ms(SSD1963_POST_RESET_MS);
-
+    
     delay_ms(10);
     // 2. Soft Reset (ANTES del PLL)
     write_command(SSD1963_SOFT_RESET);
-    delay_ms(20);
-    // 2b. Exit Sleep Mode (0x11) - OBLIGATORIO segun datasheet Rev 1.1
-    // Tras soft reset el chip queda en estado sleep. Sin esto el panel queda apagado.
+    delay_ms(5);
+    // 3. EXIT SLEEP MODE (0x11) - CRITICO: activa el panel y dispara SET_DISPLAY_ON automaticamente
     write_command(SSD1963_EXIT_SLEEP_MODE);
-    delay_ms(20);
-    // 3. Configurar PLL (para REFclk = 10 MHz -> PLLclk = 500MHz, SYSclk = 100MHz)
+    delay_ms(5);
+    // 4. Configurar PLL (para REFclk = 10 MHz → PLLclk = 500MHz, SYSclk = 100MHz)
     write_command(SSD1963_SET_PLL_MN);
-    write_data(49);     // PLL multiplier M = 49
-    write_data(4);      // System clock divider N = 4
-    write_data(0x04);   // Effectuate MN (bit C[2]=1: apply M and N)
-    delay_us(100);      // Datasheet: 100us minimo tras SET_PLL_MN
-    // Activar PLL - DATASHEET: 100ms minimo para PLL lock
+    write_data(49);     // PLLclk = REFclk * 50
+    write_data(4);      // SYSclk = PLLclk / 5
+    write_data(4);      // Dummy (según código STM32)
+    // Activar PLL - DATASHEET: esperar 100ms + polling PLL lock
     write_command(SSD1963_SET_PLL);
-    write_data(0x01);   // Enable PLL
-    delay_ms(100);      // Datasheet: 100ms minimo para PLL lock
+    write_data(0x01);
+    delay_ms(100);
     write_command(SSD1963_SET_PLL);
-    write_data(0x03);   // Lock PLL (use PLL as sysclk)
-    delay_ms(100);      // Datasheet: 100ms + polling PLL lock
+    write_data(0x03);
+    delay_ms(100);
 
     // Poll PLL status (0xE4) until bit 2 (PLL locked) is set
-    // Note: This requires read capability - using write/read sequence
-    // For now using fixed delay as fallback
+    for (uint8_t i = 0; i < 50; i++) {
+        write_command(SSD1963_GET_PLL_STATUS);
+        CS_LOW();
+        RS_HIGH();
+        write_data_bus(0);
+        DELAY_US(1);
+        WR_LOW();
+        DELAY_US(1);
+        WR_HIGH();
+        DELAY_US(1);
+        uint8_t status = 0;
+        for (uint8_t b = 0; b < 8; b++) {
+            if (GPIO_LEV(SSD1963_LCD_D0 + b)) status |= (1 << b);
+        }
+        CS_HIGH();
+        if (status & 0x04) break;  // PLL locked
+        delay_ms(10);
+    }
 
     // STM32: RS goes HIGH ~50ms before first real command
     RS_HIGH();
     delay_ms(SSD1963_RS_LEAD_MS);
-    // 6. Frecuencia LSHIFT (SE ENVIA ANTES DEL MODO LCD, como en el PIC32 de referencia)
+    // 5. Frecuencia LSHIFT (SE ENVIA ANTES DEL MODO LCD, como en el PIC32 de referencia)
     write_command(SSD1963_SET_LSHIFT_FREQ);
     write_data((LCD_FPR >> 16) & 0xFF);
     write_data((LCD_FPR >> 8) & 0xFF);
     write_data(LCD_FPR & 0xFF);
-    // 7. Configurar modo LCD
+    // 6. Configurar modo LCD - 0x10 para panel 18-bit (común en 480x272)
     write_command(SSD1963_SET_LCD_MODE);
-    write_data(0x10);    // LCD_MODE_CONFIG: 18-bit con FRC (igual PIC32)
-    write_data(0x00);    // TFT type: 00/01 = TFT mode
+    write_data(0x10);    // A5=0 -> 18-bit panel (probar 0x20 si falla)
+    write_data(0x00);    // TFT mode
     write_data((LCD_WIDTH - 1) >> 8);
     write_data((LCD_WIDTH - 1) & 0xFF);
     write_data((LCD_HEIGHT - 1) >> 8);
@@ -283,10 +246,12 @@ void SSD1963::init() {
     write_data(VPW - 1);         // 9
     write_data(0x00);            // FPS = 0
     write_data(0x00);
-    // Interfaz de datos del panel: 16-bit RGB565 (formato 0x55 via 0xF0)
+    // NO ENVIAR SET_PIXEL_FORMAT (0x3A es RESERVADO en SSD1963)
+    // El formato se configura con SET_PIXEL_DATA_INTERFACE (0xF0)
+    // Interfaz de datos del panel: 16-bit RGB565
     write_command(SSD1963_SET_PIXEL_DATA_INTERFACE);
     write_data(SSD1963_PDI_16BIT565);
-    // SET_ADDR_MODE (0x36): RGB, top->bottom, left->right, sin flips
+    // Address mode: RGB, top-to-bottom, left-to-right
     write_command(SSD1963_SET_ADDR_MODE);
     write_data(0x00);
     // Reset del PANEL fisico via GPIO0 (igual que la referencia PIC32):
@@ -302,7 +267,8 @@ void SSD1963::init() {
     write_command(SSD1963_SET_GPIO_VALUE);
     write_data(0x01);   // alto (libera reset)
 
-    // Encender display (0x29) - sin BLANK_DISPLAY innecesario
+    // Pantalla en BLANCO (0x28) hasta tener el GRAM limpio, luego ON (0x29)
+    write_command(SSD1963_BLANK_DISPLAY);
     write_command(SSD1963_ON_DISPLAY);
     delay_ms(50);
 
@@ -312,14 +278,23 @@ void SSD1963::init() {
     BACKLIGHT_ON();
 }
 
+ 
+
 void SSD1963::draw_block(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
+    if (x >= LCD_WIDTH || y >= LCD_HEIGHT) return;
+    if (x + width > LCD_WIDTH) width = LCD_WIDTH - x;
+    if (y + height > LCD_HEIGHT) height = LCD_HEIGHT - y;
     set_area(x, y, x + width - 1, y + height - 1);
     write_command(SSD1963_WRITE_MEMORY_START);
-    write_pixel_burst_start();
+    // Fast fill
+    RS_HIGH();
+    CS_LOW();
+    write_data_bus(color);
     for (uint32_t i = 0; i < (uint32_t)width * height; i++) {
-        write_pixel_burst(color);
+        WR_LOW();
+        WR_HIGH();
     }
-    write_pixel_burst_end();
+    CS_HIGH();
 }
 
 void SSD1963::draw_pixel(uint16_t x, uint16_t y, uint16_t color) {
@@ -336,85 +311,61 @@ void SSD1963::draw_image_rgb565(const char* filepath) {
         return;
     }
 
-    // Formato .rgb565: header [width BE][height BE] + pixels RGB565 BE
-    // (mismo formato que produce script_tools/convert_png_to_rgb.py)
+    // Check for 4-byte header (width, height as uint16_t big-endian)
     uint8_t hdr[4];
-    if (fread(hdr, 1, 4, file) != 4) {
-        std::cerr << "Error leyendo header de: " << filepath << std::endl;
-        fclose(file);
-        return;
+    size_t hdr_read = fread(hdr, 1, 4, file);
+    uint32_t img_w = LCD_WIDTH, img_h = LCD_HEIGHT;
+    bool has_header = false;
+    if (hdr_read == 4) {
+        uint16_t w = (hdr[0] << 8) | hdr[1];
+        uint16_t h = (hdr[2] << 8) | hdr[3];
+        if (w <= LCD_WIDTH && h <= LCD_HEIGHT) {
+            img_w = w;
+            img_h = h;
+            has_header = true;
+            std::cout << "[IMG] Header detected: " << img_w << "x" << img_h << std::endl;
+        } else {
+            // Not a valid header, rewind
+            fseek(file, 0, SEEK_SET);
+        }
+    } else {
+        fseek(file, 0, SEEK_SET);
     }
-    uint16_t img_w = (hdr[0] << 8) | hdr[1];
-    uint16_t img_h = (hdr[2] << 8) | hdr[3];
 
-    uint16_t w = (img_w > LCD_WIDTH) ? LCD_WIDTH : img_w;
-    uint16_t h = (img_h > LCD_HEIGHT) ? LCD_HEIGHT : img_h;
-
-    set_area(0, 0, w - 1, h - 1);
+    set_area(0, 0, img_w - 1, img_h - 1);
     write_command(SSD1963_WRITE_MEMORY_START);
 
-    write_pixel_burst_start();
-    for (uint32_t i = 0; i < (uint32_t)w * h; i++) {
-        uint8_t bytes[2];
-        if (fread(bytes, 1, 2, file) != 2) break;
-        write_pixel_burst((bytes[0] << 8) | bytes[1]);
+    uint32_t total_pixels = img_w * img_h;
+    std::vector<uint16_t> buffer(total_pixels);
+    for (uint32_t i = 0; i < total_pixels; i++) {
+        uint8_t high, low;
+        if (fread(&high, 1, 1, file) != 1) break;
+        if (fread(&low, 1, 1, file) != 1) break;
+        buffer[i] = (high << 8) | low;
+        if ((i % 32768) == 0) {
+            std::cout << "[IMG] Progress: " << (i * 100 / total_pixels) << "%" << std::endl;
+        }
     }
-    write_pixel_burst_end();
-
     fclose(file);
+    
+    // Fast burst write
+    write_data_burst(buffer.data(), total_pixels);
+    std::cout << "[IMG] Done" << std::endl;
 }
-
-// static uint32_t g_bus_state = 0;  // cache del estado del bus (D0=bit12...D15=bit27)
-uint32_t SSD1963::g_bus_state = 0;
 
 void SSD1963::write_data_bus(uint16_t data) {
-    // Conversión: D0=bit12 ... D15=bit27
-    uint32_t new_state = ((uint32_t)data) << 12;
-    uint32_t to_set = new_state & ~g_bus_state;
-    uint32_t to_clr = g_bus_state & ~new_state;
-    if (to_clr) bcm2835_gpio_clr_multi(to_clr);
-    if (to_set) bcm2835_gpio_set_multi(to_set);
-    g_bus_state = new_state;
-}
-
-void SSD1963::write_pixel_burst_start() {
-    RS_HIGH();
-    CS_LOW();
-}
-
-void SSD1963::write_pixel_burst(uint16_t data) {
-    write_data_bus(data);
-    WR_LOW();
-    // WR pulse ~100ns (min 65ns per STM32 capture) - busy loop for speed
-    for (volatile int i = 0; i < 50; i++) __asm__ volatile("nop");
-    WR_HIGH();
-}
-
-void SSD1963::write_pixel_burst_end() {
-    CS_HIGH();
-}
-
-void SSD1963::fill_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
-    draw_block(x, y, width, height, color);
-}
-
-void SSD1963::draw_pixels(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
-                          const uint16_t* data) {
-    set_area(x, y, x + w - 1, y + h - 1);
-    write_command(SSD1963_WRITE_MEMORY_START);
-    write_pixel_burst_start();
-    for (uint32_t i = 0; i < (uint32_t)w * h; i++) {
-        write_pixel_burst(data[i]);
+    // Escribe todos los 16 bits directamente (sin glitches intermedios)
+    // D0 = bit 0, D1 = bit 1, ..., D15 = bit 15
+    for (uint8_t i = 0; i < 16; i++) {
+        if ((data >> i) & 1) {
+            GPIO_SET(SSD1963_LCD_D0 + i);
+        } else {
+            GPIO_CLR(SSD1963_LCD_D0 + i);
+        }
     }
-    write_pixel_burst_end();
 }
 
-void SSD1963::draw_buffer(const uint16_t* data) {
-    set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
-    write_command(SSD1963_WRITE_MEMORY_START);
-    write_pixel_burst_start();
-    for (uint32_t i = 0; i < (uint32_t)LCD_WIDTH * LCD_HEIGHT; i++) {
-        write_pixel_burst(data[i]);
-    }
-    write_pixel_burst_end();
+SSD1963::~SSD1963() {
+    // GPIO cleanup handled by gpio_mmap destructor
 }
+

@@ -28,10 +28,10 @@ constexpr uint8_t SSD1963_LCD_BACKLIGHT = 0; // Backlight control ( accomp: PW1/
 constexpr uint8_t SSD1963_LCD_TE    = 7;
 constexpr uint8_t SSD1963_LCD_RD    = 2;
 
-
 // Dimensiones del display
 //constexpr unsigned int LCD_WIDTH  = 480;
 //constexpr unsigned int LCD_HEIGHT = 272;
+
 
 
 static constexpr uint16_t LCD_WIDTH = 480;
