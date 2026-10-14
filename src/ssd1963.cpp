@@ -111,10 +111,10 @@ void SSD1963::init() {
     delay_ms(SSD1963_RS_LEAD_MS);
 
     // --- LCD panel mode ---
-#if USE_8BIT_MODE
+    // 16-bit MCU bus with 18-bit panel, FRC enabled
     write_command(SSD1963_SET_LCD_MODE);
-    write_data(0x08);    // TFT mode, 18-bit panel (A[5]=0), 8-bit MCU bus
-    write_data(0x00);    // TFT type: 00/01 = TFT mode
+    write_data(0x10);    // A5=0 -> 18-bit panel, A4=1 -> FRC enable
+    write_data(0x00);    // TFT mode
     write_data((LCD_WIDTH - 1) >> 8);
     write_data((LCD_WIDTH - 1) & 0xFF);
     write_data((LCD_HEIGHT - 1) >> 8);
@@ -122,21 +122,7 @@ void SSD1963::init() {
     write_data(0x00);    // RGB sequence
 
     write_command(SSD1963_SET_PIXEL_DATA_INTERFACE);
-    write_data(SSD1963_PDI_8BIT);
-#else
-    // 16-bit MCU bus, panel config from config_hw.hpp
-    write_command(SSD1963_SET_LCD_MODE);
-    write_data(0x10);    // A5=0 -> 18-bit panel (probar 0x20 si falla)
-    write_data(0x00);    // TFT mode
-    write_data((LCD_WIDTH - 1) >> 8);   // HDP high = 0x01
-    write_data((LCD_WIDTH - 1) & 0xFF); // HDP low  = 0xDF (479)
-    write_data((LCD_HEIGHT - 1) >> 8);  // VDP high = 0x01
-    write_data((LCD_HEIGHT - 1) & 0xFF); // VDP low  = 0x0F (271)
-    write_data(0x00);    // RGB sequence
-
-    write_command(SSD1963_SET_PIXEL_DATA_INTERFACE);
     write_data(SSD1963_PDI_16BIT565);
-#endif
 
     // --- Pixel clock (LSHIFT frequency) ---
     // PCLK = PLL * (LCD_FPR + 1) / 2^20
@@ -230,31 +216,14 @@ void SSD1963::shutdown() {
 }
 
 void SSD1963::shift_out_16bits(uint16_t data) {
-#if USE_8BIT_MODE
-    // 8-bit mode: only first 74HC595 (D0-D7)
-    for (int8_t i = 7; i >= 0; i--) {
-        if (data & (1 << i)) {
-            SR_SER_HIGH();
-        } else {
-            SR_SER_LOW();
-        }
-        SR_WAIT;
-        SR_SRCLK_HIGH();
-        SR_WAIT;
-        SR_SRCLK_LOW();
-    }
-#else
-    // 16-bit mode: two 74HC595 in series
-    // Wiring: SER -> 1st HC595 SER -> 1st HC595 Q7' -> 2nd HC595 SER
+    // Two 74HC595 in series:
+    // 1st chip (SER input) outputs D0-D7
+    // 2nd chip (Q7' cascaded) outputs D8-D15
     // 
-    // With this wiring:
-    // - First chip (closest to SER) receives shifted data LAST
-    //   Its outputs Q0-Q7 become the LAST 8 bits shifted
-    // - Second chip (farthest from SER) receives shifted data FIRST  
-    //   Its outputs Q0-Q7 become the FIRST 8 bits shifted
-    //
-    // SSD1963 expects D0=bit0 (LSB) through D15=bit15 (MSB)
-    // Try: MSB-first single loop (bit 15 first → 1st chip D8-D15, bit 0 last → 2nd chip D0-D7)
+    // When shifting MSB-first (bit 15 → bit 0):
+    // - Bits 15-8 go to 2nd chip (D8-D15) ✓
+    // - Bits 7-0 go to 1st chip (D0-D7) ✓
+    // MSB-first matches natural bit-to-pin mapping
     
     for (int8_t i = 15; i >= 0; i--) {
         if (data & (1 << i)) {
@@ -267,10 +236,8 @@ void SSD1963::shift_out_16bits(uint16_t data) {
         SR_WAIT;
         SR_SRCLK_LOW();
     }
-#endif
-    // Latch the data to outputs
+    // Latch data to outputs
     SR_RCLK_HIGH();
-    SR_WAIT;
     SR_WAIT;
     SR_RCLK_LOW();
     SR_WAIT;
