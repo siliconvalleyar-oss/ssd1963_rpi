@@ -60,7 +60,7 @@ unsigned int ADS7843_Touch::read_channel_12bit(unsigned int target, unsigned int
 
     unsigned int acc = 0;
     for (unsigned int i = 0; i < samples; i++) {
-        bcm2835_spi_transfernb(buf, out, 3);
+        bcm2835_spi_transfernb(reinterpret_cast<char*>(buf), reinterpret_cast<char*>(out), 3);
         acc += ((out[1] << 8 | out[2]) >> 3);
     }
     return acc / samples;
