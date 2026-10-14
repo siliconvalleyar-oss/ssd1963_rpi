@@ -84,7 +84,6 @@ void SSD1963::clear_screen(uint16_t color) {
 
 
 void SSD1963::init() {
-
     // Durante toda la inicializacion el bus va lento (~1 us por strobe),
     // como el PMP lento (WAITB=3, WAITM=15, WAITE=3) del PIC32 de referencia.
     slow_bus_ = true;
@@ -93,8 +92,12 @@ void SSD1963::init() {
     // El módulo arranca con RST en BAJO (RD/WR/CS en alto) y ~2 s despues se libera
     // a alto; mantenerlo bajo ese tiempo antes de inicializar.
     RESET_LOW();
-    delay_ms(2000);
+    delay_ms(SSD1963_RESET_LOW_MS);
     RESET_HIGH();
+
+    // CRITICAL: STM32 waits ~1.0s after RST release before any bus activity
+    delay_ms(SSD1963_POST_RESET_MS);
+
     delay_ms(10);
     // 2. Soft Reset (ANTES del PLL)
     write_command(SSD1963_SOFT_RESET);
@@ -114,6 +117,47 @@ void SSD1963::init() {
     write_command(SSD1963_SET_PLL);
     write_data(0x03);
     delay_ms(100);  // DATASHEET: 100ms
+
+    // Poll PLL status (0xE4) until bit 2 (PLL locked) is set
+    write_command(SSD1963_GET_PLL_STATUS);
+    CS_LOW();
+    RS_HIGH();
+    write_data_bus(0);
+    usleep(1);
+    WR_LOW();
+    usleep(1);
+    WR_HIGH();
+    usleep(1);
+    uint8_t status = 0;
+    for (int b = 0; b < 8; b++) {
+        if (bcm2835_gpio_lev(SSD1963_LCD_D0 + b)) status |= (1 << b);
+    }
+    CS_HIGH();
+    if (!(status & 0x04)) {
+        for (int i = 0; i < 50; i++) {
+            delay_ms(10);
+            write_command(SSD1963_GET_PLL_STATUS);
+            CS_LOW();
+            RS_HIGH();
+            write_data_bus(0);
+            usleep(1);
+            WR_LOW();
+            usleep(1);
+            WR_HIGH();
+            usleep(1);
+            uint8_t status = 0;
+            for (int b = 0; b < 8; b++) {
+                if (bcm2835_gpio_lev(SSD1963_LCD_D0 + b)) status |= (1 << b);
+            }
+            CS_HIGH();
+            if (status & 0x04) break;
+            delay_ms(10);
+        }
+    }
+
+    // STM32: RS goes HIGH ~50ms before first real command
+    RS_HIGH();
+    delay_ms(SSD1963_RS_LEAD_MS);
     // 5. Frecuencia LSHIFT (SE ENVIA ANTES DEL MODO LCD, como en el PIC32 de referencia)
     write_command(SSD1963_SET_LSHIFT_FREQ);
     write_data((LCD_FPR >> 16) & 0xFF);
@@ -121,34 +165,40 @@ void SSD1963::init() {
     write_data(LCD_FPR & 0xFF);
     // 6. Configurar modo LCD - 0x20 para panel 24-bit (bit A5=1)
     write_command(SSD1963_SET_LCD_MODE);
-    write_data(0x20);    // A5=1 -> 24-bit panel (mayoria paneles 480x272)
-    write_data(0x00);    // igual que TechToys (byte 2 = 0x00)
+    write_data(0x10);    // A5=0 -> 18-bit panel (probar 0x20 si falla)
+    write_data(0x00);    // TFT mode
     write_data((LCD_WIDTH - 1) >> 8);
     write_data((LCD_WIDTH - 1) & 0xFF);
     write_data((LCD_HEIGHT - 1) >> 8);
     write_data((LCD_HEIGHT - 1) & 0xFF);
     write_data(0x00);    // RGB
-    // Tiempos horizontales (frmulas del PIC32 en la referencia: HT-1, HPS-1, HPW-1)
+    // Tiempos horizontales: HT, HPS, HPW, LPS (todos -1)
     const uint16_t HT  = TFT_HSYNC_PERIOD;
-    const uint16_t HPS = TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH;
+    const uint16_t HPW = TFT_HSYNC_PULSE;
+    const uint16_t HBP = TFT_HSYNC_BACK_PORCH;
+    const uint16_t HFP = TFT_HSYNC_FRONT_PORCH;
+    const uint16_t HPS = HPW + HBP;
     write_command(SSD1963_SET_HOR_PERIOD);
-    write_data(((HT - 1) >> 8) & 0xFF);
+    write_data((HT - 1) >> 8);
     write_data((HT - 1) & 0xFF);
-    write_data(((HPS - 1) >> 8) & 0xFF);
+    write_data((HPS - 1) >> 8);
     write_data((HPS - 1) & 0xFF);
-    write_data(TFT_HSYNC_PULSE - 1);
-    write_data(0x00); // LPS = 0
-    write_data(0x00); // Opcional
-    write_data(0x00); // Opcional
-    // Tiempos verticales (VT-1, VSP-1, VPW-1)
+    write_data(HPW - 1);
+    write_data(0x00);
+    write_data(0x00);
+    write_data(0x00);
+    // Tiempos verticales: VT, VSP, VPW, FPS
     const uint16_t VT  = TFT_VSYNC_PERIOD;
-    const uint16_t VSP = TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH;
+    const uint16_t VPW = TFT_VSYNC_PULSE;
+    const uint16_t VBP = TFT_VSYNC_BACK_PORCH;
+    const uint16_t VFP = TFT_VSYNC_FRONT_PORCH;
+    const uint16_t VSP = VPW + VBP;
     write_command(SSD1963_SET_VER_PERIOD);
-    write_data(((VT - 1) >> 8) & 0xFF);
+    write_data((VT - 1) >> 8);
     write_data((VT - 1) & 0xFF);
-    write_data(((VSP - 1) >> 8) & 0xFF);
+    write_data((VSP - 1) >> 8);
     write_data((VSP - 1) & 0xFF);
-    write_data(TFT_VSYNC_PULSE - 1);
+    write_data(VPW - 1);
     write_data(0x00);
     write_data(0x00);
     // NO ENVIAR SET_PIXEL_FORMAT (0x3A es RESERVADO en SSD1963)
