@@ -1,21 +1,21 @@
-CXX = g++
-CXXFLAGS = -Iinclude -std=c++11 -Wall -Wextra -O2
-VERSION := $(shell git describe --tags --abbrev=0 2>/dev/null || echo "0.0.0")
+CXX       = g++
+CXXFLAGS  = -Iinclude -std=c++11 -Wall -Wextra -O2
+VERSION  := $(shell git describe --tags --abbrev=0 2>/dev/null || echo "0.0.0")
 CXXFLAGS += -DVERSION_TAG=\"$(VERSION)\"
-LDFLAGS = -lbcm2835 -lm
+LDFLAGS   = -lbcm2835 -lm
 
-SRC_DIR = src
-OBJ_DIR = obj
-BIN_DIR = bin
+SRC_DIR   = src
+OBJ_DIR   = obj
+BIN_DIR   = bin
 
-SRCS = $(SRC_DIR)/main.cpp \
-       $(SRC_DIR)/ssd1963.cpp
+SRCS      = $(SRC_DIR)/main.cpp \
+            $(SRC_DIR)/ssd1963.cpp
 
-OBJS = $(patsubst %.cpp,$(OBJ_DIR)/%.o,$(notdir $(SRCS)))
-TARGET = $(BIN_DIR)/ssd1963_app
+OBJS      = $(patsubst %.cpp,$(OBJ_DIR)/%.o,$(notdir $(SRCS)))
+TARGET    = $(BIN_DIR)/ssd1963_app
 
 PI_HOST ?= pi@raspberry.local
-PI_DIR ?= /home/pi/src/ssd1963_photo_png_2026_sucess_rgb
+PI_DIR   ?= /home/pi/src/ssd1963_photo_png_2026_sucess_rgb
 
 $(shell mkdir -p $(OBJ_DIR) $(BIN_DIR))
 
