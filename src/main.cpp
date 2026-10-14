@@ -127,7 +127,7 @@ static void test_touch(SSD1963& lcd, ADS7843_Touch& touch) {
     touch.set_calibration(TFTGL_CALIB_MIN_Y, 200.0,   0);
     touch.set_calibration(TFTGL_CALIB_MAX_Y, 3800.0,  LCD_HEIGHT);
 
-    bcm2835_gpio_fsel(TOUCH_INT_PIN, BCM2835_GPIO_FSEL_INP);
+    bcm2835_gpio_fsel(TOUCH_INT_PIN, BCM2835_GPIO_FSEL_INPT);
 
     for (int i = 0; i < 20; i++) {
         if (!bcm2835_gpio_lev(TOUCH_INT_PIN)) {

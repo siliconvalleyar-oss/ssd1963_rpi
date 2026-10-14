@@ -42,7 +42,7 @@ constexpr unsigned int TFTGL_CALIB_MAX_Y = 3;
 // Pinout hardware del touch (SPI0):
 //   MOSI=GPIO10, SCLK=GPIO11, MISO=GPIO9, CS(touch)=GPIO7 (CE1), INT=GPIO8
 #define TOUCH_CS_PIN    BCM2835_SPI_CS1   // GPIO7 / CE1
-#define TOUCH_INT_PIN   RPI_V2_GPIO_PIN(8)  // GPIO8
+#define TOUCH_INT_PIN   8                    // GPIO8
 #define TOUCH_SPI_DIV   BCM2835_SPI_CLOCK_DIVIDER_4096
 
 class ADS7843_Touch {
