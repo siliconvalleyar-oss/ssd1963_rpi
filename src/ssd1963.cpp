@@ -56,12 +56,16 @@ void SSD1963::init() {
     shift_out_16bits(0x0000);
     delay_ms(10);
 
-    // 2. Hardware reset SSD1963
+    // 1. Hardware reset SSD1963
     printf("[INIT] Hardware reset SSD1963...\n");
     RESET_LOW();
-    delay_ms(50);
+    delay_ms(SSD1963_RESET_LOW_MS);
     RESET_HIGH();
-    delay_ms(120);  // wait for internal POR
+
+    // CRITICAL: STM32 waits ~1.0s after RST release before any bus activity
+    delay_ms(SSD1963_POST_RESET_MS);
+
+    delay_ms(10);
 
     // 3. Soft reset
     write_command(SSD1963_SOFT_RESET);
@@ -75,11 +79,11 @@ void SSD1963::init() {
     shift_out_16bits(0x0000);
     delay_ms(5);
 
-    // --- PLL startup sequence (SINGLE, CORRECT) ---
-    // Ref clk = 12MHz (typical crystal)
-    // M = 49 → VCO = 12 * 50 = 600MHz (250-800MHz OK)
-    // N = 4  → PLL = 600 / 5 = 120MHz
-    printf("[INIT] Configuring PLL (M=49, N=4, PLL=120MHz)...\n");
+    // --- PLL startup sequence ---
+    // Ref clk = 10MHz (crystal)
+    // M = 49 → VCO = 10 * 50 = 500MHz (250-800MHz OK)
+    // N = 4  → PLL = 500 / 5 = 100MHz
+    printf("[INIT] Configuring PLL (M=49, N=4, PLL=100MHz)...\n");
     write_command(SSD1963_SET_PLL_MN);
     write_data(49);   // M = 49 (0x31)
     write_data(4);    // N = 4  (0x04)
@@ -87,11 +91,35 @@ void SSD1963::init() {
 
     write_command(SSD1963_SET_PLL);
     write_data(0x01); // Enable PLL
-    delay_ms(5);      // Wait 100us min, use 5ms
+    delay_ms(100);    // Datasheet: 100ms for PLL lock
 
     write_command(SSD1963_SET_PLL);
     write_data(0x03); // Lock PLL (use PLL as sysclk)
-    delay_ms(100);    // Wait for PLL lock
+    delay_ms(100);    // Datasheet: 100ms for PLL lock
+
+    // Poll PLL status (0xE4) until bit 2 (PLL locked) is set
+    for (uint8_t i = 0; i < 50; i++) {
+        write_command(SSD1963_GET_PLL_STATUS);
+        CS_LOW();
+        RS_HIGH();
+        write_data_bus(0);
+        usleep(1);
+        WR_LOW();
+        usleep(1);
+        WR_HIGH();
+        usleep(1);
+        uint8_t status = 0;
+        for (int b = 0; b < 8; b++) {
+            if (bcm2835_gpio_lev(SSD1963_LCD_D0 + b)) status |= (1 << b);
+        }
+        CS_HIGH();
+        if (status & 0x04) break;  // PLL locked
+        delay_ms(10);
+    }
+
+    // STM32: RS goes HIGH ~50ms before first real command
+    RS_HIGH();
+    delay_ms(SSD1963_RS_LEAD_MS);
 
     // --- LCD panel mode ---
 #if USE_8BIT_MODE
@@ -109,8 +137,8 @@ void SSD1963::init() {
 #else
     // 16-bit MCU bus, panel config from config_hw.hpp
     write_command(SSD1963_SET_LCD_MODE);
-    write_data(LCD_MODE_CONFIG);  // Panel config (default 0x0C = 18-bit)
-    write_data(0x00);    // TFT type: 00/01 = TFT mode
+    write_data(0x10);    // A5=0 -> 18-bit panel (probar 0x20 si falla)
+    write_data(0x00);    // TFT mode
     write_data((LCD_WIDTH - 1) >> 8);   // HDP high = 0x01
     write_data((LCD_WIDTH - 1) & 0xFF); // HDP low  = 0xDF (479)
     write_data((LCD_HEIGHT - 1) >> 8);  // VDP high = 0x01
@@ -131,31 +159,39 @@ void SSD1963::init() {
     write_data((LCD_FPR >> 8) & 0xFF);
     write_data(LCD_FPR & 0xFF);
 
-    // --- Horizontal timing ---
-    // HT = 525, HPS = 43, HPW = 41, LPS = 0
+    // --- Horizontal timing: HT, HPS, HPW, LPS (todos -1) ---
+    const uint16_t HT  = TFT_HSYNC_PERIOD;           // 525
+    const uint16_t HPW = TFT_HSYNC_PULSE;            // 41
+    const uint16_t HBP = TFT_HSYNC_BACK_PORCH;       // 2
+    const uint16_t HFP = TFT_HSYNC_FRONT_PORCH;      // 2
+    const uint16_t HPS = HPW + HBP;                  // 43
     printf("[INIT] Setting horizontal timing (HT=%d, HPS=%d, HPW=%d)...\n",
-           TFT_HSYNC_PERIOD, TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH, TFT_HSYNC_PULSE);
+           HT, HPS, HPW);
     write_command(SSD1963_SET_HOR_PERIOD);
-    write_data((TFT_HSYNC_PERIOD >> 8) & 0xFF);
-    write_data(TFT_HSYNC_PERIOD & 0xFF);
-    write_data((TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH) >> 8);
-    write_data((TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH) & 0xFF);
-    write_data(TFT_HSYNC_PULSE);
-    write_data(0x00);
+    write_data((HT - 1) >> 8);   // 524
+    write_data((HT - 1) & 0xFF);
+    write_data((HPS - 1) >> 8);  // 42
+    write_data((HPS - 1) & 0xFF);
+    write_data(HPW - 1);         // 40
+    write_data(0x00);            // LPS = 0
     write_data(0x00);
     write_data(0x00);
 
-    // --- Vertical timing ---
-    // VT = 286, VPS = 12, VPW = 10, FPS = 0
+    // --- Vertical timing: VT, VSP, VPW, FPS ---
+    const uint16_t VT  = TFT_VSYNC_PERIOD;           // 286
+    const uint16_t VPW = TFT_VSYNC_PULSE;            // 10
+    const uint16_t VBP = TFT_VSYNC_BACK_PORCH;       // 2
+    const uint16_t VFP = TFT_VSYNC_FRONT_PORCH;      // 2
+    const uint16_t VSP = VPW + VBP;                  // 12
     printf("[INIT] Setting vertical timing (VT=%d, VPS=%d, VPW=%d)...\n",
-           TFT_VSYNC_PERIOD, TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH, TFT_VSYNC_PULSE);
+           VT, VSP, VPW);
     write_command(SSD1963_SET_VER_PERIOD);
-    write_data((TFT_VSYNC_PERIOD >> 8) & 0xFF);
-    write_data(TFT_VSYNC_PERIOD & 0xFF);
-    write_data((TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH) >> 8);
-    write_data((TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH) & 0xFF);
-    write_data(TFT_VSYNC_PULSE);
-    write_data(0x00);
+    write_data((VT - 1) >> 8);   // 285
+    write_data((VT - 1) & 0xFF);
+    write_data((VSP - 1) >> 8);  // 11
+    write_data((VSP - 1) & 0xFF);
+    write_data(VPW - 1);         // 9
+    write_data(0x00);            // FPS = 0
     write_data(0x00);
 
     // --- Turn on display ---
@@ -253,41 +289,70 @@ void SSD1963::write_data_bus(uint16_t data) {
 
 void SSD1963::write_command(uint8_t cmd) {
     RS_LOW();
-    CS_LOW();
+    usleep(1);
     write_data_bus(cmd);
+    usleep(1);
+    CS_LOW();
+    usleep(1);
     WR_LOW();
-    BUS_WAIT;
+    usleep(1);
     WR_HIGH();
-    BUS_WAIT;
+    usleep(1);
     CS_HIGH();
+    usleep(1);
+    RS_HIGH();  // Force RS HIGH after command (STM32: RS hold ~95ns after CS↑)
+    usleep(1);
 }
 
 void SSD1963::write_data(uint16_t data) {
     RS_HIGH();
-    CS_LOW();
+    usleep(1);
     write_data_bus(data);
+    usleep(1);
+    CS_LOW();
+    usleep(1);
     WR_LOW();
-    BUS_WAIT;
+    usleep(1);
     WR_HIGH();
-    BUS_WAIT;
+    usleep(1);
     CS_HIGH();
+    usleep(1);
 }
 
 void SSD1963::write_pixel_burst_start() {
     RS_HIGH();
+    usleep(1);
     CS_LOW();
+    usleep(1);
 }
 
 void SSD1963::write_pixel_burst(uint16_t data) {
     write_data_bus(data);
     WR_LOW();
-    BUS_WAIT;
+    usleep(1);  // WR pulse ~1us (min 65ns per STM32 capture)
     WR_HIGH();
-    BUS_WAIT;
 }
 
 void SSD1963::write_pixel_burst_end() {
+    usleep(1);
     CS_HIGH();
+    usleep(1);
+}
+
+void SSD1963::write_data_burst(const uint16_t* data, uint32_t count) {
+    RS_HIGH();
+    usleep(1);
+    CS_LOW();
+    usleep(1);
+    for (uint32_t i = 0; i < count; i++) {
+        write_data_bus(data[i]);
+        WR_LOW();
+        usleep(1);
+        WR_HIGH();
+        usleep(1);
+    }
+    CS_HIGH();
+    usleep(1);
 }
 
 void SSD1963::set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {

@@ -25,28 +25,47 @@ constexpr uint8_t SSD1963_LCD_BACKLIGHT = 13; // Backlight enable (OUTPUT - soft
 //constexpr unsigned int LCD_HEIGHT = 272;
 
 
-
 static constexpr uint16_t LCD_WIDTH = 480;
 static constexpr uint16_t LCD_HEIGHT = 272;
 
 
 // Sincronización horizontal - Based on stm32plus SSD1963_480x272PanelTraits
-constexpr uint16_t TFT_HSYNC_PULSE        = 2;   // H_SYNC_PULSE_WIDTH
-constexpr uint16_t TFT_HSYNC_BACK_PORCH   = 43;  // H_BACK_PORCH
-constexpr uint16_t TFT_HSYNC_FRONT_PORCH  = 8;   // H_FRONT_PORCH
+constexpr uint16_t TFT_HSYNC_PULSE        = 41;
+constexpr uint16_t TFT_HSYNC_BACK_PORCH   = 2;
+constexpr uint16_t TFT_HSYNC_FRONT_PORCH  = 2;
 constexpr uint16_t TFT_HSYNC_PERIOD = LCD_WIDTH + TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH + TFT_HSYNC_FRONT_PORCH;
 
 // Sincronización vertical - Based on stm32plus SSD1963_480x272PanelTraits
-constexpr uint16_t TFT_VSYNC_PULSE        = 10;  // V_SYNC_PULSE_WIDTH
-constexpr uint16_t TFT_VSYNC_BACK_PORCH   = 12;  // V_BACK_PORCH
-constexpr uint16_t TFT_VSYNC_FRONT_PORCH  = 4;   // V_FRONT_PORCH
+constexpr uint16_t TFT_VSYNC_PULSE        = 10;
+constexpr uint16_t TFT_VSYNC_BACK_PORCH   = 2;
+constexpr uint16_t TFT_VSYNC_FRONT_PORCH  = 2;
 constexpr uint16_t TFT_VSYNC_PERIOD = LCD_HEIGHT + TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH + TFT_VSYNC_FRONT_PORCH;
 
-// Frecuencia de píxel: PCLK = SYSCLK × (FPR + 1) / 2^20
-// Oscilador 12MHz → PLL = 12MHz × 50 / 5 = 120MHz
-// Para 480×272@60Hz con PLL=120MHz: FPR = 0x13332 (≈9MHz)
-// (mismo valor que referencia PIC32 para idéntico panel)
-constexpr uint32_t LCD_FPR = 0x13332;
+// Frecuencia de píxel: PCLK = SYSCLK * (FPR+1) / 2^20
+// 0x0170A2 con SYSCLK = 100 MHz -> PCLK = 9.00 MHz (igual que la referencia PIC32
+// para el panel TY430TFT480272)
+constexpr uint32_t LCD_FPR = 0x0170A2; // 9.0 MHz para SYSCLK = 100 MHz
+
+// =========================================================================
+// OPCION: Replicar forma de onda RS exacta del micro que funciona
+// =========================================================================
+// El analizador logico mostro que el micro que funciona genera:
+// COMANDO:
+//   1. RS baja 40 ns ANTES de CS (pre-pulso)
+//   2. WR pulsa ~65 ns
+//   3. WR sube 10 ns ANTES de CS
+//   4. RS se queda LOW 95 ns DESPUES de CS↑, luego sube a HIGH
+// PRIMER DATO tras comando:
+//   RS pulsa: HIGH 40 ns -> LOW 30 ns -> HIGH (con CS↓)
+// RESTO DE DATOS:
+//   RS se queda HIGH fijo
+// Activar para replicar exactamente esta forma de onda (requiere clock_gettime para ns).
+constexpr bool SSD1963_MCU_WAVEFORM = false;
+
+// Timings de arranque STM32 (observados en captura de analizador logico)
+constexpr uint16_t SSD1963_RESET_LOW_MS = 2000;      // RST en bajo durante power-up
+constexpr uint16_t SSD1963_POST_RESET_MS = 1000;     // Espera tras liberar RST (STM32: ~1.0s)
+constexpr uint16_t SSD1963_RS_LEAD_MS = 50;          // RS HIGH antes del 1er comando (STM32: ~50ms)
 
 // SET_LCD_MODE (0xB0) parameter A - panel configuration
 // A[5]: TFT panel data width (0=18-bit, 1=24-bit)
@@ -61,4 +80,4 @@ constexpr uint32_t LCD_FPR = 0x13332;
 // 0x2C = 0b00101100 = 24-bit panel, no FRC, LSHIFT falling, sync active low
 // 0x0E = 0b00001110 = 18-bit panel, FRC enabled, LSHIFT falling, sync active low
 // 0x08 = 0b00001000 = 18-bit panel, 8-bit MCU bus
-#define LCD_MODE_CONFIG 0x0C  // Default: 18-bit panel, standard timing
+#define LCD_MODE_CONFIG 0x10  // 18-bit panel with FRC (0x10 = A5=0, A4=1, A3=1)
