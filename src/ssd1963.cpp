@@ -152,7 +152,6 @@ void SSD1963::init() {
     const uint16_t HT  = TFT_HSYNC_PERIOD;           // 525
     const uint16_t HPW = TFT_HSYNC_PULSE;            // 41
     const uint16_t HBP = TFT_HSYNC_BACK_PORCH;       // 2
-    const uint16_t HFP = TFT_HSYNC_FRONT_PORCH;      // 2
     const uint16_t HPS = HPW + HBP;                  // 43
     printf("[INIT] Setting horizontal timing (HT=%d, HPS=%d, HPW=%d)...\n",
            HT, HPS, HPW);
@@ -170,7 +169,6 @@ void SSD1963::init() {
     const uint16_t VT  = TFT_VSYNC_PERIOD;           // 286
     const uint16_t VPW = TFT_VSYNC_PULSE;            // 10
     const uint16_t VBP = TFT_VSYNC_BACK_PORCH;       // 2
-    const uint16_t VFP = TFT_VSYNC_FRONT_PORCH;      // 2
     const uint16_t VSP = VPW + VBP;                  // 12
     printf("[INIT] Setting vertical timing (VT=%d, VPS=%d, VPW=%d)...\n",
            VT, VSP, VPW);
@@ -278,70 +276,47 @@ void SSD1963::write_data_bus(uint16_t data) {
 
 void SSD1963::write_command(uint8_t cmd) {
     RS_LOW();
-    BUS_WAIT;
     write_data_bus(cmd);
-    BUS_WAIT;
     CS_LOW();
-    BUS_WAIT;
     WR_LOW();
-    BUS_WAIT;
     WR_HIGH();
-    BUS_WAIT;
     CS_HIGH();
-    BUS_WAIT;
     RS_HIGH();
-    BUS_WAIT;
 }
 
 void SSD1963::write_data(uint16_t data) {
     RS_HIGH();
-    BUS_WAIT;
     write_data_bus(data);
-    BUS_WAIT;
     CS_LOW();
-    BUS_WAIT;
     WR_LOW();
-    BUS_WAIT;
     WR_HIGH();
-    BUS_WAIT;
     CS_HIGH();
-    BUS_WAIT;
 }
 
 void SSD1963::write_pixel_burst_start() {
     RS_HIGH();
-    BUS_WAIT;
     CS_LOW();
-    BUS_WAIT;
 }
 
 void SSD1963::write_pixel_burst(uint16_t data) {
     write_data_bus(data);
     WR_LOW();
-    BUS_WAIT;
     WR_HIGH();
 }
 
 void SSD1963::write_pixel_burst_end() {
-    BUS_WAIT;
     CS_HIGH();
-    BUS_WAIT;
 }
 
 void SSD1963::write_data_burst(const uint16_t* data, uint32_t count) {
     RS_HIGH();
-    BUS_WAIT;
     CS_LOW();
-    BUS_WAIT;
     for (uint32_t i = 0; i < count; i++) {
         write_data_bus(data[i]);
         WR_LOW();
-        BUS_WAIT;
         WR_HIGH();
-        BUS_WAIT;
     }
     CS_HIGH();
-    BUS_WAIT;
 }
 
 void SSD1963::set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
