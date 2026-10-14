@@ -280,6 +280,8 @@ void SSD1963::draw_image_rgb565(const char* filepath) {
         return;
     }
 
+    fseek(file, 4, SEEK_SET);
+
     set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
     write_command(SSD1963_WRITE_MEMORY_START);
 

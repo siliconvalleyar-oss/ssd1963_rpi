@@ -127,14 +127,20 @@ static void test_touch(SSD1963& lcd, ADS7843_Touch& touch) {
     touch.set_calibration(TFTGL_CALIB_MIN_Y, 200.0,   0);
     touch.set_calibration(TFTGL_CALIB_MAX_Y, 3800.0,  LCD_HEIGHT);
 
+    bcm2835_gpio_fsel(TOUCH_INT_PIN, BCM2835_GPIO_FSEL_INP);
+
     for (int i = 0; i < 20; i++) {
-        unsigned int x = 0, y = 0, z = 0;
-        touch.get_touch_raw(&x, &y, &z);
-        if (touch.get_touch(&x, &y) == TouchStatus::GOT_TOUCH) {
-            std::cout << "touch: x=" << x << " y=" << y << std::endl;
-            lcd.draw_pixel(x, y, RED);
+        if (!bcm2835_gpio_lev(TOUCH_INT_PIN)) {
+            unsigned int x = 0, y = 0, z = 0;
+            touch.get_touch_raw(&x, &y, &z);
+            if (touch.get_touch(&x, &y) == TouchStatus::GOT_TOUCH) {
+                std::cout << "touch: x=" << x << " y=" << y << std::endl;
+                lcd.draw_pixel(x, y, RED);
+            } else {
+                std::cout << "sin touch (z=" << z << ")" << std::endl;
+            }
         } else {
-            std::cout << "sin touch (z=" << z << ")" << std::endl;
+            std::cout << "sin touch (INT=1)" << std::endl;
         }
         delay_ms(200);
     }
