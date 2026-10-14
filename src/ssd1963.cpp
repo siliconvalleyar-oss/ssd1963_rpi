@@ -232,7 +232,6 @@ void SSD1963::shutdown() {
 void SSD1963::shift_out_16bits(uint16_t data) {
 #if USE_8BIT_MODE
     // 8-bit mode: only first 74HC595 (D0-D7)
-    // Send lower 8 bits only, MSB first (bit 7 -> bit 0)
     for (int8_t i = 7; i >= 0; i--) {
         if (data & (1 << i)) {
             SR_SER_HIGH();
@@ -245,13 +244,36 @@ void SSD1963::shift_out_16bits(uint16_t data) {
         SR_SRCLK_LOW();
     }
 #else
-    // 16-bit mode: two 74HC595 in series (D0-D15)
-    // First 74HC595 Q0-Q7 = D0-D7
-    // Second 74HC595 Q0-Q7 = D8-D15
-    // Connection: SER -> 1st chip -> Q7' -> SER 2nd chip -> 2nd chip
-    // MSB FIRST: bit 15 -> bit 0 (worked for RED before)
-    for (int8_t i = 15; i >= 0; i--) {
-        if (data & (1 << i)) {
+    // 16-bit mode: two 74HC595 in series
+    // Wiring: SER -> 1st HC595 SER -> 1st HC595 Q7' -> 2nd HC595 SER
+    // 1st HC595 outputs = D0-D7 (Q0-Q7)
+    // 2nd HC595 outputs = D8-D15 (Q0-Q7)
+    // When shifting 16 bits:
+    //   - First 8 bits shifted go to 2nd chip (D8-D15)
+    //   - Last 8 bits shifted go to 1st chip (D0-D7)
+    // 
+    // SSD1963 expects: D0=bit0, D7=bit7, D8=bit8, D15=bit15
+    // So we push: data low byte (D0-D7) LAST, high byte (D8-D15) FIRST
+    // Within each byte, LSB (bit 0/8) must be pushed first to land in Q0
+    
+    uint8_t hi_byte = (data >> 8) & 0xFF;  // D8-D15 (pushes first → ends in 2nd chip)
+    uint8_t lo_byte = data & 0xFF;         // D0-D7 (pushes last → ends in 1st chip)
+    
+    // Push high byte first (goes to 2nd chip = D8-D15)
+    for (int8_t i = 0; i <= 7; i++) {
+        if (hi_byte & (1 << i)) {
+            SR_SER_HIGH();
+        } else {
+            SR_SER_LOW();
+        }
+        SR_WAIT;
+        SR_SRCLK_HIGH();
+        SR_WAIT;
+        SR_SRCLK_LOW();
+    }
+    // Push low byte second (goes to 1st chip = D0-D7)
+    for (int8_t i = 0; i <= 7; i++) {
+        if (lo_byte & (1 << i)) {
             SR_SER_HIGH();
         } else {
             SR_SER_LOW();
@@ -265,9 +287,9 @@ void SSD1963::shift_out_16bits(uint16_t data) {
     // Latch the data to outputs
     SR_RCLK_HIGH();
     SR_WAIT;
-    SR_WAIT;  // Extra hold for RCLK high
+    SR_WAIT;
     SR_RCLK_LOW();
-    SR_WAIT;  // Extra hold time after latch
+    SR_WAIT;
 }
 
 void SSD1963::write_data_bus(uint16_t data) {

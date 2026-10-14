@@ -4,7 +4,7 @@
 
 // Definición de pines - 74HC595 Shift Registers
 // Configura USE_8BIT_MODE para probar con 1 solo 74HC595 (8 bits D0-D7)
-#define USE_8BIT_MODE  1   // 1 = 8 bits (1x 74HC595), 0 = 16 bits (2x 74HC595)
+#define USE_8BIT_MODE  0   // 1 = 8 bits (1x 74HC595), 0 = 16 bits (2x 74HC595)
 
 constexpr uint8_t SSD1963_SR_SER   = 1;  // Serial data input (pin 14 of first 74HC595)
 constexpr uint8_t SSD1963_SR_SRCLK = 19; // Shift register clock (pin 11 of both 74HC595)
