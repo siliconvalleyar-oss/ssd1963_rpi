@@ -146,49 +146,75 @@ void SSD1963::init() {
     write_data(49);     // PLLclk = REFclk * 50
     write_data(4);      // SYSclk = PLLclk / 5
     write_data(4);      // Dummy (según código STM32)
-    // Activar PLL - DATASHEET: esperar 100ms para PLL lock
+    // Activar PLL - DATASHEET: esperar 100ms + polling PLL lock
     write_command(SSD1963_SET_PLL);
     write_data(0x01);
-    delay_ms(100);  // DATASHEET: 100ms para PLL lock
+    delay_ms(100);
     write_command(SSD1963_SET_PLL);
     write_data(0x03);
-    delay_ms(100);  // DATASHEET: 100ms
+    delay_ms(100);
+
+    // Poll PLL status (0xE4) until bit 2 (PLL locked) is set
+    for (uint8_t i = 0; i < 50; i++) {
+        write_command(SSD1963_GET_PLL_STATUS);
+        CS_LOW();
+        RS_HIGH();
+        write_data_bus(0);
+        if (slow_bus_) usleep(1);
+        WR_LOW();
+        if (slow_bus_) usleep(1);
+        WR_HIGH();
+        if (slow_bus_) usleep(1);
+        uint8_t status = 0;
+        for (uint8_t b = 0; b < 8; b++) {
+            if (bcm2835_gpio_lev(SSD1963_LCD_D0 + b)) status |= (1 << b);
+        }
+        CS_HIGH();
+        if (status & 0x04) break;  // PLL locked
+        delay_ms(10);
+    }
     // 5. Frecuencia LSHIFT (SE ENVIA ANTES DEL MODO LCD, como en el PIC32 de referencia)
     write_command(SSD1963_SET_LSHIFT_FREQ);
     write_data((LCD_FPR >> 16) & 0xFF);
     write_data((LCD_FPR >> 8) & 0xFF);
     write_data(LCD_FPR & 0xFF);
-    // 6. Configurar modo LCD - 0x20 para panel 24-bit (bit A5=1)
+    // 6. Configurar modo LCD - 0x10 para panel 18-bit (común en 480x272)
     write_command(SSD1963_SET_LCD_MODE);
-    write_data(0x20);    // A5=1 -> 24-bit panel (mayoria paneles 480x272)
-    write_data(0x00);    // igual que TechToys (byte 2 = 0x00)
+    write_data(0x10);    // A5=0 -> 18-bit panel (probar 0x20 si falla)
+    write_data(0x00);    // TFT mode
     write_data((LCD_WIDTH - 1) >> 8);
     write_data((LCD_WIDTH - 1) & 0xFF);
     write_data((LCD_HEIGHT - 1) >> 8);
     write_data((LCD_HEIGHT - 1) & 0xFF);
     write_data(0x00);    // RGB
-    // Tiempos horizontales (frmulas del PIC32 en la referencia: HT-1, HPS-1, HPW-1)
-    const uint16_t HT  = TFT_HSYNC_PERIOD;
-    const uint16_t HPS = TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH;
+    // Tiempos horizontales: HT, HPS, HPW, LPS (todos -1)
+    const uint16_t HT  = TFT_HSYNC_PERIOD;           // 525
+    const uint16_t HPW = TFT_HSYNC_PULSE;            // 41
+    const uint16_t HBP = TFT_HSYNC_BACK_PORCH;       // 2
+    const uint16_t HFP = TFT_HSYNC_FRONT_PORCH;      // 2
+    const uint16_t HPS = HPW + HBP;                  // 43
     write_command(SSD1963_SET_HOR_PERIOD);
-    write_data(((HT - 1) >> 8) & 0xFF);
+    write_data((HT - 1) >> 8);   // 524
     write_data((HT - 1) & 0xFF);
-    write_data(((HPS - 1) >> 8) & 0xFF);
+    write_data((HPS - 1) >> 8);  // 42
     write_data((HPS - 1) & 0xFF);
-    write_data(TFT_HSYNC_PULSE - 1);
-    write_data(0x00); // LPS = 0
-    write_data(0x00); // Opcional
-    write_data(0x00); // Opcional
-    // Tiempos verticales (VT-1, VSP-1, VPW-1)
-    const uint16_t VT  = TFT_VSYNC_PERIOD;
-    const uint16_t VSP = TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH;
-    write_command(SSD1963_SET_VER_PERIOD);
-    write_data(((VT - 1) >> 8) & 0xFF);
-    write_data((VT - 1) & 0xFF);
-    write_data(((VSP - 1) >> 8) & 0xFF);
-    write_data((VSP - 1) & 0xFF);
-    write_data(TFT_VSYNC_PULSE - 1);
+    write_data(HPW - 1);         // 40
+    write_data(0x00);            // LPS = 0
     write_data(0x00);
+    write_data(0x00);
+    // Tiempos verticales: VT, VSP, VPW, FPS
+    const uint16_t VT  = TFT_VSYNC_PERIOD;           // 286
+    const uint16_t VPW = TFT_VSYNC_PULSE;            // 10
+    const uint16_t VBP = TFT_VSYNC_BACK_PORCH;       // 2
+    const uint16_t VFP = TFT_VSYNC_FRONT_PORCH;      // 2
+    const uint16_t VSP = VPW + VBP;                  // 12
+    write_command(SSD1963_SET_VER_PERIOD);
+    write_data((VT - 1) >> 8);   // 285
+    write_data((VT - 1) & 0xFF);
+    write_data((VSP - 1) >> 8);  // 11
+    write_data((VSP - 1) & 0xFF);
+    write_data(VPW - 1);         // 9
+    write_data(0x00);            // FPS = 0
     write_data(0x00);
     // NO ENVIAR SET_PIXEL_FORMAT (0x3A es RESERVADO en SSD1963)
     // El formato se configura con SET_PIXEL_DATA_INTERFACE (0xF0)
