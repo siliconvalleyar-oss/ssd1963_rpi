@@ -77,34 +77,57 @@ void SSD1963::init() {
     write_command(SSD1963_EXIT_SLEEP_MODE);
     delay_ms(20);
 
-    // 4. PLL. Cristal de 10 MHz:
-    //    VCO = 10 * (M+1) = 300 MHz, PLL = VCO / (N+1) = 100 MHz (maximo permitido: 110 MHz)
-    printf("[INIT] PLL (M=%u, N=%u -> 100MHz con cristal de 10MHz)\n",
-           (unsigned)SSD1963_PLL_M, (unsigned)SSD1963_PLL_N);
+    // 4. Configurar PLL (para REFclk = 10 MHz → PLLclk = 500MHz, SYSclk = 100MHz)
     write_command(SSD1963_SET_PLL_MN);
-    write_data(SSD1963_PLL_M);
-    write_data(SSD1963_PLL_N);
-    write_data(0x04);            // C[2]=1: efectuar M y N
-
+    write_data(SSD1963_HAL::PLL_M);      // 49
+    write_data(SSD1963_HAL::PLL_N);      // 4
+    write_data(0x04);      // C[2]=1: efectuar M y N
+    delay_us(100);                       // Datasheet: 100us minimo tras SET_PLL_MN
+    // Activar PLL - DATASHEET: esperar 100ms para PLL lock
     write_command(SSD1963_SET_PLL);
-    write_data(0x01);            // habilitar PLL
-    delay_ms(100);               // esperar a que enganche (el bus es solo escritura, no se puede leer 0xE4)
-
+    write_data(0x01);
+    delay_ms(100);  // DATASHEET: 100ms para PLL lock
     write_command(SSD1963_SET_PLL);
-    write_data(0x03);            // usar el PLL como reloj del sistema
-    delay_ms(20);
+    write_data(0x03);
+    delay_ms(100);  // DATASHEET: 100ms
 
-    // 5. Modo del panel (ancho y polaridades definidos en config_hw.hpp)
+    // Poll PLL status (0xE4) until bit 2 (PLL locked) is set
+    for (uint8_t i = 0; i < 50; i++) {
+        write_command(SSD1963_GET_PLL_STATUS);
+        CS_LOW();
+        RS_HIGH();
+        write_data_bus(0);
+        usleep(1);
+        WR_LOW();
+        usleep(1);
+        WR_HIGH();
+        usleep(1);
+        uint8_t status = 0;
+        for (uint8_t b = 0; b < 8; b++) {
+            if (hal_.gpio_read(SSD1963_HAL::PIN_D0 + b)) status |= (1 << b);
+        }
+        CS_HIGH();
+        if (status & 0x04) break;  // PLL locked
+        delay_ms(10);
+    }
+
+    // STM32: RS goes HIGH ~50ms before first real command
+    RS_HIGH();
+    delay_ms(SSD1963_RS_LEAD_MS);
+
+// 5. Modo del panel (ancho y polaridades definidos en config_hw.hpp)
     write_command(SSD1963_SET_LCD_MODE);
-    write_data(LCD_MODE_CONFIG);
-    write_data(0x00);            // TFT, modo Hsync+Vsync
+    write_data(0x10);    // A5=0 -> 18-bit panel (probar 0x20 si falla)
+    write_data(0x00);    // TFT mode
     write_data((LCD_WIDTH - 1) >> 8);
     write_data((LCD_WIDTH - 1) & 0xFF);
     write_data((LCD_HEIGHT - 1) >> 8);
     write_data((LCD_HEIGHT - 1) & 0xFF);
-    write_data(0x00);            // secuencia RGB
+    write_data(0x00);    // RGB
 
-    // 6. Formato de datos del bus de la Pi: 16-bit RGB565
+    // NO ENVIAR SET_PIXEL_FORMAT (0x3A es RESERVADO en SSD1963)
+    // El formato se configura con SET_PIXEL_DATA_INTERFACE (0xF0)
+    // Interfaz de datos del panel: 16-bit RGB565
     write_command(SSD1963_SET_PIXEL_DATA_INTERFACE);
     write_data(SSD1963_PDI_16BIT565);
 
@@ -217,24 +240,34 @@ void SSD1963::write_data_bus(uint16_t data) {
 
 void SSD1963::write_command(uint8_t cmd) {
     RS_LOW();
-    CS_LOW();
+    usleep(1);
     write_data_bus(cmd);
+    usleep(1);
+    CS_LOW();
+    usleep(1);
     WR_LOW();
-    BUS_WAIT;
+    usleep(1);
     WR_HIGH();
-    BUS_WAIT;
+    usleep(1);
     CS_HIGH();
+    usleep(1);
+    RS_HIGH();  // Force RS HIGH after command (STM32: RS hold ~95ns after CS↑)
+    usleep(1);
 }
 
 void SSD1963::write_data(uint16_t data) {
     RS_HIGH();
-    CS_LOW();
+    usleep(1);
     write_data_bus(data);
+    usleep(1);
+    CS_LOW();
+    usleep(1);
     WR_LOW();
-    BUS_WAIT;
+    usleep(1);
     WR_HIGH();
-    BUS_WAIT;
+    usleep(1);
     CS_HIGH();
+    usleep(1);
 }
 
 void SSD1963::write_pixel_burst_start() {
