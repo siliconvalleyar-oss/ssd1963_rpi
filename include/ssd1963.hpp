@@ -52,6 +52,7 @@ private:
     void write_data_bus(uint16_t data);
     void write_command(uint8_t cmd);
     void write_data(uint16_t data);
+    void write_data_burst(const uint16_t* data, uint32_t count);  // Fast bulk write
     void set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
     void define_constants();
 

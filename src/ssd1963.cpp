@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 #include <iostream>
+#include <vector>
 #include <config_hw.hpp>
 #include <ssd1963_cmd.hpp>
 #include <ssd1963.hpp>
@@ -67,6 +68,18 @@ void SSD1963::write_data(uint16_t data) {
     CS_HIGH();
     DELAY_US(1);
     // RS stays HIGH for data bursts
+}
+
+void SSD1963::write_data_burst(const uint16_t* data, uint32_t count) {
+    // Fast bulk write: CS stays LOW, RS stays HIGH, only WR pulses
+    RS_HIGH();
+    CS_LOW();
+    for (uint32_t i = 0; i < count; i++) {
+        write_data_bus(data[i]);
+        WR_LOW();
+        WR_HIGH();
+    }
+    CS_HIGH();
 } 
  
 
@@ -86,22 +99,23 @@ void SSD1963::set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
 
 
 void SSD1963::clear_screen(uint16_t color) {
-    // Interfaz 16-bit RGB565 (PDI 0x03): CADA escritura al bus es UN píxel completo.
-    // Antes se enviaba color + color>>8 (2 escrituras por píxel): desplazaba/duplicaba
-    // los datos -> rayas y "basura de bits" en pantalla.
     set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
     write_command(SSD1963_WRITE_MEMORY_START);
+    // Fast fill: reuse single pixel value
+    RS_HIGH();
+    CS_LOW();
+    write_data_bus(color);
     for (uint32_t i = 0; i < (uint32_t)LCD_WIDTH * LCD_HEIGHT; i++) {
-        write_data(color);
+        WR_LOW();
+        WR_HIGH();
     }
+    CS_HIGH();
 }
 
 void SSD1963::draw_buffer(const uint16_t* buffer) {
     set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
     write_command(SSD1963_WRITE_MEMORY_START);
-    for (uint32_t i = 0; i < (uint32_t)LCD_WIDTH * LCD_HEIGHT; i++) {
-        write_data(buffer[i]);
-    }
+    write_data_burst(buffer, (uint32_t)LCD_WIDTH * LCD_HEIGHT);
 }
 
 void SSD1963::fill_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
@@ -110,9 +124,15 @@ void SSD1963::fill_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height,
     if (y + height > LCD_HEIGHT) height = LCD_HEIGHT - y;
     set_area(x, y, x + width - 1, y + height - 1);
     write_command(SSD1963_WRITE_MEMORY_START);
+    // Fast fill
+    RS_HIGH();
+    CS_LOW();
+    write_data_bus(color);
     for (uint32_t i = 0; i < (uint32_t)width * height; i++) {
-        write_data(color);
+        WR_LOW();
+        WR_HIGH();
     }
+    CS_HIGH();
 }
 
 void SSD1963::draw_pixels(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint16_t* pixels) {
@@ -120,6 +140,9 @@ void SSD1963::draw_pixels(uint16_t x, uint16_t y, uint16_t width, uint16_t heigh
     if (x + width > LCD_WIDTH) width = LCD_WIDTH - x;
     if (y + height > LCD_HEIGHT) height = LCD_HEIGHT - y;
     set_area(x, y, x + width - 1, y + height - 1);
+    write_command(SSD1963_WRITE_MEMORY_START);
+    write_data_burst(pixels, (uint32_t)width * height);
+}
     write_command(SSD1963_WRITE_MEMORY_START);
     for (uint32_t i = 0; i < (uint32_t)width * height; i++) {
         write_data(pixels[i]);
@@ -263,11 +286,20 @@ void SSD1963::init() {
  
 
 void SSD1963::draw_block(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
+    if (x >= LCD_WIDTH || y >= LCD_HEIGHT) return;
+    if (x + width > LCD_WIDTH) width = LCD_WIDTH - x;
+    if (y + height > LCD_HEIGHT) height = LCD_HEIGHT - y;
     set_area(x, y, x + width - 1, y + height - 1);
     write_command(SSD1963_WRITE_MEMORY_START);
-    for (uint32_t i = 0; i < width * height; i++) {
-        write_data(color);
+    // Fast fill
+    RS_HIGH();
+    CS_LOW();
+    write_data_bus(color);
+    for (uint32_t i = 0; i < (uint32_t)width * height; i++) {
+        WR_LOW();
+        WR_HIGH();
     }
+    CS_HIGH();
 }
 
 void SSD1963::draw_pixel(uint16_t x, uint16_t y, uint16_t color) {
@@ -309,20 +341,20 @@ void SSD1963::draw_image_rgb565(const char* filepath) {
     write_command(SSD1963_WRITE_MEMORY_START);
 
     uint32_t total_pixels = img_w * img_h;
+    std::vector<uint16_t> buffer(total_pixels);
     for (uint32_t i = 0; i < total_pixels; i++) {
         uint8_t high, low;
         if (fread(&high, 1, 1, file) != 1) break;
         if (fread(&low, 1, 1, file) != 1) break;
-
-        uint16_t color = (high << 8) | low;
-        write_data(color);
-        
+        buffer[i] = (high << 8) | low;
         if ((i % 32768) == 0) {
             std::cout << "[IMG] Progress: " << (i * 100 / total_pixels) << "%" << std::endl;
         }
     }
-
     fclose(file);
+    
+    // Fast burst write
+    write_data_burst(buffer.data(), total_pixels);
     std::cout << "[IMG] Done" << std::endl;
 }
 
