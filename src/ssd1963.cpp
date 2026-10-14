@@ -6,6 +6,7 @@
 #include <ssd1963_cmd.hpp>
 #include <ssd1963.hpp>
 #include <color.hpp>
+#include <gpio_mmap.hpp>
 
 
 SSD1963::SSD1963() {}
@@ -17,21 +18,21 @@ void SSD1963::delay_ms(uint32_t ms) {
 void SSD1963::setup_gpio() {
     // Configurar pines de datos como salida
     for (uint8_t pin = SSD1963_LCD_D0; pin <= SSD1963_LCD_D15; pin++) {
-        bcm2835_gpio_fsel(pin, BCM2835_GPIO_FSEL_OUTP);
+        GPIO_FSEL(pin, GPIO_FSEL_OUT);
     }
     // Configurar pines de control como salida
-    bcm2835_gpio_fsel(SSD1963_LCD_RS, BCM2835_GPIO_FSEL_OUTP);
-    bcm2835_gpio_fsel(SSD1963_LCD_WR, BCM2835_GPIO_FSEL_OUTP);
-    bcm2835_gpio_fsel(SSD1963_LCD_CS, BCM2835_GPIO_FSEL_OUTP);
-    bcm2835_gpio_fsel(SSD1963_LCD_RESET, BCM2835_GPIO_FSEL_OUTP);
-    bcm2835_gpio_fsel(SSD1963_LCD_BACKLIGHT, BCM2835_GPIO_FSEL_OUTP);
-    bcm2835_gpio_fsel(SSD1963_LCD_RD, BCM2835_GPIO_FSEL_OUTP);
+    GPIO_FSEL(SSD1963_LCD_RS, GPIO_FSEL_OUT);
+    GPIO_FSEL(SSD1963_LCD_WR, GPIO_FSEL_OUT);
+    GPIO_FSEL(SSD1963_LCD_CS, GPIO_FSEL_OUT);
+    GPIO_FSEL(SSD1963_LCD_RESET, GPIO_FSEL_OUT);
+    GPIO_FSEL(SSD1963_LCD_BACKLIGHT, GPIO_FSEL_OUT);
+    GPIO_FSEL(SSD1963_LCD_RD, GPIO_FSEL_OUT);
     // Estados iniciales: RST en BAJO, RD/WR/CS en ALTO, RS en BAJO (command mode por defecto)
     CS_HIGH();
     WR_HIGH();
     RS_LOW();       // RS en BAJO al inicio (modo comando)
     RESET_LOW();
-    bcm2835_gpio_write(SSD1963_LCD_RD, HIGH);
+    GPIO_SET(SSD1963_LCD_RD);
     BACKLIGHT_OFF();
 }
 

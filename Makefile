@@ -1,8 +1,8 @@
 CXX       = g++
-CXXFLAGS  = -Iinclude -I/tmp/bcm2835-install/include -std=c++11 -Wall -Wextra -O2
+CXXFLAGS  = -Iinclude -std=c++11 -Wall -Wextra -O2
 VERSION  := $(shell git describe --tags --abbrev=0 2>/dev/null || echo "0.0.0")
 CXXFLAGS += -DVERSION_TAG=\"$(VERSION)\"
-LDFLAGS   = -L/tmp/bcm2835-install/lib -lbcm2835 -lm
+LDFLAGS   = -lrt -lm
 
 SRC_DIR   = src
 ENG_DIR   = src/engine

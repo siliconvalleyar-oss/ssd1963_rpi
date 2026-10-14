@@ -1,7 +1,7 @@
 // ssd1963.hpp
 #pragma once
-#include <bcm2835.h>
 #include <cstdint>
+#include <gpio_mmap.hpp>
 
 
 //SSD1963_PIN_RST pin128_ssd1963_smd  CONF 1=8080 0:6800
@@ -14,17 +14,18 @@
 
 
 
+
 // Macros de control
-#define RS_LOW()    bcm2835_gpio_write(SSD1963_LCD_RS, LOW)
-#define RS_HIGH()   bcm2835_gpio_write(SSD1963_LCD_RS, HIGH)
-#define WR_LOW()    bcm2835_gpio_write(SSD1963_LCD_WR, LOW)
-#define WR_HIGH()   bcm2835_gpio_write(SSD1963_LCD_WR, HIGH)
-#define CS_LOW()    bcm2835_gpio_write(SSD1963_LCD_CS, LOW)
-#define CS_HIGH()   bcm2835_gpio_write(SSD1963_LCD_CS, HIGH)
-#define RESET_LOW() bcm2835_gpio_write(SSD1963_LCD_RESET, LOW)
-#define RESET_HIGH() bcm2835_gpio_write(SSD1963_LCD_RESET, HIGH)
-#define BACKLIGHT_ON() bcm2835_gpio_write(SSD1963_LCD_BACKLIGHT, HIGH)
-#define BACKLIGHT_OFF() bcm2835_gpio_write(SSD1963_LCD_BACKLIGHT, LOW)
+#define RS_LOW()    GPIO_CLR(SSD1963_LCD_RS)
+#define RS_HIGH()   GPIO_SET(SSD1963_LCD_RS)
+#define WR_LOW()    GPIO_CLR(SSD1963_LCD_WR)
+#define WR_HIGH()   GPIO_SET(SSD1963_LCD_WR)
+#define CS_LOW()    GPIO_CLR(SSD1963_LCD_CS)
+#define CS_HIGH()   GPIO_SET(SSD1963_LCD_CS)
+#define RESET_LOW() GPIO_CLR(SSD1963_LCD_RESET)
+#define RESET_HIGH() GPIO_SET(SSD1963_LCD_RESET)
+#define BACKLIGHT_ON()  GPIO_SET(SSD1963_LCD_BACKLIGHT)
+#define BACKLIGHT_OFF() GPIO_CLR(SSD1963_LCD_BACKLIGHT)
 
 
 class SSD1963 {
@@ -55,4 +56,3 @@ private:
     void define_constants();
 
 };
-

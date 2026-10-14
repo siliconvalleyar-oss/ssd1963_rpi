@@ -1,31 +1,18 @@
 #include <ssd1963.hpp>
-//#include <ssd1963_cmd.hpp>
-#include <bcm2835.h>
 #include <unistd.h>
 #include <cstdint>
 #include <iostream>
 #include <color.hpp>
 
 
-
-void delay_ms(uint32_t ms) {
-    usleep(ms * 1000);
-}
-//version 3
-
-
 int main() {
 
     SSD1963 ssd1963;
-    if (!bcm2835_init()) {
-        std::cerr << "Error al inicializar bcm2835" << std::endl;
-        return 1;
-    }
     ssd1963.setup_gpio();
     ssd1963.init();
     // Pantalla en BLANCO primero (tras la 2a inicializacion del SSD1963)
     ssd1963.clear_screen(WHITE);
-    delay_ms(500);
+    usleep(500000);
     struct ColorBlock {
         uint16_t x;
         uint16_t y;
@@ -50,11 +37,8 @@ int main() {
         ssd1963.draw_block(block.x, block.y, block_width, block_height, block.color);
         // Sin delay para que quede fijo rápido
     }
-//    std::cout << "Fin del test de colores." << std::endl;
- delay_ms(900);
+    usleep(900000);
 
     ssd1963.draw_image_rgb565("assets/capibaras.rgb565");
-    bcm2835_close();
     return 0;
 }
-
