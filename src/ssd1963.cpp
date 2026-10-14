@@ -10,6 +10,10 @@
 
 SSD1963::SSD1963() {}
 
+SSD1963::~SSD1963() {
+    bcm2835_close();
+}
+
 void SSD1963::delay_ms(uint32_t ms) {
     usleep(ms * 1000);
 }
