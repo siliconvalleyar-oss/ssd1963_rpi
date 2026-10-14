@@ -247,7 +247,7 @@ void SSD1963::init() {
     write_data(LCD_FPR & 0xFF);
     // 7. Configurar modo LCD
     write_command(SSD1963_SET_LCD_MODE);
-    write_data(0x20);    // LCD_MODE_CONFIG: 24-bit panel (probar 0x10 si falla)
+    write_data(0x10);    // LCD_MODE_CONFIG: 18-bit con FRC (igual PIC32)
     write_data(0x00);    // TFT type: 00/01 = TFT mode
     write_data((LCD_WIDTH - 1) >> 8);
     write_data((LCD_WIDTH - 1) & 0xFF);
@@ -385,7 +385,8 @@ void SSD1963::write_pixel_burst_start() {
 void SSD1963::write_pixel_burst(uint16_t data) {
     write_data_bus(data);
     WR_LOW();
-    bcm2835_delayMicroseconds(1);  // WR pulse width ~1us (min 65ns per STM32 capture)
+    // WR pulse ~100ns (min 65ns per STM32 capture) - busy loop for speed
+    for (volatile int i = 0; i < 50; i++) __asm__ volatile("nop");
     WR_HIGH();
 }
 
