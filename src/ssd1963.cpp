@@ -10,10 +10,6 @@
 
 SSD1963::SSD1963() {}
 
-SSD1963::~SSD1963() {
-    bcm2835_close();
-}
-
 void SSD1963::delay_ms(uint32_t ms) {
     usleep(ms * 1000);
 }
@@ -271,5 +267,9 @@ void SSD1963::write_data_bus(uint16_t data) {
     for (uint8_t i = 0; i < 16; i++) {
         bcm2835_gpio_write(SSD1963_LCD_D0 + i, (data >> i) & 1);
     }
+}
+
+SSD1963::~SSD1963() {
+    bcm2835_close();
 }
 

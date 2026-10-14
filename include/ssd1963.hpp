@@ -31,6 +31,7 @@ class SSD1963 {
 public:
 
     SSD1963();
+    ~SSD1963();
     void init();
     void setup_gpio();
     void clear_screen(uint16_t color);
