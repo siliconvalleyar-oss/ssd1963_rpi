@@ -244,6 +244,9 @@ private:
     /** @brief Ciclo de escritura de datos (RS=HIGH, CS toggles). */
     void write_data(uint16_t data);
 
+    /** @brief Escritura masiva de datos (CS fija en LOW, solo toggle WR). */
+    void write_data_burst(const uint16_t* data, uint32_t count);
+
     /** @brief Define el área activa de escritura en GRAM. */
     void set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
 

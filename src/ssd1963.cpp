@@ -98,24 +98,11 @@ void SSD1963::init() {
     delay_ms(100);    // Datasheet: 100ms for PLL lock
 
     // Poll PLL status (0xE4) until bit 2 (PLL locked) is set
-    for (uint8_t i = 0; i < 50; i++) {
-        write_command(SSD1963_GET_PLL_STATUS);
-        CS_LOW();
-        RS_HIGH();
-        write_data_bus(0);
-        usleep(1);
-        WR_LOW();
-        usleep(1);
-        WR_HIGH();
-        usleep(1);
-        uint8_t status = 0;
-        for (int b = 0; b < 8; b++) {
-            if (bcm2835_gpio_lev(SSD1963_LCD_D0 + b)) status |= (1 << b);
-        }
-        CS_HIGH();
-        if (status & 0x04) break;  // PLL locked
-        delay_ms(10);
-    }
+    // NOTE: With 74HC595, reading data from SSD1963 requires RD cycle + input latch.
+    // Simple approach: poll by writing the command and checking via GPIO RD.
+    // Since 74HC595 is write-only in this configuration, we skip the poll and
+    // rely on the 100ms delay which exceeds the datasheet's typical lock time.
+    delay_ms(200);
 
     // STM32: RS goes HIGH ~50ms before first real command
     RS_HIGH();
