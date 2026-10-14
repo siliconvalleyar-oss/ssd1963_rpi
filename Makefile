@@ -11,7 +11,8 @@ BIN_DIR   = bin
 # Proyecto driver limpio: ssd1963.cpp es el driver avanzado (se mantiene),
 # main.cpp es el demo unificado (merge de los snapshots de tmp/).
 SRCS      = $(SRC_DIR)/main.cpp \
-            $(SRC_DIR)/ssd1963.cpp
+            $(SRC_DIR)/ssd1963.cpp \
+            $(SRC_DIR)/tftgl_ads7843.cpp
 
 OBJS      = $(patsubst %.cpp,$(OBJ_DIR)/%.o,$(notdir $(SRCS)))
 TARGET    = $(BIN_DIR)/ssd1963_app
