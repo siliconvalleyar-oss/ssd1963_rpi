@@ -38,32 +38,35 @@ void SSD1963::setup_gpio() {
 
 void SSD1963::write_command(uint8_t cmd) {
     RS_LOW();
-    if (slow_bus_) usleep(1);
+    DELAY_US(1);
     write_data_bus(cmd);
-    if (slow_bus_) usleep(1);
+    DELAY_US(1);
     CS_LOW();
-    if (slow_bus_) usleep(1);
+    DELAY_US(1);
     WR_LOW();
-    if (slow_bus_) usleep(1);
+    DELAY_US(1);
     WR_HIGH();
-    if (slow_bus_) usleep(1);
+    DELAY_US(1);
     CS_HIGH();
-    if (slow_bus_) usleep(1);
+    DELAY_US(1);
+    RS_HIGH();  // Force RS HIGH after command (STM32: RS hold ~95ns after CS↑)
+    DELAY_US(1);
 }
 
 void SSD1963::write_data(uint16_t data) {
     RS_HIGH();
-    if (slow_bus_) usleep(1);
+    DELAY_US(1);
     write_data_bus(data);
-    if (slow_bus_) usleep(1);
+    DELAY_US(1);
     CS_LOW();
-    if (slow_bus_) usleep(1);
+    DELAY_US(1);
     WR_LOW();
-    if (slow_bus_) usleep(1);
+    DELAY_US(1);
     WR_HIGH();
-    if (slow_bus_) usleep(1);
+    DELAY_US(1);
     CS_HIGH();
-    if (slow_bus_) usleep(1);
+    DELAY_US(1);
+    // RS stays HIGH for data bursts
 } 
  
 
@@ -165,11 +168,11 @@ void SSD1963::init() {
         CS_LOW();
         RS_HIGH();
         write_data_bus(0);
-        if (slow_bus_) usleep(1);
+        DELAY_US(1);
         WR_LOW();
-        if (slow_bus_) usleep(1);
+        DELAY_US(1);
         WR_HIGH();
-        if (slow_bus_) usleep(1);
+        DELAY_US(1);
         uint8_t status = 0;
         for (uint8_t b = 0; b < 8; b++) {
             if (GPIO_LEV(SSD1963_LCD_D0 + b)) status |= (1 << b);
