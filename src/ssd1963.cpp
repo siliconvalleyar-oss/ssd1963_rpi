@@ -134,6 +134,10 @@ void SSD1963::init() {
     // El módulo hace power-up mientras RST está bajo; esperar 2 s.
     delay_ms(2000);
     RESET_HIGH();
+    
+    // CRITICAL: STM32 waits ~1.0s after RST release before any bus activity
+    delay_ms(1000);
+    
     delay_ms(10);
     // 2. Soft Reset (ANTES del PLL)
     write_command(SSD1963_SOFT_RESET);
@@ -173,6 +177,10 @@ void SSD1963::init() {
         if (status & 0x04) break;  // PLL locked
         delay_ms(10);
     }
+
+    // STM32: RS goes HIGH ~50ms before first real command
+    RS_HIGH();
+    delay_ms(50);
     // 5. Frecuencia LSHIFT (SE ENVIA ANTES DEL MODO LCD, como en el PIC32 de referencia)
     write_command(SSD1963_SET_LSHIFT_FREQ);
     write_data((LCD_FPR >> 16) & 0xFF);
