@@ -14,8 +14,10 @@
     "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop" );\
 } while(0)
 
-// Retardo 74HC595 timing (~1us per toggle) - stable for shift register
-#define SR_WAIT  do { bcm2835_delayMicroseconds(1); } while(0)
+// Retardo 74HC595 timing - NOP loop (sufficient for 1MHz+ shift register, no usleep overhead)
+#define SR_WAIT  do { __asm__ __volatile__( \
+    "nop\nnop\nnop\nnop\nnop\nnop" );\
+} while(0)
 
 
 SSD1963::SSD1963() {}
@@ -276,70 +278,70 @@ void SSD1963::write_data_bus(uint16_t data) {
 
 void SSD1963::write_command(uint8_t cmd) {
     RS_LOW();
-    usleep(1);
+    BUS_WAIT;
     write_data_bus(cmd);
-    usleep(1);
+    BUS_WAIT;
     CS_LOW();
-    usleep(1);
+    BUS_WAIT;
     WR_LOW();
-    usleep(1);
+    BUS_WAIT;
     WR_HIGH();
-    usleep(1);
+    BUS_WAIT;
     CS_HIGH();
-    usleep(1);
-    RS_HIGH();  // Force RS HIGH after command (STM32: RS hold ~95ns after CS↑)
-    usleep(1);
+    BUS_WAIT;
+    RS_HIGH();
+    BUS_WAIT;
 }
 
 void SSD1963::write_data(uint16_t data) {
     RS_HIGH();
-    usleep(1);
+    BUS_WAIT;
     write_data_bus(data);
-    usleep(1);
+    BUS_WAIT;
     CS_LOW();
-    usleep(1);
+    BUS_WAIT;
     WR_LOW();
-    usleep(1);
+    BUS_WAIT;
     WR_HIGH();
-    usleep(1);
+    BUS_WAIT;
     CS_HIGH();
-    usleep(1);
+    BUS_WAIT;
 }
 
 void SSD1963::write_pixel_burst_start() {
     RS_HIGH();
-    usleep(1);
+    BUS_WAIT;
     CS_LOW();
-    usleep(1);
+    BUS_WAIT;
 }
 
 void SSD1963::write_pixel_burst(uint16_t data) {
     write_data_bus(data);
     WR_LOW();
-    usleep(1);  // WR pulse ~1us (min 65ns per STM32 capture)
+    BUS_WAIT;
     WR_HIGH();
 }
 
 void SSD1963::write_pixel_burst_end() {
-    usleep(1);
+    BUS_WAIT;
     CS_HIGH();
-    usleep(1);
+    BUS_WAIT;
 }
 
 void SSD1963::write_data_burst(const uint16_t* data, uint32_t count) {
     RS_HIGH();
-    usleep(1);
+    BUS_WAIT;
     CS_LOW();
-    usleep(1);
+    BUS_WAIT;
     for (uint32_t i = 0; i < count; i++) {
         write_data_bus(data[i]);
         WR_LOW();
-        usleep(1);
+        BUS_WAIT;
         WR_HIGH();
-        usleep(1);
+        BUS_WAIT;
     }
     CS_HIGH();
-    usleep(1);
+    BUS_WAIT;
 }
 
 void SSD1963::set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
