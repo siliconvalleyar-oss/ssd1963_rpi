@@ -143,11 +143,6 @@ void SSD1963::draw_pixels(uint16_t x, uint16_t y, uint16_t width, uint16_t heigh
     write_command(SSD1963_WRITE_MEMORY_START);
     write_data_burst(pixels, (uint32_t)width * height);
 }
-    write_command(SSD1963_WRITE_MEMORY_START);
-    for (uint32_t i = 0; i < (uint32_t)width * height; i++) {
-        write_data(pixels[i]);
-    }
-}
 
 
 void SSD1963::init() {
