@@ -172,7 +172,7 @@ void SSD1963::init() {
         if (slow_bus_) usleep(1);
         uint8_t status = 0;
         for (uint8_t b = 0; b < 8; b++) {
-            if (bcm2835_gpio_lev(SSD1963_LCD_D0 + b)) status |= (1 << b);
+            if (GPIO_LEV(SSD1963_LCD_D0 + b)) status |= (1 << b);
         }
         CS_HIGH();
         if (status & 0x04) break;  // PLL locked
@@ -300,11 +300,15 @@ void SSD1963::write_data_bus(uint16_t data) {
     // Escribe todos los 16 bits directamente (sin glitches intermedios)
     // D0 = bit 0, D1 = bit 1, ..., D15 = bit 15
     for (uint8_t i = 0; i < 16; i++) {
-        bcm2835_gpio_write(SSD1963_LCD_D0 + i, (data >> i) & 1);
+        if ((data >> i) & 1) {
+            GPIO_SET(SSD1963_LCD_D0 + i);
+        } else {
+            GPIO_CLR(SSD1963_LCD_D0 + i);
+        }
     }
 }
 
 SSD1963::~SSD1963() {
-    bcm2835_close();
+    // GPIO cleanup handled by gpio_mmap destructor
 }
 
