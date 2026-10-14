@@ -70,3 +70,8 @@ constexpr uint32_t LCD_FPR = 0x0170A2; // 9.0 MHz para SYSCLK = 100 MHz
 //   RS se queda HIGH fijo
 // Activar para replicar exactamente esta forma de onda (requiere clock_gettime para ns).
 constexpr bool SSD1963_MCU_WAVEFORM = false;
+
+// Timings de arranque STM32 (observados en captura de analisis logico)
+constexpr uint16_t SSD1963_RESET_LOW_MS = 2000;      // RST en bajo durante power-up
+constexpr uint16_t SSD1963_POST_RESET_MS = 1000;     // Espera tras liberar RST (STM32: ~1.0s)
+constexpr uint16_t SSD1963_RS_LEAD_MS = 50;          // RS HIGH antes del 1er comando (STM32: ~50ms)
