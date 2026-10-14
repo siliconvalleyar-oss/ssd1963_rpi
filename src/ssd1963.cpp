@@ -281,19 +281,46 @@ void SSD1963::draw_image_rgb565(const char* filepath) {
         return;
     }
 
-    set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
+    // Check for 4-byte header (width, height as uint16_t big-endian)
+    uint8_t hdr[4];
+    size_t hdr_read = fread(hdr, 1, 4, file);
+    uint32_t img_w = LCD_WIDTH, img_h = LCD_HEIGHT;
+    bool has_header = false;
+    if (hdr_read == 4) {
+        uint16_t w = (hdr[0] << 8) | hdr[1];
+        uint16_t h = (hdr[2] << 8) | hdr[3];
+        if (w <= LCD_WIDTH && h <= LCD_HEIGHT) {
+            img_w = w;
+            img_h = h;
+            has_header = true;
+            std::cout << "[IMG] Header detected: " << img_w << "x" << img_h << std::endl;
+        } else {
+            // Not a valid header, rewind
+            fseek(file, 0, SEEK_SET);
+        }
+    } else {
+        fseek(file, 0, SEEK_SET);
+    }
+
+    set_area(0, 0, img_w - 1, img_h - 1);
     write_command(SSD1963_WRITE_MEMORY_START);
 
-    for (uint32_t i = 0; i < LCD_WIDTH * LCD_HEIGHT; i++) {
+    uint32_t total_pixels = img_w * img_h;
+    for (uint32_t i = 0; i < total_pixels; i++) {
         uint8_t high, low;
         if (fread(&high, 1, 1, file) != 1) break;
         if (fread(&low, 1, 1, file) != 1) break;
 
         uint16_t color = (high << 8) | low;
         write_data(color);
+        
+        if ((i % 32768) == 0) {
+            std::cout << "[IMG] Progress: " << (i * 100 / total_pixels) << "%" << std::endl;
+        }
     }
 
     fclose(file);
+    std::cout << "[IMG] Done" << std::endl;
 }
 
 void SSD1963::write_data_bus(uint16_t data) {
