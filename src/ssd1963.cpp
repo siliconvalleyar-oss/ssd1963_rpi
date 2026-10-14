@@ -251,17 +251,16 @@ void SSD1963::shift_out_16bits(uint16_t data) {
     // When shifting 16 bits:
     //   - First 8 bits shifted go to 2nd chip (D8-D15)
     //   - Last 8 bits shifted go to 1st chip (D0-D7)
-    // 
-    // SSD1963 expects: D0=bit0, D7=bit7, D8=bit8, D15=bit15
-    // So we push: data low byte (D0-D7) LAST, high byte (D8-D15) FIRST
-    // Within each byte, LSB (bit 0/8) must be pushed first to land in Q0
+    //
+    // Try ALTERNATE: push low byte first (to 2nd chip), then high byte (to 1st chip)
+    // This assumes 1st chip = D8-D15, 2nd chip = D0-D7
     
-    uint8_t hi_byte = (data >> 8) & 0xFF;  // D8-D15 (pushes first → ends in 2nd chip)
-    uint8_t lo_byte = data & 0xFF;         // D0-D7 (pushes last → ends in 1st chip)
+    uint8_t hi_byte = (data >> 8) & 0xFF;  // D8-D15
+    uint8_t lo_byte = data & 0xFF;         // D0-D7
     
-    // Push high byte first (goes to 2nd chip = D8-D15)
-    for (int8_t i = 0; i <= 7; i++) {
-        if (hi_byte & (1 << i)) {
+    // Push low byte first (goes to 2nd chip = D0-D7 in this wiring)
+    for (int8_t i = 7; i >= 0; i--) {
+        if (lo_byte & (1 << i)) {
             SR_SER_HIGH();
         } else {
             SR_SER_LOW();
@@ -271,9 +270,9 @@ void SSD1963::shift_out_16bits(uint16_t data) {
         SR_WAIT;
         SR_SRCLK_LOW();
     }
-    // Push low byte second (goes to 1st chip = D0-D7)
-    for (int8_t i = 0; i <= 7; i++) {
-        if (lo_byte & (1 << i)) {
+    // Push high byte second (goes to 1st chip = D8-D15 in this wiring)
+    for (int8_t i = 7; i >= 0; i--) {
+        if (hi_byte & (1 << i)) {
             SR_SER_HIGH();
         } else {
             SR_SER_LOW();
