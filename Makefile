@@ -1,14 +1,14 @@
 CXX = g++
-CXXFLAGS = -Iinclude
+CXXFLAGS = -Iinclude -std=c++11
 LDFLAGS = -lbcm2835
 
 SRC_DIR = src
 OBJ_DIR = obj
 BIN_DIR = bin
 
-SRCS = main.cpp $(SRC_DIR)/ssd1963.cpp
+SRCS = main_game.cpp $(SRC_DIR)/ssd1963.cpp $(SRC_DIR)/game.cpp
 OBJS = $(patsubst %.cpp, $(OBJ_DIR)/%.o, $(notdir $(SRCS)))
-TARGET = $(BIN_DIR)/ssd1963_app
+TARGET = $(BIN_DIR)/mario_game
 
 PI_HOST ?= pi@raspberry.local
 PI_DIR ?= /home/pi/src/ssd1963_photo_png_2026_sucess_rgb
