@@ -5,22 +5,13 @@ CXXFLAGS += -DVERSION_TAG=\"$(VERSION)\"
 LDFLAGS   = -L/tmp/bcm2835-install/lib -lbcm2835 -lm
 
 SRC_DIR   = src
-ENG_DIR   = src/engine
 OBJ_DIR   = obj
 BIN_DIR   = bin
 
+# Proyecto driver limpio: ssd1963.cpp es el driver avanzado (se mantiene),
+# main.cpp es el demo unificado (merge de los snapshots de tmp/).
 SRCS      = $(SRC_DIR)/main.cpp \
-            $(SRC_DIR)/ssd1963.cpp \
-            $(SRC_DIR)/FrameBuffer.cpp \
-            $(ENG_DIR)/GameEngine.cpp \
-            $(ENG_DIR)/MenuScene.cpp \
-            $(ENG_DIR)/Sprite.cpp \
-            $(ENG_DIR)/SpaceShooterScene.cpp \
-            $(ENG_DIR)/FontDemoScene.cpp \
-            $(ENG_DIR)/ImageViewerScene.cpp \
-            $(ENG_DIR)/ColorBlocksScene.cpp \
-            $(ENG_DIR)/PatternScene.cpp \
-            $(ENG_DIR)/SpriteViewerScene.cpp
+            $(SRC_DIR)/ssd1963.cpp
 
 OBJS      = $(patsubst %.cpp,$(OBJ_DIR)/%.o,$(notdir $(SRCS)))
 TARGET    = $(BIN_DIR)/ssd1963_app
@@ -38,9 +29,6 @@ $(TARGET): $(OBJS)
 	$(CXX) $^ -o $@ $(LDFLAGS)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-$(OBJ_DIR)/%.o: $(ENG_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
