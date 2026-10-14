@@ -9,7 +9,11 @@
 
 
 void delay_ms(uint32_t ms) {
+    std::cout << "Delaying " << ms << "ms..." << std::endl;
+    std::cout.flush();
     usleep(ms * 1000);
+    std::cout << "Delay done" << std::endl;
+    std::cout.flush();
 }
 //version 3
 
@@ -47,14 +51,18 @@ int main() {
     const uint16_t block_height = 45;
     for (const auto& block : blocks) {
         std::cout << "Dibujando bloque color: " << block.name << " en (" << block.x << ", " << block.y << ")" << std::endl;
+        std::cout.flush();
         ssd1963.draw_block(block.x, block.y, block_width, block_height, block.color);
         // Sin delay para que quede fijo rápido
     }
 //    std::cout << "Fin del test de colores." << std::endl;
  delay_ms(900);
 
+    std::cout << "Cargando imagen..." << std::endl;
+    std::cout.flush();
     ssd1963.draw_image_rgb565("assets/capibaras.rgb565");
+    std::cout << "Imagen cargada!" << std::endl;
+    delay_ms(5000);
     bcm2835_close();
     return 0;
 }
-
