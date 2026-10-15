@@ -9,6 +9,7 @@
 #include <engine/PatternScene.hpp>
 #include <engine/SpriteViewerScene.hpp>
 #include <engine/TouchTestScene.hpp>
+#include <engine/PiStatusScene.hpp>
 #include <engine/sprite_list.hpp>
 #include <tftgl_ads7843.hpp>
 #include <bcm2835.h>
@@ -56,6 +57,7 @@ int main() {
     PatternScene      patterns(engine.display());
     SpriteViewerScene sprites(engine.display());
     TouchTestScene    touch_test(engine.display());
+    PiStatusScene     pi_status(engine.display());
 
     populate_sprites(sprites);
 
@@ -66,6 +68,7 @@ int main() {
     menu.add_item("COLORES",        &color_blocks);
     menu.add_item("PATRONES",       &patterns);
     menu.add_item("TOUCH TEST",     &touch_test);
+    menu.add_item("PI STATUS",      &pi_status);
     menu.add_item("SALIR",          nullptr);
 
     // === TEST: renderizado directo (sin FrameBuffer) ===
