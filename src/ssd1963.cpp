@@ -7,17 +7,19 @@
 #include <color.hpp>
 #include <font_8x8.hpp>
 
-// Retardo para timing del bus 8080 (WR pulse width + data hold) - ~50ns
+// Retardo para timing del bus 8080 (WR pulse width + data hold) - mínimo necesario
 #define BUS_WAIT  do { __asm__ __volatile__( \
     "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
-    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n" \
-    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop" );\
+    "nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop" );\
 } while(0)
 
-// Retardo 74HC595 timing - NOP loop (sufficient for 1MHz+ shift register, no usleep overhead)
+// Retardo 74HC595 timing - minimal NOPs (74HC595 has ~100ns propagation, NOPs add ~10-20ns overhead)
 #define SR_WAIT  do { __asm__ __volatile__( \
-    "nop\nnop\nnop\nnop\nnop\nnop" );\
+    "nop\nnop\nnop\nnop" );\
 } while(0)
+
+// Minimal wait for WR/RCLK transitions (just enough for signal settling)
+#define TINY_WAIT do { __asm__ __volatile__("nop"); } while(0)
 
 
 SSD1963::SSD1963() {}
