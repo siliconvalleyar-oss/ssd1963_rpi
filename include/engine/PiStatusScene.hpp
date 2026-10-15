@@ -19,6 +19,7 @@ private:
     std::string m_temp;
     std::string m_uptime;
     std::string m_memory;
+    std::string m_wifi_rssi;
 
     void refresh_system_info();
     std::string exec_command(const char* cmd);

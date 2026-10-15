@@ -11,7 +11,8 @@ static uint16_t rgb(uint8_t r, uint8_t g, uint8_t b) {
 
 PiStatusScene::PiStatusScene(SSD1963& display)
     : Scene(display), m_ip("?"), m_time("?"), m_location("?"),
-      m_btc_price("?"), m_temp("?"), m_uptime("?"), m_memory("?") {}
+      m_btc_price("?"), m_temp("?"), m_uptime("?"), m_memory("?"),
+      m_wifi_rssi("?") {}
 
 bool PiStatusScene::on_enter() {
     refresh_system_info();
@@ -95,11 +96,11 @@ void PiStatusScene::refresh_system_info() {
 
     // Get memory usage
     m_memory = exec_command("free -m | awk 'NR==2{printf \"%d/%dMB (%.0f%%)\", $3, $2, $3*100/$2}' 2>/dev/null");
-    if (m_memory.empty()) {
-        // Fallback: parse /proc/meminfo
-        std::string used = exec_command("awk '/MemAvailable/{free=$2}END{print 0}' /proc/meminfo 2>/dev/null");
-        m_memory = "N/A";
-    }
+    if (m_memory.empty()) m_memory = "N/A";
+
+    // Get WiFi signal strength
+    m_wifi_rssi = exec_command("iwconfig wlan0 2>/dev/null | grep -oP 'Signal level=\\K-?[0-9]+'");
+    if (m_wifi_rssi.empty()) m_wifi_rssi = "N/A";
 }
 
 void PiStatusScene::draw(FrameBuffer& fb) {
@@ -108,17 +109,16 @@ void PiStatusScene::draw(FrameBuffer& fb) {
 
     fb.draw_string_centered_scaled(cx, 4, "SISTEMA", rgb(255, 255, 0), rgb(0, 0, 20), 2);
 
-    uint16_t y = 40;
-    int label_w = 100;
+    uint16_t y = 32;
+    int label_w = 120;
+
+    // Time in LARGE font with seconds
+    fb.draw_string_centered_scaled(cx, y, m_time.c_str(), rgb(0, 255, 0), rgb(0, 0, 20), 3);
+    y += 28;
 
     // IP address
     fb.draw_string(10, y, "IP:", rgb(200, 200, 255), rgb(0, 0, 20));
     fb.draw_string(10 + label_w, y, m_ip.c_str(), rgb(0, 255, 0), rgb(0, 0, 20));
-    y += 14;
-
-    // Time
-    fb.draw_string(10, y, "Hora:", rgb(200, 200, 255), rgb(0, 0, 20));
-    fb.draw_string(10 + label_w, y, m_time.c_str(), rgb(0, 255, 0), rgb(0, 0, 20));
     y += 14;
 
     // Temperature
@@ -134,6 +134,11 @@ void PiStatusScene::draw(FrameBuffer& fb) {
     // Memory usage
     fb.draw_string(10, y, "Mem:", rgb(200, 200, 255), rgb(0, 0, 20));
     fb.draw_string(10 + label_w, y, m_memory.c_str(), rgb(255, 100, 0), rgb(0, 0, 20));
+    y += 14;
+
+    // WiFi RSSI
+    fb.draw_string(10, y, "WiFi:", rgb(200, 200, 255), rgb(0, 0, 20));
+    fb.draw_string(10 + label_w, y, m_wifi_rssi.c_str(), rgb(100, 255, 100), rgb(0, 0, 20));
     y += 14;
 
     // Bitcoin price
