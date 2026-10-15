@@ -1,5 +1,9 @@
 #pragma once
 #include <cstdint>
+
+// Estado del PLL (bit 2 = PLL locked) - usado por SSD1963::init()
+constexpr uint8_t SSD1963_GET_PLL_STATUS = 0xE4;
+
 /*
 
 // Definición de pines

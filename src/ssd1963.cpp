@@ -250,6 +250,23 @@ void SSD1963::draw_pixel(uint16_t x, uint16_t y, uint16_t color) {
 }
 
 
+void SSD1963::draw_buffer(uint16_t x, uint16_t y, uint16_t width, uint16_t height,
+                          const uint16_t* pixels) {
+    if (width == 0 || height == 0) return;
+    set_area(x, y, x + width - 1, y + height - 1);
+    write_command(SSD1963_WRITE_MEMORY_START);
+    // Ráfaga: RS y CS se mantienen y solo se generan pulsos WR por pixel
+    RS_HIGH();
+    CS_LOW();
+    const uint32_t count = (uint32_t)width * height;
+    for (uint32_t i = 0; i < count; i++) {
+        write_data_bus(pixels[i]);
+        WR_LOW();
+        WR_HIGH();
+    }
+    CS_HIGH();
+}
+
 void SSD1963::draw_image_rgb565(const char* filepath) {
     FILE* file = fopen(filepath, "rb");
     if (!file) {
@@ -273,10 +290,11 @@ void SSD1963::draw_image_rgb565(const char* filepath) {
 }
 
 void SSD1963::write_data_bus(uint16_t data) {
-    // Escribe todos los 16 bits directamente (sin glitches intermedios)
+    // D0..D15 = GPIO12..27 (contiguos en el banco 0 del BCM2835).
+    // Una sola escritura a GPSET0/GPCLR0 por pixel en lugar de 16 llamadas
+    // a bcm2835_gpio_write: ~8x mas rapido (critico para un juego a 60 fps).
     // D0 = bit 0, D1 = bit 1, ..., D15 = bit 15
-    for (uint8_t i = 0; i < 16; i++) {
-        bcm2835_gpio_write(SSD1963_LCD_D0 + i, (data >> i) & 1);
-    }
+    bcm2835_gpio_write_mask((uint32_t)data << SSD1963_LCD_D0,
+                            0xFFFFUL << SSD1963_LCD_D0);
 }
 

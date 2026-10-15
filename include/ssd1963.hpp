@@ -13,7 +13,6 @@
 
 
 
-
 // Macros de control
 #define RS_LOW()    bcm2835_gpio_write(SSD1963_LCD_RS, LOW)
 #define RS_HIGH()   bcm2835_gpio_write(SSD1963_LCD_RS, HIGH)
@@ -38,7 +37,12 @@ public:
     void delay_ms(uint32_t ms);
 	void draw_pixel(uint16_t x, uint16_t y, uint16_t color);
     void draw_image_rgb565(const char* filepath) ;
-    
+
+    // Blit de una region de un buffer RGB565 (row-major, w*h pixeles).
+    // Mucho mas rapido que draw_pixel por pixel: un solo set_area + ráfaga WR.
+    void draw_buffer(uint16_t x, uint16_t y, uint16_t width, uint16_t height,
+                     const uint16_t* pixels);
+
 private:
 
     // true = espera ~1 us tras cada strobe WR (durante init, como el PMP lento del PIC32)
