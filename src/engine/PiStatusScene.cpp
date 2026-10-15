@@ -11,7 +11,7 @@ static uint16_t rgb(uint8_t r, uint8_t g, uint8_t b) {
 
 PiStatusScene::PiStatusScene(SSD1963& display)
     : Scene(display), m_ip("?"), m_time("?"), m_location("?"),
-      m_btc_price("?"), m_temp("?"), m_uptime("?") {}
+      m_btc_price("?"), m_temp("?"), m_uptime("?"), m_memory("?") {}
 
 bool PiStatusScene::on_enter() {
     refresh_system_info();
@@ -90,8 +90,15 @@ void PiStatusScene::refresh_system_info() {
     if (m_temp.empty()) m_temp = "?.?C";
 
     // Get uptime
-    m_uptime = exec_command("awk '{print int($1/3600)\"h \"int(($1%3600)/60)\"m\"}' /proc/uptime 2>/dev/null");
+    m_uptime = exec_command("awk '{print int($1/3600)\"h \"int(($1%3600)/60)\"m"}' /proc/uptime 2>/dev/null");
     if (m_uptime.empty()) m_uptime = "0h 0m";
+
+    // Get memory usage
+    m_memory = exec_command("free -m | awk 'NR==2{printf \"%d/%dMB (%.0f%%)\", $3, $2, $3*100/$2}' 2>/dev/null");
+    if (m_memory.empty()) {
+        m_memory = exec_command("awk '/MemUsed/{printf \"%dMB\", $2/1024}' /proc/meminfo 2>/dev/null");
+        if (m_memory.empty()) m_memory = "N/A";
+    }
 }
 
 void PiStatusScene::draw(FrameBuffer& fb) {
@@ -121,6 +128,11 @@ void PiStatusScene::draw(FrameBuffer& fb) {
     // Uptime
     fb.draw_string(10, y, "Uptime:", rgb(200, 200, 255), rgb(0, 0, 20));
     fb.draw_string(10 + label_w, y, m_uptime.c_str(), rgb(0, 255, 0), rgb(0, 0, 20));
+    y += 14;
+
+    // Memory usage
+    fb.draw_string(10, y, "Mem:", rgb(200, 200, 255), rgb(0, 0, 20));
+    fb.draw_string(10 + label_w, y, m_memory.c_str(), rgb(255, 100, 0), rgb(0, 0, 20));
     y += 14;
 
     // Bitcoin price
