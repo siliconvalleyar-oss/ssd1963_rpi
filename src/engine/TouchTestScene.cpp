@@ -68,7 +68,7 @@ void TouchTestScene::draw(FrameBuffer& fb) {
     if (m_touched) {
         snprintf(buf, sizeof(buf), "x=%u  y=%u", m_last_x, m_last_y);
         fb.draw_string_centered(cx, 180, buf, rgb(0, 255, 0), rgb(10, 10, 30));
-        fb.draw_pixel(m_last_x, m_last_y, rgb(255, 0, 0));
+        fb.set_pixel(m_last_x, m_last_y, rgb(255, 0, 0));
     }
 
     fb.draw_string_centered(cx, 240,

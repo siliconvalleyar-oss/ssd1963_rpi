@@ -8,7 +8,7 @@ public:
     bool on_enter() override;
     void update(uint32_t dt) override;
     void draw(FrameBuffer& fb) override;
-    const char* name() const override { return "TouchTestScene"; }
+    const char* name() const override;
 
 private:
     uint32_t m_timer;
