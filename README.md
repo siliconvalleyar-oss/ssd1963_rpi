@@ -90,12 +90,18 @@ driver SSD1963:
 - Laberinto clásico 28x31 (casillas de 8 px) + HUD con puntaje, récord, nivel y vidas
 - 4 fantasmas con IA clásica (scatter/chase, modo asustado con pastillas,
   ojos que vuelven a la casa, salida escalonada de la casa, túnel lateral)
-- Estados: título, READY, juego, pausa, muerte, parpadeo de muros al
-  completar el nivel, game over
+- **Presentación de ~3 s al arrancar** y después **demo automática** que se
+  juega sola (IA por BFS: va al punto más cercano, huye de fantasmas y los
+  persigue con las pastillas); cualquier botón toma el control
+- Estados: presentación, demo, READY, juego, pausa, muerte, parpadeo de
+  muros al completar el nivel, game over
 - Render a 60 Hz con back-buffer en RAM; solo se suben al display los
   rectángulos que cambian (el bus 8080 bit-bangueado no da para más)
 - `write_data_bus()` optimizado: los 16 pines GPIO12-27 se escriben con una
   sola escritura de registro (GPSET0/GPCLR0) vía `bcm2835_gpio_write_mask`
+- Espejo horizontal del panel compensado **por software** (`SSD1963_MIRROR_X`
+  en `config_hw.hpp`): `set_area()` refleja la ventana X y las ráfagas emiten
+  cada fila invertida, así las fuentes se leen de izquierda a derecha
 
 Puntuación: punto 10, pastilla 50, fantasmas 200/400/800/1600, vida extra a 10000.
 

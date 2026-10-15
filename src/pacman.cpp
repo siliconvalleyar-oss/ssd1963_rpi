@@ -140,7 +140,9 @@ void PacmanGame::init() {
 
     load_level();
     reset_positions();
-    state_ = State::ATTRACT;
+    state_ = State::INTRO;
+    state_ticks_ = 0;
+    demo_mode_ = false;
     full_redraw_ = true;
 }
 
@@ -152,18 +154,28 @@ bool PacmanGame::button(uint8_t pin) {
 }
 
 void PacmanGame::read_input() {
-    if (button(PIN_UP))    { next_dx_ = 0;  next_dy_ = -1; }
-    if (button(PIN_DOWN))  { next_dx_ = 0;  next_dy_ =  1; }
-    if (button(PIN_LEFT))  { next_dx_ = -1; next_dy_ =  0; }
-    if (button(PIN_RIGHT)) { next_dx_ =  1; next_dy_ =  0; }
-
-    bool s = button(PIN_START);
-    bool pressed = s && !start_prev_;
+    bool up    = button(PIN_UP);
+    bool down  = button(PIN_DOWN);
+    bool left  = button(PIN_LEFT);
+    bool right = button(PIN_RIGHT);
+    bool s     = button(PIN_START);
+    bool start_edge = s && !start_prev_;
     start_prev_ = s;
-    if (!pressed) return;
+
+    // En presentacion o demo, cualquier boton toma el control
+    if (state_ == State::INTRO || state_ == State::DEMO) {
+        if (start_edge || up || down || left || right) new_game();
+        return;
+    }
+
+    if (up)    { next_dx_ = 0;  next_dy_ = -1; }
+    if (down)  { next_dx_ = 0;  next_dy_ =  1; }
+    if (left)  { next_dx_ = -1; next_dy_ =  0; }
+    if (right) { next_dx_ =  1; next_dy_ =  0; }
+
+    if (!start_edge) return;
 
     switch (state_) {
-        case State::ATTRACT:  new_game(); break;
         case State::PLAYING:  state_ = State::PAUSED;
                               mark_dirty(MAZE_X, MAZE_Y + 13 * TILE, MAZE_W * TILE, 56);
                               break;
@@ -182,11 +194,35 @@ void PacmanGame::new_game() {
     lives_ = 3;
     level_ = 1;
     extra_life_given_ = false;
+    demo_mode_ = false;
     load_level();
     reset_positions();
     state_ = State::READY;
     state_ticks_ = 0;
     hud_dirty_ = true;
+    full_redraw_ = true;
+}
+
+void PacmanGame::start_demo() {
+    score_ = 0;
+    lives_ = 3;
+    level_ = 1;
+    extra_life_given_ = false;
+    demo_mode_ = true;
+    load_level();
+    reset_positions();
+    state_ = State::READY;
+    state_ticks_ = 0;
+    hud_dirty_ = true;
+    full_redraw_ = true;
+}
+
+void PacmanGame::enter_intro() {
+    state_ = State::INTRO;
+    state_ticks_ = 0;
+    attract_scroll_ = 0;
+    demo_mode_ = false;
+    last_blink_ = false;
     full_redraw_ = true;
 }
 
@@ -254,11 +290,16 @@ void PacmanGame::lose_life() {
     lives_--;
     hud_dirty_ = true;
     if (lives_ < 0) {
-        state_ = State::GAMEOVER;
-        state_ticks_ = 0;
         if (score_ > high_score_) high_score_ = score_;
         hud_dirty_ = true;
-        full_redraw_ = true;
+        if (demo_mode_) {
+            // en demo se vuelve a la presentacion
+            enter_intro();
+        } else {
+            state_ = State::GAMEOVER;
+            state_ticks_ = 0;
+            full_redraw_ = true;
+        }
     } else {
         reset_positions();
         state_ = State::READY;
@@ -619,7 +660,8 @@ void PacmanGame::check_collisions() {
 // ----------------------------------------------------------------------
 void PacmanGame::update() {
     switch (state_) {
-        case State::ATTRACT:  update_attract();  break;
+        case State::INTRO:    update_intro();    break;
+        case State::DEMO:     update_demo();     break;
         case State::READY:    update_ready();    break;
         case State::PLAYING:  update_playing();  break;
         case State::PAUSED:   update_paused();   break;
@@ -629,8 +671,9 @@ void PacmanGame::update() {
     }
 }
 
-void PacmanGame::update_attract() {
+void PacmanGame::update_intro() {
     attract_scroll_++;
+    state_ticks_++;
     // linea de persecucion: limpiar rastro y marcar posiciones nuevas
     int16_t base_old = (int16_t)(LCD_WIDTH - ((attract_scroll_ - 1) % (LCD_WIDTH + 96)));
     int16_t base_new = (int16_t)(LCD_WIDTH - (attract_scroll_ % (LCD_WIDTH + 96)));
@@ -645,12 +688,25 @@ void PacmanGame::update_attract() {
         last_blink_ = blink;
         mark_dirty(MAZE_X + 32, 212, 160, 14);
     }
+    // presentacion de ~3 s -> arranca la demo automatica
+    if (state_ticks_ >= 180) start_demo();
+}
+
+void PacmanGame::update_demo() {
+    demo_ai();
+    update_playing();
+    // parpadeo del rotulo DEMO en el HUD
+    bool blink = (tick_ / 30) & 1;
+    if (blink != last_blink_) {
+        last_blink_ = blink;
+        mark_dirty(HUD_X + 4, 257, 64, 14);
+    }
 }
 
 void PacmanGame::update_ready() {
     state_ticks_++;
     if (state_ticks_ >= 150) {
-        state_ = State::PLAYING;
+        state_ = demo_mode_ ? State::DEMO : State::PLAYING;
         mark_dirty(MAZE_X, MAZE_Y + 13 * TILE, MAZE_W * TILE, 40);
     }
 }
@@ -668,7 +724,8 @@ void PacmanGame::update_playing() {
     move_pacman();
     for (uint8_t i = 0; i < GHOST_COUNT; i++) move_ghost(ghosts_[i]);
     check_collisions();
-    if (state_ != State::PLAYING) return; // colision ha cambiado el estado
+    // si la colision ha cambiado el estado (muerte, game over...)
+    if (state_ != State::PLAYING && state_ != State::DEMO) return;
 
     // parpadeo de pastillas
     uint32_t phase = (tick_ / 25) & 1;
@@ -728,11 +785,7 @@ void PacmanGame::update_clearing() {
 
 void PacmanGame::update_gameover() {
     state_ticks_++;
-    if (state_ticks_ >= 300) {
-        state_ = State::ATTRACT;
-        attract_scroll_ = 0;
-        full_redraw_ = true;
-    }
+    if (state_ticks_ >= 300) enter_intro();
 }
 
 // ----------------------------------------------------------------------
@@ -791,7 +844,7 @@ void PacmanGame::upload(const Rect& r) {
 
 void PacmanGame::render_full() {
     fb_fill(0, 0, LCD_WIDTH, LCD_HEIGHT, CLR_BG);
-    if (state_ != State::ATTRACT) {
+    if (state_ != State::INTRO) {
         for (int8_t ty = 0; ty < MAZE_H; ty++)
             for (int8_t tx = 0; tx < MAZE_W; tx++)
                 draw_tile(tx, ty);
@@ -809,7 +862,7 @@ void PacmanGame::render_full() {
         draw_overlay();
         draw_hud();
     } else {
-        draw_attract();
+        draw_intro();
     }
     Rect full = Rect{0, 0, LCD_WIDTH, LCD_HEIGHT};
     dirty_count_ = 0;
@@ -817,7 +870,7 @@ void PacmanGame::render_full() {
 }
 
 void PacmanGame::render_region(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
-    if (state_ == State::ATTRACT) { draw_attract(); return; }
+    if (state_ == State::INTRO) { draw_intro(); return; }
 
     // muros y puntos que tocan el rectangulo
     if (x < MAZE_X + MAZE_W * TILE && x + w > MAZE_X &&
@@ -1034,6 +1087,11 @@ void PacmanGame::draw_hud() {
     draw_text(x, 232, "10 IZQUIER",0x8410, 1);
     draw_text(x, 242, "11 DERECHA",0x8410, 1);
     draw_text(x, 252, "7 INICIO/PAUSA", 0x8410, 1);
+
+    // rotulo de modo demo (parpadea via update_demo)
+    if (demo_mode_ && ((tick_ / 30) & 1) == 0) {
+        draw_text(x, 259, "DEMO", YELLOW, 2);
+    }
 }
 
 void PacmanGame::draw_overlay() {
@@ -1054,8 +1112,8 @@ void PacmanGame::draw_overlay() {
     }
 }
 
-void PacmanGame::draw_attract() {
-    // titulo
+void PacmanGame::draw_intro() {
+    // presentacion de titulo
     const char* title = "PAC-MAN";
     int16_t w = (int16_t)(strlen(title) * 4 * 4 - 4);
     draw_text((int16_t)((LCD_WIDTH - w) / 2), 40, title, YELLOW, 4);
@@ -1089,11 +1147,130 @@ void PacmanGame::draw_attract() {
         fb_pixel((int16_t)(ox + 4), 173, CLR_EYE);
     }
 
-    // "PULSA 7 PARA JUGAR" parpadeante
+    // "PULSA 7 PARA JUGAR" parpadeante (o arranca la demo en 3 s)
     if (((tick_ / 30) & 1) == 0) {
         const char* msg = "PULSA 7 PARA JUGAR";
         w = (int16_t)(strlen(msg) * 4 * 2 - 2);
         draw_text((int16_t)((LCD_WIDTH - w) / 2), 212, msg, WHITE, 2);
+    }
+}
+
+// ----------------------------------------------------------------------
+// IA del modo demo: BFS al comestible mas cercano, huida si hay peligro
+// ----------------------------------------------------------------------
+int PacmanGame::demo_search(bool chase_ghost) {
+    static const int8_t dirs[4][2] = {{0, -1}, {-1, 0}, {0, 1}, {1, 0}};
+    const int N = MAZE_W * MAZE_H;
+    int16_t parent[MAZE_W * MAZE_H]; // 868*2 = 1.7 KB
+    int16_t queue[MAZE_W * MAZE_H];
+    for (int i = 0; i < N; i++) parent[i] = -1;
+
+    int start = pacman_.ty * MAZE_W + pacman_.tx;
+    int head = 0, tail = 0, found = -1;
+    parent[start] = (int16_t)start;
+    queue[tail++] = (int16_t)start;
+
+    while (head < tail && found < 0) {
+        int cur = queue[head++];
+        int cx = cur % MAZE_W, cy = cur / MAZE_W;
+        bool is_target = false;
+        if (cur != start) {
+            if (chase_ghost) {
+                for (uint8_t i = 0; i < GHOST_COUNT; i++) {
+                    if (ghosts_[i].state == GS_NORMAL &&
+                        ghosts_[i].e.tx == cx && ghosts_[i].e.ty == cy) {
+                        is_target = true;
+                        break;
+                    }
+                }
+            } else {
+                uint8_t t = maze_[cy][cx];
+                is_target = (t == 1 || t == 2);
+            }
+        }
+        if (is_target) { found = cur; break; }
+
+        for (int d = 0; d < 4; d++) {
+            int8_t nx = (int8_t)(cx + dirs[d][0]);
+            int8_t ny = (int8_t)(cy + dirs[d][1]);
+            if (!passable(nx, ny, 0)) continue;
+            // normalizar tunel (fila 14) al indice de casilla
+            if (ny == TUNNEL_ROW) {
+                if (nx < 0) nx = MAZE_W - 1;
+                else if (nx >= MAZE_W) nx = 0;
+            }
+            int ni = ny * MAZE_W + nx;
+            if (parent[ni] >= 0) continue;
+            parent[ni] = (int16_t)cur;
+            queue[tail++] = (int16_t)ni;
+        }
+    }
+    if (found < 0) return -1;
+
+    // retroceder hasta el primer paso desde el inicio
+    int step = found;
+    while (parent[step] != start) {
+        step = parent[step];
+        if (step == parent[step]) return -1; // proteccion
+    }
+    int dx = step % MAZE_W - pacman_.tx;
+    int dy = step / MAZE_W - pacman_.ty;
+    if (dx > 1) dx = -1;   // envoltura del tunel
+    if (dx < -1) dx = 1;
+    for (int d = 0; d < 4; d++)
+        if (dirs[d][0] == dx && dirs[d][1] == dy) return d;
+    return -1;
+}
+
+int PacmanGame::demo_flee() {
+    static const int8_t dirs[4][2] = {{0, -1}, {-1, 0}, {0, 1}, {1, 0}};
+    int best = -1, best_score = -1;
+    for (int d = 0; d < 4; d++) {
+        int8_t ddx = dirs[d][0], ddy = dirs[d][1];
+        if (ddx == -pacman_.dx && ddy == -pacman_.dy &&
+            (pacman_.dx != 0 || pacman_.dy != 0)) continue;
+        int8_t nx = (int8_t)(pacman_.tx + ddx), ny = (int8_t)(pacman_.ty + ddy);
+        if (!passable(nx, ny, 0)) continue;
+        if (ny == TUNNEL_ROW) {
+            if (nx < 0) nx = MAZE_W - 1;
+            else if (nx >= MAZE_W) nx = 0;
+        }
+        // puntuacion = distancia minima al fantasma vivo mas cercano
+        int score = 999;
+        for (uint8_t i = 0; i < GHOST_COUNT; i++) {
+            const Ghost& g = ghosts_[i];
+            if (g.state != GS_NORMAL && g.state != GS_EXIT) continue;
+            if (g.fright) continue;
+            int dist = abs(nx - g.e.tx) + abs(ny - g.e.ty);
+            if (dist < score) score = dist;
+        }
+        if (ddx == pacman_.dx && ddy == pacman_.dy) score++; // preferir seguir
+        if (score > best_score) { best_score = score; best = d; }
+    }
+    return best;
+}
+
+void PacmanGame::demo_ai() {
+    static const int8_t dirs[4][2] = {{0, -1}, {-1, 0}, {0, 1}, {1, 0}};
+    if (pacman_.off != 0) return; // solo decide en el centro de la casilla
+
+    bool threat = false;
+    if (fright_ticks_ == 0) {
+        for (uint8_t i = 0; i < GHOST_COUNT; i++) {
+            const Ghost& g = ghosts_[i];
+            if (g.state != GS_NORMAL && g.state != GS_EXIT) continue;
+            int dist = abs(g.e.tx - pacman_.tx) + abs(g.e.ty - pacman_.ty);
+            if (dist <= 4) { threat = true; break; }
+        }
+    }
+
+    int d = -1;
+    if (fright_ticks_ > 0) d = demo_search(true);  // con miedo: cazar fantasmas
+    if (d < 0 && threat)  d = demo_flee();         // peligro: huir
+    if (d < 0)            d = demo_search(false);  // normal: punto mas cercano
+    if (d >= 0) {
+        next_dx_ = dirs[d][0];
+        next_dy_ = dirs[d][1];
     }
 }
 

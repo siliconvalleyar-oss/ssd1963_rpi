@@ -56,6 +56,15 @@ void SSD1963::write_data(uint16_t data) {
  
 
 void SSD1963::set_area(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
+    if (SSD1963_MIRROR_X) {
+        // El panel se muestra en espejo horizontal (GRAC col c -> pantalla 479-c).
+        // Compensar la ventana aqui hace que TODO lo que se dibuje (pixel,
+        // bloque, ráfaga) aparezca en su posición lógica correcta.
+        uint16_t a = (uint16_t)(LCD_WIDTH - 1 - x2);
+        uint16_t b = (uint16_t)(LCD_WIDTH - 1 - x1);
+        x1 = a;
+        x2 = b;
+    }
     write_command(SSD1963_SET_COLUMN_ADDRESS);
     write_data(x1 >> 8);
     write_data(x1 & 0xFF);
@@ -206,10 +215,12 @@ void SSD1963::init() {
     // Interfaz de datos del panel: 16-bit RGB565
     write_command(SSD1963_SET_PIXEL_DATA_INTERFACE);
     write_data(SSD1963_PDI_16BIT565);
-    // Address mode: RGB, top-to-bottom, left-to-right
-    // + A[1] flip horizontal si el panel se muestra en espejo (config_hw.hpp)
+    // Address mode: RGB, top-to-bottom, left-to-right.
+    // El espejo horizontal del panel se compensa por software (set_area +
+    // inversion de filas en las ráfagas); A[1] de 0x36 no es fiable en este
+    // panel, se mantiene 0x00 (ver config_hw.hpp SSD1963_MIRROR_X).
     write_command(SSD1963_SET_ADDR_MODE);
-    write_data(SSD1963_MIRROR_X ? 0x02 : 0x00);
+    write_data(0x00);
     // Reset del PANEL fisico via GPIO0 (igual que la referencia PIC32):
     // pulso LOW -> 1ms -> HIGH. Sin esto el panel puede quedar en estado indefinido.
     write_command(SSD1963_SET_GPIO_CONF);
@@ -256,14 +267,27 @@ void SSD1963::draw_buffer(uint16_t x, uint16_t y, uint16_t width, uint16_t heigh
     if (width == 0 || height == 0) return;
     set_area(x, y, x + width - 1, y + height - 1);
     write_command(SSD1963_WRITE_MEMORY_START);
-    // Ráfaga: RS y CS se mantienen y solo se generan pulsos WR por pixel
+    // Ráfaga: RS y CS se mantienen y solo se generan pulsos WR por pixel.
+    // Con MIRROR_X la ventana ya esta reflejada por set_area, asi que cada
+    // fila se emite invertida para que el contenido logico sea correcto.
     RS_HIGH();
     CS_LOW();
-    const uint32_t count = (uint32_t)width * height;
-    for (uint32_t i = 0; i < count; i++) {
-        write_data_bus(pixels[i]);
-        WR_LOW();
-        WR_HIGH();
+    if (SSD1963_MIRROR_X) {
+        for (uint32_t r = 0; r < height; r++) {
+            const uint16_t* row = pixels + (size_t)r * width;
+            for (uint32_t i = width; i-- > 0;) {
+                write_data_bus(row[i]);
+                WR_LOW();
+                WR_HIGH();
+            }
+        }
+    } else {
+        const uint32_t count = (uint32_t)width * height;
+        for (uint32_t i = 0; i < count; i++) {
+            write_data_bus(pixels[i]);
+            WR_LOW();
+            WR_HIGH();
+        }
     }
     CS_HIGH();
 }
@@ -277,6 +301,24 @@ void SSD1963::draw_image_rgb565(const char* filepath) {
 
     set_area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
     write_command(SSD1963_WRITE_MEMORY_START);
+
+    if (SSD1963_MIRROR_X) {
+        // fila a fila, emitida invertida (ventana ya reflejada por set_area)
+        uint16_t rowbuf[LCD_WIDTH];
+        bool eof = false;
+        for (uint32_t y = 0; y < LCD_HEIGHT && !eof; y++) {
+            for (uint32_t x = 0; x < LCD_WIDTH; x++) {
+                uint8_t b[2];
+                if (fread(b, 1, 2, file) != 2) { eof = true; break; }
+                rowbuf[x] = (uint16_t)((b[0] << 8) | b[1]);
+            }
+            if (!eof) {
+                for (uint32_t x = LCD_WIDTH; x-- > 0;) write_data(rowbuf[x]);
+            }
+        }
+        fclose(file);
+        return;
+    }
 
     for (uint32_t i = 0; i < LCD_WIDTH * LCD_HEIGHT; i++) {
         uint8_t high, low;

@@ -48,7 +48,8 @@ private:
     // Maquina de estados
     // ------------------------------------------------------------------
     enum class State : uint8_t {
-        ATTRACT,    // pantalla de titulo
+        INTRO,      // presentacion de titulo (~3 s)
+        DEMO,       // partida automatica (IA) para el escaparate
         READY,      // "READY!" antes de cada ronda
         PLAYING,
         PAUSED,
@@ -91,7 +92,7 @@ private:
     // ------------------------------------------------------------------
     SSD1963& display_;
     bool running_ = true;
-    State state_ = State::ATTRACT;
+    State state_ = State::INTRO;
 
     // Back-buffer en RAM (se sube solo lo que cambia)
     std::vector<uint16_t> fb_;
@@ -137,6 +138,7 @@ private:
     bool     hud_dirty_ = true;
     bool     start_prev_ = false;
     bool     last_blink_ = false;
+    bool     demo_mode_ = false;   // la partida actual la controla la IA
 
     // ------------------------------------------------------------------
     // Entrada
@@ -148,7 +150,8 @@ private:
     // Logica
     // ------------------------------------------------------------------
     void update();
-    void update_attract();
+    void update_intro();
+    void update_demo();
     void update_ready();
     void update_playing();
     void update_paused();
@@ -157,6 +160,8 @@ private:
     void update_gameover();
 
     void new_game();
+    void start_demo();     // reinicia partida en modo demo (IA)
+    void enter_intro();    // vuelve a la presentacion
     void load_level();
     void reset_positions();
     void lose_life();
@@ -170,6 +175,9 @@ private:
     void decide_ghost_dir(Ghost& g);
     void ghost_target(const Ghost& g, int8_t& tx, int8_t& ty) const;
     void check_collisions();
+    void demo_ai();                    // IA del jugador en modo demo
+    int  demo_search(bool chase_ghost); // BFS: primer paso al objetivo
+    int  demo_flee();                   // paso que maximiza la distancia a los fantasmas
     void eat_tile();
 
     static void wrap_tile(int8_t& tx);
@@ -196,7 +204,7 @@ private:
     void draw_text_centered(int16_t y, const char* text, uint16_t color, uint8_t scale);
     void draw_hud();
     void draw_overlay();
-    void draw_attract();
+    void draw_intro();
 
     static uint16_t glyph(char c);
 };

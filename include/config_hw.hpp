@@ -77,9 +77,12 @@ constexpr uint16_t SSD1963_POST_RESET_MS = 1000;     // Espera tras liberar RST 
 constexpr uint16_t SSD1963_RS_LEAD_MS = 50;          // RS HIGH antes del 1er comando (STM32: ~50ms)
 
 // =========================================================================
-// Espejo horizontal (bit A[1] del comando 0x36 SET ADDRESS MODE)
-// El panel TFT montado muestra la imagen invertida de derecha a izquierda
-// (FPC del panel cableada al reves); activar corrige el espejo sin tocar
-// el frame buffer. Ver docs/SSD1963.PDF, figura 9-15 "A[1] Flip Horizontal".
+// Espejo horizontal del panel (FPC cableada al reves: se ve de derecha a
+// izquierda, con las fuentes volteadas). Compensacion 100% POR SOFTWARE:
+//   - set_area() refleja la ventana X
+//   - draw_buffer() / draw_image_rgb565() emiten cada fila invertida
+// (El bit A[1] del comando 0x36 "Flip Horizontal" no es fiable en este
+//  panel, se deja 0x00 en init. Baseline observado: con 0x00 la imagen
+//  sale en espejo, luego esta compensacion la corrige.)
 // =========================================================================
 constexpr bool SSD1963_MIRROR_X = true;
