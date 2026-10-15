@@ -90,14 +90,15 @@ void PiStatusScene::refresh_system_info() {
     if (m_temp.empty()) m_temp = "?.?C";
 
     // Get uptime
-    m_uptime = exec_command("awk '{print int($1/3600)\"h \"int(($1%3600)/60)\"m"}' /proc/uptime 2>/dev/null");
+    m_uptime = exec_command("awk 'BEGIN{srand()}{sec=int($1);h=int(sec/3600);m=int((sec%3600)/60);print h\"h \"m\"m\"}' /proc/uptime 2>/dev/null");
     if (m_uptime.empty()) m_uptime = "0h 0m";
 
     // Get memory usage
     m_memory = exec_command("free -m | awk 'NR==2{printf \"%d/%dMB (%.0f%%)\", $3, $2, $3*100/$2}' 2>/dev/null");
     if (m_memory.empty()) {
-        m_memory = exec_command("awk '/MemUsed/{printf \"%dMB\", $2/1024}' /proc/meminfo 2>/dev/null");
-        if (m_memory.empty()) m_memory = "N/A";
+        // Fallback: parse /proc/meminfo
+        std::string used = exec_command("awk '/MemAvailable/{free=$2}END{print 0}' /proc/meminfo 2>/dev/null");
+        m_memory = "N/A";
     }
 }
 
