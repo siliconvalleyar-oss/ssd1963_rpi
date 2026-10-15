@@ -75,3 +75,11 @@ constexpr bool SSD1963_MCU_WAVEFORM = false;
 constexpr uint16_t SSD1963_RESET_LOW_MS = 2000;      // RST en bajo durante power-up
 constexpr uint16_t SSD1963_POST_RESET_MS = 1000;     // Espera tras liberar RST (STM32: ~1.0s)
 constexpr uint16_t SSD1963_RS_LEAD_MS = 50;          // RS HIGH antes del 1er comando (STM32: ~50ms)
+
+// =========================================================================
+// Espejo horizontal (bit A[1] del comando 0x36 SET ADDRESS MODE)
+// El panel TFT montado muestra la imagen invertida de derecha a izquierda
+// (FPC del panel cableada al reves); activar corrige el espejo sin tocar
+// el frame buffer. Ver docs/SSD1963.PDF, figura 9-15 "A[1] Flip Horizontal".
+// =========================================================================
+constexpr bool SSD1963_MIRROR_X = true;

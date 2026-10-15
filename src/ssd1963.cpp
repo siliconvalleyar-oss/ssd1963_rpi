@@ -207,8 +207,9 @@ void SSD1963::init() {
     write_command(SSD1963_SET_PIXEL_DATA_INTERFACE);
     write_data(SSD1963_PDI_16BIT565);
     // Address mode: RGB, top-to-bottom, left-to-right
+    // + A[1] flip horizontal si el panel se muestra en espejo (config_hw.hpp)
     write_command(SSD1963_SET_ADDR_MODE);
-    write_data(0x00);
+    write_data(SSD1963_MIRROR_X ? 0x02 : 0x00);
     // Reset del PANEL fisico via GPIO0 (igual que la referencia PIC32):
     // pulso LOW -> 1ms -> HIGH. Sin esto el panel puede quedar en estado indefinido.
     write_command(SSD1963_SET_GPIO_CONF);
